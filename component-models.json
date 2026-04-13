@@ -190,6 +190,9 @@
     ]
   },
   {
+    "id": "header"
+  },
+  {
     "id": "hero",
     "fields": [
       {
