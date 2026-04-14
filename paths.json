@@ -1,8 +1,8 @@
 {
   "mappings": [
-    "/content/eds-header/:/"
+    "/content/header-poc/:/"
   ],
   "includes": [
-    "/content/eds-header/"
+    "/content/header-poc/"
   ]
 }
