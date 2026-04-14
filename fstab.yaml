@@ -1,5 +1,5 @@
 mountpoints:
   /:
-    url: "https://author-p8803-e1283844.adobeaemcloud.com/bin/franklin.delivery/AnkanAEM/eds-header/main"
+    url: "https://author-p8803-e1283844.adobeaemcloud.com/bin/franklin.delivery/AnkanAEM/header-poc/main"
     type: "markup"
     suffix: ".html"
