@@ -1,8 +1,8 @@
 {
   "mappings": [
-    "/content/header-v1/:/"
+    "/content/header-v2/:/"
   ],
   "includes": [
-    "/content/header-v1/"
+    "/content/header-v2/"
   ]
 }
