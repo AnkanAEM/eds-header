@@ -1,5 +1,6 @@
+/* eslint-disable no-use-before-define */
 import { getMetadata } from '../../scripts/aem.js';
-import { loadFragment } from '../../scripts/scripts.js';
+import { loadFragment } from '../fragment/fragment.js';
 
 function createArrowSvg() {
   const svg = document.createElement('svg');
@@ -19,7 +20,7 @@ function createArrowSvg() {
   return svg;
 }
 
-function buildMenu(menuHtmlString, isRoot = false) {
+function buildMenu(menuHtmlString) {
   const parser = new DOMParser();
   const doc = parser.parseFromString(menuHtmlString, 'text/html');
   const rootUl = doc.body.firstElementChild; // Assuming the string starts with a <ul>
@@ -92,7 +93,7 @@ export default async function decorate(block) {
   const hamburgerDiv = document.createElement('div');
   hamburgerDiv.className = 'hamburger';
   const hamburgerUl = document.createElement('ul');
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 3; i += 1) {
     hamburgerUl.appendChild(document.createElement('li'));
   }
   hamburgerDiv.appendChild(hamburgerUl);
@@ -107,7 +108,7 @@ export default async function decorate(block) {
 
   const l1Items = JSON.parse(getMetadata('nav-sections')); // Assuming nav-sections metadata holds the extracted data
 
-  l1Items.forEach(item => {
+  l1Items.forEach((item) => {
     const li = document.createElement('li');
     li.className = 'has-child hover-red';
     li.setAttribute('itemprop', 'name');
@@ -197,14 +198,15 @@ export default async function decorate(block) {
 
     const menuContent = buildMenu(item.menuHtml);
     if (menuContent) {
-      Array.from(menuContent.children).forEach(child => subNavWrap.appendChild(child));
+      Array.from(menuContent.children).forEach((child) => subNavWrap.appendChild(child));
     }
-    
     // Special case for Investor Relations to include the inner-sub-nav-wrap-list div
     if (item.l1Label === 'Investor Relations') {
       const innerSubNavWrapList = document.createElement('div');
       innerSubNavWrapList.className = 'inner-sub-nav-wrap-list';
-      Array.from(subNavWrap.children).slice(1, 3).forEach(child => innerSubNavWrapList.appendChild(child));
+      Array.from(subNavWrap.children).slice(1, 3).forEach((child) => {
+        innerSubNavWrapList.appendChild(child);
+      });
       subNavWrap.insertBefore(innerSubNavWrapList, subNavWrap.children[1] || null);
     }
 
@@ -320,6 +322,6 @@ export default async function decorate(block) {
   block.appendChild(headerEl);
 
   // Add event listeners similar to data-once functionality
-  // This would typically involve a dedicated JS file for header interactivity (dropdowns, mobile menu, search)
+  // This would typically involve a dedicated JS file for header interactivity
   // For brevity, basic toggles are not implemented here but would follow EDS best practices.
 }
