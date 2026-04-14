@@ -224,10 +224,7 @@ export default async function decorate(block) {
   // mobile header (back, title)
   const mobileHeader = document.createElement('div');
   mobileHeader.className = 'nav-mobile-header';
-  mobileHeader.innerHTML = `
-    <button class="nav-back" aria-label="Back"></button>
-    <span class="nav-title">Menu</span>
-  `;
+  mobileHeader.innerHTML = `<button class="nav-back" aria-label="Back"></button><span class="nav-title">Menu</span>`;
   const backBtn = mobileHeader.querySelector('.nav-back');
   backBtn.addEventListener('click', () => {
     nav.querySelectorAll('.nav-drop[aria-expanded="true"]').forEach((drop) => drop.setAttribute('aria-expanded', 'false'));
@@ -239,9 +236,7 @@ export default async function decorate(block) {
   // hamburger for mobile
   const hamburger = document.createElement('div');
   hamburger.classList.add('nav-hamburger');
-  hamburger.innerHTML = `<button type="button" aria-controls="nav" aria-label="Open navigation">
-      <span class="nav-hamburger-icon"></span>
-    </button>`;
+  hamburger.innerHTML = `<button type="button" aria-controls="nav" aria-label="Open navigation"><span class="nav-hamburger-icon"></span></button>`;
   hamburger.addEventListener('click', () => {
     toggleMenu(nav, navSections);
     // Reset mobile menu level on close
