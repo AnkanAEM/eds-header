@@ -4,54 +4,6 @@ import { loadFragment } from '../fragment/fragment.js';
 // media query match that indicates mobile/tablet width
 const isDesktop = window.matchMedia('(min-width: 900px)');
 
-function closeOnEscape(e) {
-  if (e.code === 'Escape') {
-    const nav = document.getElementById('nav');
-    const navSections = nav.querySelectorAll('.nav-sections, .nav-brand');
-    const navSectionExpanded = Array.from(navSections).find((s) => s.getAttribute('aria-expanded') === 'true');
-    if (navSectionExpanded && isDesktop.matches) {
-      // eslint-disable-next-line no-use-before-define
-      toggleAllNavSections(navSections);
-      navSectionExpanded.focus();
-    } else if (!isDesktop.matches) {
-      // eslint-disable-next-line no-use-before-define
-      toggleMenu(nav, navSections);
-      nav.querySelector('button').focus();
-    }
-  }
-}
-
-function closeOnFocusLost(e) {
-  const nav = e.currentTarget;
-  // Only close if focus moves to another element within the page that is NOT in the nav
-  if (e.relatedTarget && !nav.contains(e.relatedTarget)) {
-    const navSections = nav.querySelectorAll('.nav-sections, .nav-brand');
-    const navSectionExpanded = Array.from(navSections).find((s) => s.getAttribute('aria-expanded') === 'true');
-    if (navSectionExpanded && isDesktop.matches) {
-      toggleAllNavSections(navSections, false);
-    } else if (!isDesktop.matches) {
-      toggleMenu(nav, navSections, false);
-    }
-  }
-}
-
-function openOnKeydown(e) {
-  const focused = document.activeElement;
-  const isNavDrop = focused.classList.contains('nav-drop');
-  if (isNavDrop && (e.code === 'Enter' || e.code === 'Space')) {
-    const dropExpanded = focused.getAttribute('aria-expanded') === 'true';
-    // eslint-disable-next-line no-use-before-define
-    const nav = focused.closest('nav');
-    const navSections = nav.querySelectorAll('.nav-sections, .nav-brand');
-    toggleAllNavSections(navSections);
-    focused.setAttribute('aria-expanded', dropExpanded ? 'false' : 'true');
-  }
-}
-
-function focusNavSection() {
-  document.activeElement.addEventListener('keydown', openOnKeydown);
-}
-
 /**
  * Toggles all nav sections
  * @param {Element} sections The container element
@@ -111,6 +63,51 @@ function toggleMenu(nav, navSections, forceExpanded = null) {
   }
 }
 
+function closeOnEscape(e) {
+  if (e.code === 'Escape') {
+    const nav = document.getElementById('nav');
+    const navSections = nav.querySelectorAll('.nav-sections, .nav-brand');
+    const navSectionExpanded = Array.from(navSections).find((s) => s.getAttribute('aria-expanded') === 'true');
+    if (navSectionExpanded && isDesktop.matches) {
+      toggleAllNavSections(navSections);
+      navSectionExpanded.focus();
+    } else if (!isDesktop.matches) {
+      toggleMenu(nav, navSections);
+      nav.querySelector('button').focus();
+    }
+  }
+}
+
+function closeOnFocusLost(e) {
+  const nav = e.currentTarget;
+  // Only close if focus moves to another element within the page that is NOT in the nav
+  if (e.relatedTarget && !nav.contains(e.relatedTarget)) {
+    const navSections = nav.querySelectorAll('.nav-sections, .nav-brand');
+    const navSectionExpanded = Array.from(navSections).find((s) => s.getAttribute('aria-expanded') === 'true');
+    if (navSectionExpanded && isDesktop.matches) {
+      toggleAllNavSections(navSections, false);
+    } else if (!isDesktop.matches) {
+      toggleMenu(nav, navSections, false);
+    }
+  }
+}
+
+function openOnKeydown(e) {
+  const focused = document.activeElement;
+  const isNavDrop = focused.classList.contains('nav-drop');
+  if (isNavDrop && (e.code === 'Enter' || e.code === 'Space')) {
+    const dropExpanded = focused.getAttribute('aria-expanded') === 'true';
+    const nav = focused.closest('nav');
+    const navSections = nav.querySelectorAll('.nav-sections, .nav-brand');
+    toggleAllNavSections(navSections);
+    focused.setAttribute('aria-expanded', dropExpanded ? 'false' : 'true');
+  }
+}
+
+function focusNavSection() {
+  document.activeElement.addEventListener('keydown', openOnKeydown);
+}
+
 /**
  * loads and decorates the header, mainly the nav
  * @param {Element} block The header block element
@@ -163,11 +160,11 @@ export default async function decorate(block) {
       // Create a wrapper for the entire sub-menu
       const menuWrapper = document.createElement('div');
       menuWrapper.className = 'nav-drop-menu';
-      
+
       // Separate the trigger from the content
       const menuContent = document.createElement('div');
       menuContent.className = 'nav-drop-menu-content';
-      
+
       // Group columns
       if (isMega) {
         menus.forEach((ul) => {
@@ -181,7 +178,7 @@ export default async function decorate(block) {
       } else {
         menuContent.append(menus[0]);
       }
-      
+
       menuWrapper.append(menuContent);
       navSection.append(menuWrapper);
 
