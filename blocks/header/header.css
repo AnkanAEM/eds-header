@@ -1,321 +1,406 @@
-/* Part 1: Core Layout */
-
 .nav-wrapper {
   display: flex;
-  justify-content: space-between; /* Distributes items (brand, sections, tools) across the wrapper */
-  align-items: center; /* Vertically aligns all direct children */
-  width: 100%; /* Occupy full available width of its parent */
-  max-width: 1440px; /* Common maximum width for content within a container */
-  margin: 0 auto; /* Centers the wrapper horizontally on larger screens */
-  padding: 0 24px; /* Horizontal padding for inner content */
-  min-height: 80px; /* Minimum height for the header area */
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 70px; /* Standard minimum height for a header */
 }
 
 .nav-brand {
   flex-shrink: 0; /* Prevents the brand area from shrinking */
-  /* Further styling for the logo (e.g., width, height) would be applied to an image or specific brand elements within this container. */
+  /* Actual width/height will typically be defined by the logo image itself or a max-width */
 }
 
 .nav-sections {
-  display: flex; /* Arranges navigation items horizontally */
-  align-items: center; /* Vertically aligns individual navigation items */
-  flex-grow: 1; /* Allows the navigation section to expand and take available horizontal space */
-  justify-content: center; /* Centers the navigation items within the allocated space */
-  gap: 32px; /* Spacing between individual navigation links */
+  display: flex;
+  flex-grow: 1; /* Allows the navigation sections to take up available space */
+  justify-content: center; /* Centers the main navigation links horizontally */
+  /* Further styling for individual menu items (li, a) would be in other EDS components */
 }
 
 .nav-tools {
-  display: flex; /* Arranges tool items (e.g., search, contact icons) horizontally */
-  align-items: center; /* Vertically aligns individual tool items */
-  flex-shrink: 0; /* Prevents the tools area from shrinking */
-  gap: 20px; /* Spacing between individual tool icons/links */
-}
-
-/* Mega-Menu Container Styles */
-header.main-header .main-nav ul > li.has-child > .mega-menu {
-  position: absolute;
-  left: 0;
-  right: 0;
-  /* top: varies based on header height, e.g., 101px on desktop */
-  background-color: #fff;
-  padding: 3.5rem 0;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease-in-out;
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-}
-
-/* Mega-Menu Visibility on Hover */
-header.main-header .main-nav ul > li.has-child:hover > .mega-menu {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: all;
-  z-index: 10; /* Ensure it overlays other content */
-}
-
-/* Mega-Menu Inner Layout (Desktop: two main columns) */
-.mega-menu .center-div {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  max-width: 1300px; /* Or appropriate container width */
-  margin: 0 auto;
-  padding: 0 15px; /* Horizontal padding for smaller screens within max-width */
+  align-items: center;
+  flex-shrink: 0; /* Prevents the tool icons from shrinking */
+  /* Layout for individual tools (e.g., mail, search) would typically be internal to this component */
 }
 
-/* Left Section of Mega-Menu */
+/* Mega-Menu Fidelity for Mahindra.com */
+
+/* Base Mega-Menu Container */
+.main-header .main-nav ul > li.has-child .mega-menu {
+    position: absolute;
+    top: 101px; /* Aligns with existing media query for desktop */
+    left: 0;
+    width: 100%;
+    /* Use a light, subtle background for the mega-menu content area */
+    background-color: #FFFFFF; /* White background */
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15); /* Soft shadow for depth */
+    z-index: 100; /* Ensure it's above other content */
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px); /* Slight lift animation */
+    transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease;
+    padding: 20px 0; /* Vertical padding for content inside */
+    border-top: 2px solid #DD052B; /* A subtle red line at the top */
+}
+
+/* Show Mega-Menu on hover of parent <li> */
+.main-header .main-nav ul > li.has-child:hover > .mega-menu,
+.main-header .main-nav ul > li.has-child:focus-within > .mega-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+/* Inner Wrapper for content alignment */
+.mega-menu .wrap.container {
+    max-width: 1200px; /* Adjust based on overall site container width */
+    margin: 0 auto;
+    padding: 0 15px; /* Horizontal padding */
+}
+
+.mega-menu .center-div {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 30px; /* Space between left and right sections */
+}
+
+/* Left-Div Styling (Purpose, Key Facts, Newsroom, Careers descriptions) */
 .mega-menu .left-div {
-  width: 30%; /* Example width, can vary */
-  padding-right: 2rem;
-  box-sizing: border-box;
+    flex: 0 0 35%; /* Allocate about 35% width for the left column */
+    padding: 20px 0;
+    /* Aesthetic border or background difference */
+    border-right: 1px solid rgba(0, 0, 0, 0.1); /* Subtle separator */
+    padding-right: 30px;
 }
 
 .mega-menu .left-div-heading {
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin-bottom: 1rem;
-  color: #1c1c1c; /* Dark text color */
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #030408; /* Dark text color */
+    margin-bottom: 15px;
+}
+
+.mega-menu .left-div-heading a {
+    color: inherit;
+    text-decoration: none;
+    transition: color 0.2s ease, border-bottom 0.2s ease;
 }
 
 .mega-menu .left-div-heading a:hover {
-  border-bottom: 2px solid #00000026; /* Subtle underline effect */
-  color: #1c1c1c;
+    color: #DD052B; /* Red on hover */
+    border-bottom: 2px solid #DD052B;
 }
 
 .mega-menu .left-div-desc,
 .mega-menu .left-div-subdesc {
-  font-size: 1rem;
-  line-height: 1.5;
-  color: #555; /* Medium grey text */
-  margin-top: 0.5rem;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: #555; /* Slightly lighter text */
+    margin-bottom: 10px;
 }
 
-.mega-menu .left-div-subdesc {
-  font-weight: bold; /* As seen in "Bold. Agile. Collaborative." */
-  color: #1c1c1c;
+.mega-menu .left-div ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
 }
 
-/* Specific styling for Investor Relations left-div highlights */
-.mega-menu .left-div.ir-left-div ul {
-  list-style: none;
-  padding: 0;
-  margin: 1rem 0 0 0;
-}
-.mega-menu .left-div.ir-left-div ul li.list-text-red {
-  display: flex;
-  align-items: center;
-  justify-content: space-between; /* To align number to the right */
-  margin-bottom: 0.5rem;
-  color: #1c1c1c;
-  font-size: 1.1rem;
-}
-.mega-menu .left-div.ir-left-div ul li.list-text-red span {
-  font-size: 1.5rem; /* Larger font for the number */
-  font-weight: bold;
-  color: #dd052b; /* Primary red color */
-  /* Specific positioning can be added with `position: relative` and `left` */
-}
-@media screen and (min-width: 992px) {
-  .main-header .wrap .main-nav .left-div.ir-left-div {
-      width: 516px; /* Specific width for IR left div on desktop */
-  }
-  .main-header .wrap .main-nav .left-div.ir-left-div ul li.list-text-red span {
-     left: 200px; /* Adjusted position on desktop */
-  }
+.mega-menu .left-div ul li {
+    font-size: 1rem;
+    color: #333;
+    margin-bottom: 8px;
+    position: relative;
+    padding-left: 15px; /* For potential bullet/icon */
 }
 
-/* Specific styling for Newsroom left-div press releases */
-.mega-menu .left-div.newsroom-left-div .latest-two-press-release .slides .wrap .content .desc p a {
-  color: #1c1c1c;
-  text-decoration: none;
-  font-weight: 500;
-  line-height: 1.4;
-  display: block;
-}
-.mega-menu .left-div.newsroom-left-div .latest-two-press-release .slides .wrap .content .desc p a:hover {
-  color: #dd052b;
-  text-decoration: underline;
-}
-.mega-menu .left-div.newsroom-left-div .latest-two-press-release .slides .wrap .content .date {
-  font-size: 0.85rem;
-  color: #666;
-  margin-top: 0.5rem;
-}
-.mega-menu .left-div.newsroom-left-div .latest-two-press-release .slides .wrap .content .date em {
-  font-style: normal;
-  margin-right: 0.5rem;
+.mega-menu .left-div ul li::before {
+    content: "•"; /* Simple bullet point */
+    color: #DD052B; /* Red bullet */
+    position: absolute;
+    left: 0;
+    font-weight: bold;
 }
 
-/* Right Section of Mega-Menu (Navigation Columns) */
+.mega-menu .left-div ul li span {
+    font-weight: bold;
+    color: #DD052B; /* Highlight numbers/titles in red */
+    display: block;
+    font-size: 1.5rem; /* Larger font for numbers */
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+
+/* Specific styling for .list-text-red found in 'What we do' left-div */
+.mega-menu .left-div ul li.list-text-red {
+    font-size: 1.1rem; /* Slightly larger text for key facts */
+    color: #333; /* Default text color */
+    margin-bottom: 15px;
+}
+
+.mega-menu .left-div ul li.list-text-red span {
+    color: #DD052B; /* Red for the number/key stat */
+    font-size: 2rem;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 10px;
+    position: unset; /* Override any absolute positioning */
+}
+
+/* Sub-Navigation Wrap (Right section of mega-menu) */
 .mega-menu .sub-nav-wrap {
-  width: 65%; /* Example width, adjust based on left-div */
-  display: flex;
-  gap: 20px; /* Space between navigation columns */
-  flex-wrap: wrap; /* Allow columns to wrap on smaller screens */
+    flex: 1; /* Takes remaining width */
+    display: flex;
+    flex-wrap: wrap; /* Allows multiple columns of links */
+    padding: 20px 0;
 }
 
 .mega-menu .sub-nav-wrap ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  flex: 1; /* Distribute space evenly among columns */
-  min-width: 150px; /* Minimum width for each column to prevent excessive squeezing */
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    flex: 1 1 33%; /* Each ul takes about 1/3rd of the width, adjust as needed */
+    min-width: 200px; /* Minimum width for each column */
+    padding-left: 30px; /* Space from left-div */
+    border-left: 1px solid rgba(0, 0, 0, 0.05); /* Very subtle separator */
+}
+.mega-menu .sub-nav-wrap ul:first-child {
+    border-left: none; /* No border for the first column */
 }
 
 .mega-menu .sub-nav-wrap ul li {
-  margin-bottom: 0.25rem; /* Spacing between list items */
+    margin-bottom: 10px;
 }
 
 .mega-menu .sub-nav-wrap ul li a {
-  display: block;
-  padding: 0.5rem 0;
-  color: #1c1c1c;
-  text-decoration: none;
-  transition: color 0.2s ease-in-out;
-  font-size: 1rem;
+    text-decoration: none;
+    color: #333; /* Dark text for links */
+    font-size: 1rem;
+    font-weight: 500;
+    display: block;
+    padding: 5px 0;
+    transition: color 0.2s ease, padding-left 0.2s ease;
 }
 
 .mega-menu .sub-nav-wrap ul li a:hover {
-  color: #dd052b; /* Primary red on hover */
-  text-decoration: underline;
+    color: #DD052B; /* Red on hover */
+    padding-left: 5px; /* Slight indent on hover */
 }
 
+/* Nested Sub-Menus (e.g., within "What we do" -> "Industries") */
 .mega-menu .sub-nav-wrap ul li.top-level-li > a {
-  font-weight: bold; /* Differentiate top-level links */
-  color: #000; /* Stronger color for top-level links */
-}
-
-/* Nested Sub-menus within Mega-Menu (for mobile interaction) */
-.mega-menu .sub-nav-wrap ul li .has-sub-child,
-.mega-menu .sub-nav-wrap ul li .has-inner-sub-child {
-  max-height: 0;
-  overflow: hidden;
-  opacity: 0;
-  transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out;
-}
-
-/* Active states for nested sub-menus (controlled by JS on mobile) */
-.mega-menu .sub-nav-wrap ul li.active > .has-sub-child,
-.mega-menu .sub-nav-wrap ul li.first-level-li.active-child > .has-inner-sub-child {
-  max-height: 850px; /* Sufficiently large to show all content */
-  opacity: 1;
-}
-
-/* Styling for expand/collapse icons (SVGs) */
-.mega-menu .sub-nav-wrap ul li span svg {
-  width: 15px;
-  height: 15px;
-  fill: #000000; /* Default icon color */
-  stroke: #000000; /* Default stroke color */
-  stroke-width: 4.851456;
-  transition: transform 0.3s ease;
-  vertical-align: middle;
-  margin-left: 5px;
-}
-
-.mega-menu .sub-nav-wrap ul li.active > span svg {
-  transform: rotate(90deg); /* Rotate icon when active */
-  fill: #dd052b;
-  stroke: #dd052b;
-}
-
-.mega-menu .sub-nav-wrap ul li a:hover + span svg path,
-.mega-menu .sub-nav-wrap ul li.active > a + span svg path {
-  fill: #dd052b;
-  stroke: #dd052b;
-}
-
-/* Responsive adjustments for mobile menu */
-@media screen and (max-width: 991px) {
-  header.main-header .main-nav ul > li.has-child > .mega-menu {
-    position: relative; /* Position relative for mobile */
-    box-shadow: none;
-    padding: 0; /* Adjust padding for mobile view */
-    background-color: transparent; /* Or match mobile nav background */
-  }
-
-  .mega-menu .center-div {
-    flex-direction: column; /* Stack left and right sections vertically */
-    align-items: stretch;
-    max-width: 100%;
-    padding: 0;
-  }
-
-  .mega-menu .left-div,
-  .mega-menu .sub-nav-wrap {
-    width: 100%; /* Full width for both sections */
-    padding: 1rem 0; /* Adjust padding */
-    border-bottom: 1px solid #eee; /* Separator for sections */
-  }
-  .mega-menu .left-div:last-child {
-      border-bottom: none;
-  }
-
-  .mega-menu .sub-nav-wrap {
-    flex-direction: column; /* Stack navigation columns vertically */
-    gap: 0; /* Remove gap between stacked columns */
-  }
-
-  .mega-menu .sub-nav-wrap ul {
-    width: 100%; /* Full width for each navigation list */
-    min-width: unset;
-  }
-  
-  .mega-menu .sub-nav-wrap ul li a {
-      padding: 0.75rem 0;
-  }
-
-  /* Specific mobile active state adjustments from inline style */
-  .main-header .wrap .main-nav ul > li.has-child .mega-menu .wrap .sub-nav-wrap .has-sub-child.active,
-  .main-header .wrap .main-nav ul > li.has-child .mega-menu .wrap .sub-nav-wrap .has-sub-child .has-inner-sub-child.active-child {
-    max-height: 850px; /* Use a larger height for expanded sub-menus */
-    opacity: 1;
-  }
-
-  .mega-menu .left-div.ir-left-div,
-  .mega-menu .left-div.newsroom-left-div,
-  .mega-menu .left-div.career-left-div {
-    width: 100%;
-    padding: 1rem 0; /* Adjust padding for mobile */
-  }
-  
-  .mega-menu .left-div.ir-left-div ul li.list-text-red span {
-      position: static; /* Remove absolute positioning */
-      left: unset;
-  }
-}
-
-/* Part 3: Interactive Fidelity (Hover transitions, animations, mobile-specific overrides, icon styling) */
-
-/* General Interactive Transitions */
-a, button, input[type="submit"], .btn, .wrap, .card-wrap, .performace-driven-home-box-card {
-    transition: all 0.3s ease-in-out;
-}
-
-/* Header - Navigation Hover Effects */
-.main-header .wrap .main-nav ul > li > a {
+    font-weight: 700; /* Bolder for top-level categories */
+    color: #030408;
     position: relative;
-    padding-bottom: 5px; /* Adjust as needed for underline */
-    display: inline-block;
-    color: #1c1c1c; /* Default color, already in base CSS */
 }
 
-.main-header .wrap .main-nav ul > li:hover > a {
-    color: #dd052b; /* Mahindra Red on hover */
+.mega-menu .sub-nav-wrap ul li.top-level-li > a:hover {
+    color: #DD052B;
 }
 
-/* Underline animation for top-level links */
-.main-header .wrap .main-nav ul > li > a::after {
-    content: '';
-    position: absolute;
-    width: 0;
-    height: 2px;
-    background: #dd052b;
-    bottom: 0;
-    left: 0;
-    transition: width 0.3s ease-in-out;
+.mega-menu .sub-nav-wrap ul li.top-level-li > span svg,
+.mega-menu .sub-nav-wrap ul li.first-level-li > span svg {
+    width: 15px; /* Size of the arrow icon */
+    height: 15px;
+    vertical-align: middle;
+    margin-left: 8px;
+    fill: #030408; /* Default arrow color */
+    transition: fill 0.2s ease, transform 0.2s ease;
 }
 
-.main-header .wrap .main-nav ul > li:hover > a::after {
-    width: 100
+.mega-menu .sub-nav-wrap ul li.top-level-li:hover > span svg,
+.mega-menu .sub-nav-wrap ul li.first-level-li:hover > span svg {
+    fill: #DD052B; /* Red on hover */
+    transform: translateX(3px); /* Small arrow movement */
+}
+
+/* Hidden state for nested sub-menus (desktop, for JS controlled opening) */
+.mega-menu .sub-nav-wrap .has-sub-child,
+.mega-menu .sub-nav-wrap .has-inner-sub-child {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out; /* Smooth slide-down effect */
+}
+
+/* Active state for nested sub-menus (controlled by JS or parent hover) */
+.mega-menu .sub-nav-wrap .has-sub-child.active,
+.mega-menu .sub-nav-wrap .has-sub-child .has-inner-sub-child.active-child {
+    max-height: 500px; /* Sufficient height to reveal all links */
+    transition: max-height 0.5s ease-in-out;
+}
+
+/* Adjustments for `inner-sub-nav-wrap-list` in Investor Relations */
+.mega-menu .element-block .inner-sub-nav-wrap-list {
+    display: flex; /* Makes the two Uls inside behave as columns */
+    gap: 30px;
+    padding-left: 0; /* Reset padding for direct child of element-block */
+    border-left: none; /* No border here */
+}
+
+.mega-menu .element-block .inner-sub-nav-wrap-list ul {
+    flex: 1 1 50%; /* Each ul takes 50% width */
+    padding-left: 0; /* No left padding for these inner uls */
+    border-left: none; /* No border for these inner uls */
+}
+
+.mega-menu .element-block .sub-nav-wrap-one-link {
+    flex: 1 1 100%; /* Takes full width */
+    padding-bottom: 20px;
+}
+.mega-menu .element-block .sub-nav-wrap-one-link li a {
+    font-weight: 600; /* Bolder for important links */
+    color: #030408;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1); /* Separator below single link */
+}
+.mega-menu .element-block .sub-nav-wrap-one-link li:last-child a {
+    border-bottom: none; /* No border for the last one */
+}
+
+/* Newsroom specific styles for the press release previews */
+.mega-menu .newsroom-left-div .latest-two-press-release {
+    margin-top: 20px;
+}
+
+.mega-menu .newsroom-left-div .latest-two-press-release .slides {
+    margin-bottom: 15px;
+}
+
+.mega-menu .newsroom-left-div .latest-two-press-release .content .desc p a {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #030408;
+    text-decoration: none;
+    line-height: 1.4;
+    display: block;
+    transition: color 0.2s ease;
+}
+
+.mega-menu .newsroom-left-div .latest-two-press-release .content .desc p a:hover {
+    color: #DD052B;
+}
+
+.mega-menu .newsroom-left-div .latest-two-press-release .content .date {
+    font-size: 0.85rem;
+    color: #777;
+    margin-top: 5px;
+}
+
+.mega-menu .newsroom-left-div .latest-two-press-release .content .date em {
+    font-style: normal;
+    margin-right: 10px;
+}
+
+
+/* Responsive adjustments for mobile/smaller screens (under 992px) */
+@media screen and (max-width: 991px) {
+    .main-header .main-nav ul > li.has-child .mega-menu {
+        position: relative; /* Stays in normal flow in mobile menu */
+        top: 0 !important; /* Override desktop specific top */
+        box-shadow: none; /* Remove shadow */
+        border-top: none; /* Remove red border */
+        padding: 0;
+        transition: none;
+        transform: none;
+        max-height: 0; /* Hidden by default for mobile */
+        overflow: hidden;
+    }
+
+    /* Show mega menu when parent is active (e.g. clicked) */
+    .main-header .main-nav ul > li.has-child.active > .mega-menu {
+        max-height: 850px; /* Allows content to expand */
+        opacity: 1;
+        visibility: visible;
+        overflow: auto; /* Allow scrolling if content is too long */
+        padding-bottom: 20px; /* Add some padding at the bottom */
+    }
+
+    .mega-menu .center-div {
+        flex-direction: column; /* Stack sections vertically */
+        gap: 0; /* Remove gap */
+        padding: 0 15px;
+    }
+
+    .mega-menu .left-div {
+        flex: 0 0 100%; /* Full width */
+        border-right: none;
+        padding-right: 0;
+        padding-bottom: 20px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1); /* Separator below left div */
+    }
+
+    .mega-menu .sub-nav-wrap {
+        flex-direction: column; /* Stack columns of links vertically */
+        padding: 20px 0;
+    }
+
+    .mega-menu .sub-nav-wrap ul {
+        flex: 0 0 100%; /* Full width */
+        padding-left: 0;
+        border-left: none;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05); /* Separator between main columns */
+        padding-bottom: 10px;
+        margin-bottom: 10px;
+    }
+    .mega-menu .sub-nav-wrap ul:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+    }
+
+    .mega-menu .element-block .inner-sub-nav-wrap-list {
+        flex-direction: column; /* Stack investor relations links vertically */
+        gap: 0;
+    }
+    .mega-menu .element-block .inner-sub-nav-wrap-list ul {
+        flex: 0 0 100%;
+    }
+    .mega-menu .element-block .sub-nav-wrap-one-link li a {
+        border-bottom: none; /* Remove border for single link in mobile */
+    }
+
+    /* For nested sub-menus in mobile, arrow icons should indicate expandability */
+    .mega-menu .sub-nav-wrap ul li.top-level-li > a,
+    .mega-menu .sub-nav-wrap ul li.first-level-li > a {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-right: 15px;
+    }
+}
+
+/* Part 3: Interactive Fidelity */
+
+/* ------------------------------------------- */
+/* 1. Global Interactive States and Transitions */
+/* ------------------------------------------- */
+a, button, input[type="submit"], .btn, .stretched-link {
+  transition: all 0.3s ease-in-out;
+}
+
+/* Remove default link underline and define custom hover */
+a:not(.btn):not(.stretched-link):not(.with-full-underline) {
+  text-decoration: none;
+}
+a:not(.btn):not(.stretched-link):not(.with-full-underline):hover {
+  text-decoration: underline;
+  color: #dd052b; /* Example hover color */
+}
+
+/* ------------------------------------------- */
+/* 2. Header & Navigation Interactivity */
+/* ------------------------------------------- */
+
+/* Main Nav Parent Items */
+.main-header .wrap .main-nav ul > li {
+  position: relative;
+}
+
+.main-header .wrap .main-nav ul > li.has-child > a {
+  color: #1c1c1c; /* Default text color */
+  transition: color 0.3s ease;
+}
+
+.main-header .wrap .main-nav ul > li.has-child:hover > a,
+.main-header .wrap .main-nav ul > li.has-child.hover-red:hover > a { /*

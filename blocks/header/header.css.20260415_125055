@@ -1,0 +1,321 @@
+/* Part 1: Core Layout */
+
+.nav-wrapper {
+  display: flex;
+  justify-content: space-between; /* Distributes items (brand, sections, tools) across the wrapper */
+  align-items: center; /* Vertically aligns all direct children */
+  width: 100%; /* Occupy full available width of its parent */
+  max-width: 1440px; /* Common maximum width for content within a container */
+  margin: 0 auto; /* Centers the wrapper horizontally on larger screens */
+  padding: 0 24px; /* Horizontal padding for inner content */
+  min-height: 80px; /* Minimum height for the header area */
+}
+
+.nav-brand {
+  flex-shrink: 0; /* Prevents the brand area from shrinking */
+  /* Further styling for the logo (e.g., width, height) would be applied to an image or specific brand elements within this container. */
+}
+
+.nav-sections {
+  display: flex; /* Arranges navigation items horizontally */
+  align-items: center; /* Vertically aligns individual navigation items */
+  flex-grow: 1; /* Allows the navigation section to expand and take available horizontal space */
+  justify-content: center; /* Centers the navigation items within the allocated space */
+  gap: 32px; /* Spacing between individual navigation links */
+}
+
+.nav-tools {
+  display: flex; /* Arranges tool items (e.g., search, contact icons) horizontally */
+  align-items: center; /* Vertically aligns individual tool items */
+  flex-shrink: 0; /* Prevents the tools area from shrinking */
+  gap: 20px; /* Spacing between individual tool icons/links */
+}
+
+/* Mega-Menu Container Styles */
+header.main-header .main-nav ul > li.has-child > .mega-menu {
+  position: absolute;
+  left: 0;
+  right: 0;
+  /* top: varies based on header height, e.g., 101px on desktop */
+  background-color: #fff;
+  padding: 3.5rem 0;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease-in-out;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Mega-Menu Visibility on Hover */
+header.main-header .main-nav ul > li.has-child:hover > .mega-menu {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: all;
+  z-index: 10; /* Ensure it overlays other content */
+}
+
+/* Mega-Menu Inner Layout (Desktop: two main columns) */
+.mega-menu .center-div {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  max-width: 1300px; /* Or appropriate container width */
+  margin: 0 auto;
+  padding: 0 15px; /* Horizontal padding for smaller screens within max-width */
+}
+
+/* Left Section of Mega-Menu */
+.mega-menu .left-div {
+  width: 30%; /* Example width, can vary */
+  padding-right: 2rem;
+  box-sizing: border-box;
+}
+
+.mega-menu .left-div-heading {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: #1c1c1c; /* Dark text color */
+}
+
+.mega-menu .left-div-heading a:hover {
+  border-bottom: 2px solid #00000026; /* Subtle underline effect */
+  color: #1c1c1c;
+}
+
+.mega-menu .left-div-desc,
+.mega-menu .left-div-subdesc {
+  font-size: 1rem;
+  line-height: 1.5;
+  color: #555; /* Medium grey text */
+  margin-top: 0.5rem;
+}
+
+.mega-menu .left-div-subdesc {
+  font-weight: bold; /* As seen in "Bold. Agile. Collaborative." */
+  color: #1c1c1c;
+}
+
+/* Specific styling for Investor Relations left-div highlights */
+.mega-menu .left-div.ir-left-div ul {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0 0 0;
+}
+.mega-menu .left-div.ir-left-div ul li.list-text-red {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* To align number to the right */
+  margin-bottom: 0.5rem;
+  color: #1c1c1c;
+  font-size: 1.1rem;
+}
+.mega-menu .left-div.ir-left-div ul li.list-text-red span {
+  font-size: 1.5rem; /* Larger font for the number */
+  font-weight: bold;
+  color: #dd052b; /* Primary red color */
+  /* Specific positioning can be added with `position: relative` and `left` */
+}
+@media screen and (min-width: 992px) {
+  .main-header .wrap .main-nav .left-div.ir-left-div {
+      width: 516px; /* Specific width for IR left div on desktop */
+  }
+  .main-header .wrap .main-nav .left-div.ir-left-div ul li.list-text-red span {
+     left: 200px; /* Adjusted position on desktop */
+  }
+}
+
+/* Specific styling for Newsroom left-div press releases */
+.mega-menu .left-div.newsroom-left-div .latest-two-press-release .slides .wrap .content .desc p a {
+  color: #1c1c1c;
+  text-decoration: none;
+  font-weight: 500;
+  line-height: 1.4;
+  display: block;
+}
+.mega-menu .left-div.newsroom-left-div .latest-two-press-release .slides .wrap .content .desc p a:hover {
+  color: #dd052b;
+  text-decoration: underline;
+}
+.mega-menu .left-div.newsroom-left-div .latest-two-press-release .slides .wrap .content .date {
+  font-size: 0.85rem;
+  color: #666;
+  margin-top: 0.5rem;
+}
+.mega-menu .left-div.newsroom-left-div .latest-two-press-release .slides .wrap .content .date em {
+  font-style: normal;
+  margin-right: 0.5rem;
+}
+
+/* Right Section of Mega-Menu (Navigation Columns) */
+.mega-menu .sub-nav-wrap {
+  width: 65%; /* Example width, adjust based on left-div */
+  display: flex;
+  gap: 20px; /* Space between navigation columns */
+  flex-wrap: wrap; /* Allow columns to wrap on smaller screens */
+}
+
+.mega-menu .sub-nav-wrap ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  flex: 1; /* Distribute space evenly among columns */
+  min-width: 150px; /* Minimum width for each column to prevent excessive squeezing */
+}
+
+.mega-menu .sub-nav-wrap ul li {
+  margin-bottom: 0.25rem; /* Spacing between list items */
+}
+
+.mega-menu .sub-nav-wrap ul li a {
+  display: block;
+  padding: 0.5rem 0;
+  color: #1c1c1c;
+  text-decoration: none;
+  transition: color 0.2s ease-in-out;
+  font-size: 1rem;
+}
+
+.mega-menu .sub-nav-wrap ul li a:hover {
+  color: #dd052b; /* Primary red on hover */
+  text-decoration: underline;
+}
+
+.mega-menu .sub-nav-wrap ul li.top-level-li > a {
+  font-weight: bold; /* Differentiate top-level links */
+  color: #000; /* Stronger color for top-level links */
+}
+
+/* Nested Sub-menus within Mega-Menu (for mobile interaction) */
+.mega-menu .sub-nav-wrap ul li .has-sub-child,
+.mega-menu .sub-nav-wrap ul li .has-inner-sub-child {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out;
+}
+
+/* Active states for nested sub-menus (controlled by JS on mobile) */
+.mega-menu .sub-nav-wrap ul li.active > .has-sub-child,
+.mega-menu .sub-nav-wrap ul li.first-level-li.active-child > .has-inner-sub-child {
+  max-height: 850px; /* Sufficiently large to show all content */
+  opacity: 1;
+}
+
+/* Styling for expand/collapse icons (SVGs) */
+.mega-menu .sub-nav-wrap ul li span svg {
+  width: 15px;
+  height: 15px;
+  fill: #000000; /* Default icon color */
+  stroke: #000000; /* Default stroke color */
+  stroke-width: 4.851456;
+  transition: transform 0.3s ease;
+  vertical-align: middle;
+  margin-left: 5px;
+}
+
+.mega-menu .sub-nav-wrap ul li.active > span svg {
+  transform: rotate(90deg); /* Rotate icon when active */
+  fill: #dd052b;
+  stroke: #dd052b;
+}
+
+.mega-menu .sub-nav-wrap ul li a:hover + span svg path,
+.mega-menu .sub-nav-wrap ul li.active > a + span svg path {
+  fill: #dd052b;
+  stroke: #dd052b;
+}
+
+/* Responsive adjustments for mobile menu */
+@media screen and (max-width: 991px) {
+  header.main-header .main-nav ul > li.has-child > .mega-menu {
+    position: relative; /* Position relative for mobile */
+    box-shadow: none;
+    padding: 0; /* Adjust padding for mobile view */
+    background-color: transparent; /* Or match mobile nav background */
+  }
+
+  .mega-menu .center-div {
+    flex-direction: column; /* Stack left and right sections vertically */
+    align-items: stretch;
+    max-width: 100%;
+    padding: 0;
+  }
+
+  .mega-menu .left-div,
+  .mega-menu .sub-nav-wrap {
+    width: 100%; /* Full width for both sections */
+    padding: 1rem 0; /* Adjust padding */
+    border-bottom: 1px solid #eee; /* Separator for sections */
+  }
+  .mega-menu .left-div:last-child {
+      border-bottom: none;
+  }
+
+  .mega-menu .sub-nav-wrap {
+    flex-direction: column; /* Stack navigation columns vertically */
+    gap: 0; /* Remove gap between stacked columns */
+  }
+
+  .mega-menu .sub-nav-wrap ul {
+    width: 100%; /* Full width for each navigation list */
+    min-width: unset;
+  }
+  
+  .mega-menu .sub-nav-wrap ul li a {
+      padding: 0.75rem 0;
+  }
+
+  /* Specific mobile active state adjustments from inline style */
+  .main-header .wrap .main-nav ul > li.has-child .mega-menu .wrap .sub-nav-wrap .has-sub-child.active,
+  .main-header .wrap .main-nav ul > li.has-child .mega-menu .wrap .sub-nav-wrap .has-sub-child .has-inner-sub-child.active-child {
+    max-height: 850px; /* Use a larger height for expanded sub-menus */
+    opacity: 1;
+  }
+
+  .mega-menu .left-div.ir-left-div,
+  .mega-menu .left-div.newsroom-left-div,
+  .mega-menu .left-div.career-left-div {
+    width: 100%;
+    padding: 1rem 0; /* Adjust padding for mobile */
+  }
+  
+  .mega-menu .left-div.ir-left-div ul li.list-text-red span {
+      position: static; /* Remove absolute positioning */
+      left: unset;
+  }
+}
+
+/* Part 3: Interactive Fidelity (Hover transitions, animations, mobile-specific overrides, icon styling) */
+
+/* General Interactive Transitions */
+a, button, input[type="submit"], .btn, .wrap, .card-wrap, .performace-driven-home-box-card {
+    transition: all 0.3s ease-in-out;
+}
+
+/* Header - Navigation Hover Effects */
+.main-header .wrap .main-nav ul > li > a {
+    position: relative;
+    padding-bottom: 5px; /* Adjust as needed for underline */
+    display: inline-block;
+    color: #1c1c1c; /* Default color, already in base CSS */
+}
+
+.main-header .wrap .main-nav ul > li:hover > a {
+    color: #dd052b; /* Mahindra Red on hover */
+}
+
+/* Underline animation for top-level links */
+.main-header .wrap .main-nav ul > li > a::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 2px;
+    background: #dd052b;
+    bottom: 0;
+    left: 0;
+    transition: width 0.3s ease-in-out;
+}
+
+.main-header .wrap .main-nav ul > li:hover > a::after {
+    width: 100
