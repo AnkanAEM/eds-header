@@ -106,7 +106,7 @@ export default async function decorate(block) {
   navUl.setAttribute('itemscope', '');
   navUl.setAttribute('itemtype', 'http://www.schema.org/SiteNavigationElement');
 
-  const l1Items = JSON.parse(getMetadata('nav-sections')); // Assuming nav-sections metadata holds the extracted data
+  const l1Items = JSON.parse(getMetadata('nav')); // Assuming nav-sections metadata holds the extracted data
 
   l1Items.forEach((item) => {
     const li = document.createElement('li');
