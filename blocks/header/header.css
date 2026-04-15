@@ -47,7 +47,7 @@
     left: 0;
     width: 100%; /* Full width */
     background-color: #fff;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15); /* More pronounced shadow */
+    box-shadow: 0 8px 20px rgb(0 0 0 / 15%); /* More pronounced shadow */
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out, transform 0.3s ease-in-out;
@@ -232,7 +232,7 @@
     left: calc(100% + 20px); /* Position to the right of parent with more space */
     top: -20px; /* Adjust top to align better */
     background-color: #f8f8f8; /* Lighter background for nested menus */
-    box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.08);
+    box-shadow: 2px 2px 10px rgb(0 0 0 / 8%);
     opacity: 0;
     visibility: hidden;
     transform: translateX(10px);
@@ -250,7 +250,7 @@
     left: calc(100% + 20px); /* Position to the right of parent with more space */
     top: -10px; /* Adjust top to align better */
     background-color: #f0f0f0; /* Even lighter background */
-    box-shadow: 1px 1px 8px rgba(0, 0, 0, 0.05);
+    box-shadow: 1px 1px 8px rgb(0 0 0 / 5%);
     opacity: 0;
     visibility: hidden;
     transform: translateX(10px);
@@ -285,11 +285,13 @@
     white-space: nowrap; /* Prevent wrapping for nested menu items */
     color: #333;
 }
+
 .main-header .wrap .main-nav ul > li.has-child .mega-menu .has-inner-sub-child ul li a::before {
     content: '- '; /* Add a dash for inner nested items */
     color: #888;
     margin-right: 5px;
 }
+
 .main-header .wrap .main-nav ul > li.has-child .mega-menu .has-sub-child ul li a:hover,
 .main-header .wrap .main-nav ul > li.has-child .mega-menu .has-inner-sub-child ul li a:hover {
     color: #dd052b;
@@ -311,6 +313,7 @@
     color: #777;
     vertical-align: middle; /* Align with number */
 }
+
 .main-header .wrap .main-nav ul > li.has-child .mega-menu .left-div.ir-left-div ul li.list-text-red {
     font-size: 1.8rem; /* Larger number */
     font-weight: 700;
@@ -318,6 +321,7 @@
     line-height: 1.2;
     padding-left: 0; /* Remove padding-left as bullet is not needed here */
 }
+
 .main-header .wrap .main-nav ul > li.has-child .mega-menu .left-div.ir-left-div ul li.list-text-red::before {
     content: none; /* Remove bullet point for IR specific facts */
 }
@@ -326,16 +330,19 @@
     flex-direction: column; /* Stack for IR sub-nav as it has fewer items */
     gap: 1rem;
 }
+
 .main-header .wrap .main-nav ul > li.has-child .mega-menu .sub-nav-wrap.element-block .sub-nav-wrap-one-link li a {
     font-size: 1.1rem;
     font-weight: 600;
     color: #000;
 }
+
 .main-header .wrap .main-nav ul > li.has-child .mega-menu .sub-nav-wrap.element-block .inner-sub-nav-wrap-list {
     display: flex;
     gap: 2rem;
     margin-top: 1rem;
 }
+
 .main-header .wrap .main-nav ul > li.has-child .mega-menu .sub-nav-wrap.element-block .inner-sub-nav-wrap-list ul {
     flex: 1;
 }
@@ -346,16 +353,19 @@
     border-top: 1px solid #e0e0e0;
     padding-top: 1.5rem;
 }
+
 .main-header .wrap .main-nav ul > li.has-child .mega-menu .left-div.newsroom-left-div .latest-two-press-release .content {
     margin-bottom: 1.5rem;
     padding-bottom: 1.5rem;
     border-bottom: 1px dashed #eee;
 }
+
 .main-header .wrap .main-nav ul > li.has-child .mega-menu .left-div.newsroom-left-div .latest-two-press-release .content:last-child {
     border-bottom: none;
     margin-bottom: 0;
     padding-bottom: 0;
 }
+
 .main-header .wrap .main-nav ul > li.has-child .mega-menu .left-div.newsroom-left-div .latest-two-press-release .content .desc p a {
     font-size: 1.05rem;
     font-weight: 600;
@@ -363,15 +373,18 @@
     text-decoration: none;
     line-height: 1.4;
 }
+
 .main-header .wrap .main-nav ul > li.has-child .mega-menu .left-div.newsroom-left-div .latest-two-press-release .content .desc p a:hover {
     color: #dd052b;
     text-decoration: underline;
 }
+
 .main-header .wrap .main-nav ul > li.has-child .mega-menu .left-div.newsroom-left-div .latest-two-press-release .content .date {
     font-size: 0.85rem;
     color: #888;
     margin-top: 0.5rem;
 }
+
 .main-header .wrap .main-nav ul > li.has-child .mega-menu .left-div.newsroom-left-div .latest-two-press-release .content .date em {
     font-style: normal;
     margin-right: 0.5rem;
@@ -384,11 +397,13 @@
     border-right: none;
     padding-right: 0;
 }
+
 .main-header .wrap .main-nav ul > li.has-child .mega-menu .sub-nav-wrap.careers-div {
     display: flex;
     flex-direction: column; /* Stack these columns */
     gap: 1.5rem;
 }
+
 .main-header .wrap .main-nav ul > li.has-child .mega-menu .sub-nav-wrap.careers-div ul li.top-level-li > a {
     font-weight: 700;
     font-size: 1.1rem;
@@ -396,7 +411,7 @@
 
 
 /* Responsive Adjustments for Mobile (Below 992px) */
-@media screen and (max-width: 991px) {
+@media screen and (width <= 991px) {
     .main-header .wrap .main-nav ul > li.has-child .mega-menu {
         position: static; /* Stack on mobile */
         opacity: 0; /* Hidden by default */
@@ -433,6 +448,7 @@
         border-bottom: 1px solid #dad8d4; /* Separator between sections */
         padding-bottom: 1.5rem;
     }
+
     .main-header .wrap .main-nav ul > li.has-child .mega-menu .left-div:last-child {
         border-bottom: none;
         padding-bottom: 0;
@@ -442,6 +458,7 @@
         font-size: 1.5rem;
         margin-bottom: 1rem;
     }
+
     .main-header .wrap .main-nav ul > li.has-child .mega-menu .left-div p {
         font-size: 0.9rem;
     }
@@ -451,12 +468,14 @@
         padding-left: 1rem;
         margin-bottom: 0.8rem;
     }
+
     .main-header .wrap .main-nav ul > li.has-child .mega-menu .left-div ul li.list-text-red span {
         font-size: 0.75rem;
         margin-left: 5px;
         display: inline; /* Keep next to number */
         vertical-align: baseline;
     }
+
     .main-header .wrap .main-nav ul > li.has-child .mega-menu .left-div ul li.list-text-red::before {
         font-size: 1.5rem;
         left: -5px;
@@ -475,6 +494,7 @@
         border-bottom: 1px solid #eee; /* Separator for mobile menu lists */
         padding-bottom: 1rem;
     }
+
     .main-header .wrap .main-nav ul > li.has-child .mega-menu .sub-nav-wrap ul:last-child {
         border-bottom: none;
         padding-bottom: 0;
@@ -484,11 +504,14 @@
         font-size: 1rem; /* Slightly larger links on mobile */
         padding-left: 0.5rem;
     }
+
     .main-header .wrap .main-nav ul > li.has-child .mega-menu .sub-nav-wrap ul li a:hover {
         padding-left: 10px; /* More pronounced indent on hover */
     }
+
     .main-header .wrap .main-nav ul > li.has-child .mega-menu .sub-nav-wrap ul li span svg {
         margin-left: 10px; /* Adjust margin for mobile */
+        transform: rotate(0deg); /* Reset for mobile default */
     }
 
 
@@ -528,20 +551,18 @@
         width: 100%; /* Override specific width for mobile */
         padding-right: 0;
     }
+
     .main-header .wrap .main-nav ul > li.has-child .mega-menu .left-div.ir-left-div ul li.list-text-red span {
         position: static; /* Stack content for mobile */
         display: inline;
         margin-left: 5px;
         font-size: 0.95rem;
     }
+
     .main-header .wrap .main-nav ul > li.has-child .mega-menu .left-div.ir-left-div ul li.list-text-red {
         font-size: 1.1rem; /* Adjust font size for mobile */
     }
 
-    /* Ensure arrow icons for sub-menus rotate on active */
-    .main-header .wrap .main-nav ul > li.has-child .mega-menu .sub-nav-wrap ul li span svg {
-        transform: rotate(0deg); /* Reset for mobile default */
-    }
     .main-header .wrap .main-nav ul > li.has-child .mega-menu .sub-nav-wrap ul li.top-level-li.active > span svg,
     .main-header .wrap .main-nav ul > li.has-child .mega-menu .has-sub-child ul li.first-level-li.active > span svg {
         transform: rotate(90deg); /* Rotate for active mobile sub-menus */
@@ -551,6 +572,7 @@
         flex-direction: column; /* Always stack for IR sub-nav on mobile */
         gap: 1rem;
     }
+
     .main-header .wrap .main-nav ul > li.has-child .mega-menu .sub-nav-wrap.element-block .inner-sub-nav-wrap-list {
         flex-direction: column;
         gap: 1rem;
@@ -559,12 +581,15 @@
     .main-header .wrap .main-nav ul > li.has-child .mega-menu .left-div.newsroom-left-div .latest-two-press-release .content .desc p a {
         font-size: 0.95rem;
     }
+
     .main-header .wrap .main-nav ul > li.has-child .mega-menu .left-div.newsroom-left-div .latest-two-press-release .content .date {
         font-size: 0.8rem;
     }
+
     .main-header .wrap .main-nav ul > li.has-child .mega-menu .left-div.newsroom-left-div {
         padding-top: 1.5rem; /* Add padding for newsroom left div */
     }
+
     .main-header .wrap .main-nav ul > li.has-child .mega-menu .left-div.newsroom-left-div .latest-two-press-release {
         padding-top: 0;
         border-top: none;
@@ -577,7 +602,7 @@
 }
 
 /* Adjustments for smaller mobile screens (below 768px) */
-@media screen and (max-width: 767px) {
+@media screen and (width <= 767px) {
     .main-header .wrap .main-nav ul > li.has-child.active > .mega-menu {
         max-height: 100vh; /* Allow it to take full screen height if needed */
         overflow-y: auto; /* Enable scrolling if content exceeds height */
@@ -585,16 +610,19 @@
 }
 
 /* Adjustments for very small mobile screens (below 480px) */
-@media screen and (max-width: 479px) {
+@media screen and (width <= 479px) {
     .main-header .wrap .main-nav ul > li.has-child .mega-menu .left-div-heading {
         font-size: 1.3rem;
     }
+
     .main-header .wrap .main-nav ul > li.has-child .mega-menu .left-div p {
         font-size: 0.8rem;
     }
+
     .main-header .wrap .main-nav ul > li.has-child .mega-menu .sub-nav-wrap ul li a {
         font-size: 0.95rem;
     }
+
     .main-header .wrap .main-nav ul > li.has-child .mega-menu .left-div.ir-left-div ul li.list-text-red {
         font-size: 1rem;
     }
@@ -607,6 +635,7 @@
  */
 
 /* ==================== Global Interactive States ==================== */
+
 /* Smooth transitions for common interactive properties */
 a, button, input[type="submit"], .btn {
     transition: all 0.3s ease-in-out;
@@ -659,9 +688,11 @@ a:hover, a:focus {
 .hamburger.active ul li:nth-child(1) {
     transform: translateY(9px) rotate(45deg);
 }
+
 .hamburger.active ul li:nth-child(2) {
     opacity: 0;
 }
+
 .hamburger.active ul li:nth-child(3) {
     transform: translateY(-9px) rotate(-45deg);
 }
@@ -679,6 +710,7 @@ a:hover, a:focus {
     color: #dd052b; /* Red color on hover */
     text-decoration: none;
 }
+
 .main-nav ul > li.hover-red > a::before {
     content: '';
     position: absolute;
@@ -689,6 +721,7 @@ a:hover, a:focus {
     background-color: #dd052b;
     transition: width 0.3s ease-in-out;
 }
+
 .main-nav ul > li.hover-red > a:hover::before {
     width: 100%;
 }
@@ -715,6 +748,7 @@ a:hover, a:focus {
     text-decoration: none;
     transition: color 0.2s ease-in-out;
 }
+
 .mega-menu a:hover {
     color: #dd052b;
     text-decoration: underline;
@@ -725,17 +759,21 @@ a:hover, a:focus {
     transition: all 0.3s ease-in-out;
     fill: #000; /* Default icon color */
 }
+
 .icon-nav li.search a .close {
     transition: all 0.3s ease-in-out;
     fill: #000; /* Default icon color */
     display: none; /* Hidden by default */
 }
+
 .icon-nav li.search.active a .lens {
     display: none;
 }
+
 .icon-nav li.search.active a .close {
     display: inline-block;
 }
+
 .icon-nav li.search a:hover .lens,
 .icon-nav li.search a:hover .close {
     fill: #dd052b;
@@ -748,6 +786,7 @@ a:hover, a:focus {
     visibility: hidden;
     pointer-events: none;
 }
+
 .icon-nav li.search.active .search-screen-wrap {
     opacity: 1;
     visibility: visible;
@@ -757,17 +796,20 @@ a:hover, a:focus {
 /* Search input and button */
 .search-wrap .input-text:focus {
     border-color: #dd052b;
-    box-shadow: 0 0 0 0.15rem rgba(221, 5, 43, 0.25);
+    box-shadow: 0 0 0 0.15rem rgb(221 5 43 / 25%);
 }
+
 .search-wrap .submit-button {
     background-color: #000;
     color: #fff;
     border-radius: 0 6px 6px 0;
     transition: background-color 0.3s ease-in-out;
 }
+
 .search-wrap .submit-button:hover {
     background-color: #dd052b;
 }
+
 .search-wrap .submit-button svg path {
     fill: #fff; /* Ensure arrow is white */
     transition: fill 0.3s ease-in-out;
@@ -778,24 +820,28 @@ a:hover, a:focus {
     cursor: pointer;
     transition: background-color 0.2s ease-in-out, color 0.2s ease-in-out;
 }
+
 .search-suggestions-wrap .tokens-wrap ul li:hover {
     background-color: #f0f0f0;
     color: #dd052b;
 }
 
 /* ==================== Spotlight Section (Slider) ==================== */
+
 /* Swiper navigation buttons */
 .swiper-button-prev,
 .swiper-button-next {
     transition: opacity 0.3s ease-in-out;
 }
+
 .swiper-button-prev:hover,
 .swiper-button-next:hover {
     opacity: 0.8;
 }
+
 .swiper-button-prev svg path,
 .swiper-button-next svg path {
-    fill: currentColor; /* Inherits from parent, typically white */
+    fill: currentcolor; /* Inherits from parent, typically white */
 }
 
 /* Quick links hover */
@@ -806,6 +852,7 @@ a:hover, a:focus {
     text-decoration: none;
     padding-bottom: 5px; /* Space for the underline */
 }
+
 .quick-links-div li a.with-full-underline::before {
     content: '';
     position: absolute;
@@ -816,6 +863,7 @@ a:hover, a:focus {
     background-color: #dd052b; /* Red underline */
     transition: width 0.3s ease-in-out;
 }
+
 .quick-links-div li a.with-full-underline:hover::before {
     width: 100%;
 }
@@ -826,13 +874,15 @@ a:hover, a:focus {
     overflow: hidden; /* For image scaling effect */
     transition: box-shadow 0.3s ease-in-out;
 }
+
 .our-business-verticals .col .wrap:hover {
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 8px 16px rgb(0 0 0 / 20%);
 }
 
 .our-business-verticals .col .wrap .image img {
     transition: transform 0.4s ease-in-out;
 }
+
 .our-business-verticals .col .wrap:hover .image img {
     transform: scale(1.05);
 }
@@ -842,13 +892,15 @@ a:hover, a:focus {
     color: #fff; /* Text color on image */
     transition: background-color 0.3s ease-in-out;
 }
+
 .our-business-verticals .col .wrap:hover .title {
-    background-color: rgba(221, 5, 43, 0.8); /* Red overlay on hover */
+    background-color: rgb(221 5 43 / 80%); /* Red overlay on hover */
 }
 
 .our-business-verticals .col .wrap .title img { /* Arrow icon */
     transition: transform 0.3s ease-in-out;
 }
+
 .our-business-verticals .col .wrap:hover .title img {
     transform: translateX(5px); /* Move arrow slightly on hover */
 }
@@ -860,16 +912,20 @@ a:hover, a:focus {
     display: block;
     text-decoration: none;
 }
+
 .purpose-led-grid .card-wrap .card-image img {
     transition: transform 0.4s ease-in-out;
 }
+
 .purpose-led-grid .card-wrap:hover .card-image img {
     transform: scale(1.05);
 }
+
 .purpose-led-grid .card-wrap .card-text {
     color: #000; /* Default text color */
     transition: color 0.3s ease-in-out;
 }
+
 .purpose-led-grid .card-wrap:hover .card-text {
     color: #dd052b; /* Change text color on hover */
 }
@@ -879,27 +935,34 @@ a:hover, a:focus {
     position: relative;
     overflow: hidden;
 }
+
 .performace-driven-cards-link .performace-driven-card-wrapper .card-image img {
     transition: transform 0.4s ease-in-out;
 }
+
 .performace-driven-cards-link:hover .performace-driven-card-wrapper .card-image img {
     transform: scale(1.05);
 }
+
 .performace-driven-cards-link .performace-driven-home-box-card {
     transition: background-color 0.3s ease-in-out;
 }
+
 .performace-driven-cards-link:hover .performace-driven-home-box-card {
-    background-color: rgba(221, 5, 43, 0.8); /* Red overlay on hover */
+    background-color: rgb(221 5 43 / 80%); /* Red overlay on hover */
 }
+
 .performace-driven-cards-link .performace-driven-home-box-card p {
     color: #000; /* Default text color */
     transition: color 0.3s ease-in-out;
 }
+
 .performace-driven-cards-link:hover .performace-driven-home-box-card p {
     color: #fff; /* White text on red hover */
 }
 
 /* ==================== "Latest News" (Twitter Feed) - Elfsight Widget Overrides ==================== */
+
 /* The provided HTML has inline styles for the Elfsight widget, which makes direct CSS overrides
    challenging and often requires !important. I'll include general interactive overrides
    based on common patterns, but specific widget behavior might be controlled by its JS/internal CSS. */
@@ -910,16 +973,19 @@ a:hover, a:focus {
     color: #1da1f2 !important; /* Twitter blue */
     fill: #1da1f2 !important;
 }
+
 .eapps-twitter-feed-posts-item-actions-item-repost:hover .eapps-twitter-feed-posts-item-actions-item-text,
 .eapps-twitter-feed-posts-item-actions-item-repost:hover .eapps-twitter-feed-posts-item-actions-item-icon svg {
     color: #17bf64 !important; /* Twitter green */
     fill: #17bf64 !important;
 }
+
 .eapps-twitter-feed-posts-item-actions-item-likes:hover .eapps-twitter-feed-posts-item-actions-item-text,
 .eapps-twitter-feed-posts-item-actions-item-likes:hover .eapps-twitter-feed-posts-item-actions-item-icon svg {
     color: #e0235e !important; /* Twitter red */
     fill: #e0235e !important;
 }
+
 .eapps-twitter-feed-posts-item-actions-item-share:hover .eapps-twitter-feed-posts-item-actions-item-text,
 .eapps-twitter-feed-posts-item-actions-item-share:hover .eapps-twitter-feed-posts-item-actions-item-icon svg {
     color: #32a0c2 !important; /* A shade of blue for share */
@@ -930,6 +996,7 @@ a:hover, a:focus {
 .eui-popover-content-item {
     transition: background-color 0.2s ease-in-out;
 }
+
 .eui-popover-content-item:hover {
     background-color: #fafafa; /* Light background on hover */
 }
@@ -938,6 +1005,7 @@ a:hover, a:focus {
 .eapps-twitter-feed-posts-show-more {
     transition: background-color 0.3s ease-in-out;
 }
+
 .eapps-twitter-feed-posts-show-more:hover {
     background-color: #dddedf;
 }
@@ -946,15 +1014,18 @@ a:hover, a:focus {
 .work-with-us .slides .wrap .image-wrap img {
     transition: transform 0.4s ease-in-out;
 }
+
 .work-with-us .slides .wrap:hover .image-wrap img {
     transform: scale(1.05);
 }
+
 .work-with-us .slides .wrap .content-wrap .btn-primary {
     background-color: #dd052b;
     border-color: #dd052b;
     color: #fff;
     transition: background-color 0.3s ease-in-out, border-color 0.3s ease-in-out;
 }
+
 .work-with-us .slides .wrap .content-wrap .btn-primary:hover {
     background-color: #a30421; /* Darker red */
     border-color: #a30421;
@@ -966,6 +1037,7 @@ a:hover, a:focus {
     transition: color 0.2s ease-in-out;
     position: relative; /* For custom arrow/indicator */
 }
+
 .faqs-section .acco-div ul li h2:hover {
     color: #dd052b;
 }
@@ -976,6 +1048,7 @@ a:hover, a:focus {
     overflow: hidden;
     transition: max-height 0.4s ease-in-out, padding 0.4s ease-in-out;
 }
+
 .faqs-section .acco-div ul li .acco-content-div.show {
     max-height: 500px; /* Adjust as needed for content */
     padding: 15px 0;
@@ -991,6 +1064,7 @@ a:hover, a:focus {
     font-size: 1.5em;
     transition: transform 0.3s ease-in-out;
 }
+
 .faqs-section .acco-div ul li.active h2::after {
     content: '-';
     transform: translateY(-50%) rotate(0deg); /* No rotation for minus */
@@ -1000,6 +1074,7 @@ a:hover, a:focus {
 .footer-main .social-wrap li a {
     transition: opacity 0.3s ease-in-out;
 }
+
 .footer-main .social-wrap li a:hover {
     opacity: 0.8;
 }
@@ -1009,6 +1084,7 @@ a:hover, a:focus {
     text-decoration: none;
     transition: color 0.2s ease-in-out;
 }
+
 .footer-main .footer-menu .link-blocks .head > span > a:hover {
     color: #dd052b;
 }
@@ -1018,6 +1094,7 @@ a:hover, a:focus {
     text-decoration: none;
     transition: color 0.2s ease-in-out;
 }
+
 .footer-main .footer-menu .link-blocks .head .footer-inner-list li a:hover {
     color: #dd052b;
 }
@@ -1028,6 +1105,7 @@ a:hover, a:focus {
     overflow: hidden;
     transition: max-height 0.3s ease-in-out;
 }
+
 .footer-main .footer-menu .link-blocks .head .footer-inner-list.active {
     max-height: 500px; /* Adjust as needed */
 }
@@ -1038,6 +1116,7 @@ a:hover, a:focus {
     overflow: hidden;
     transition: max-height 0.3s ease-in-out;
 }
+
 .has-footer-sub-child.active, .has-footer-inner-sub-child.active-inner-child {
     max-height: 850px; /* As seen in HTML, adjust for content */
 }
@@ -1046,30 +1125,34 @@ a:hover, a:focus {
 .footer-main .footer-menu .link-blocks .head .footer-inner-list li > span svg path {
     transition: fill 0.2s ease-in-out, transform 0.2s ease-in-out;
 }
+
 .footer-main .footer-menu .link-blocks .head .footer-inner-list li.active > span svg path {
     transform: rotate(90deg); /* Rotate arrow when active */
     fill: #dd052b;
 }
 
 /* ==================== Mobile-Specific Overrides (for Interactive Elements) ==================== */
-@media screen and (max-width: 991px) {
+@media screen and (width <= 991px) {
     /* Header adjustments for interactive elements */
     .main-header .wrap .main-nav.active {
         overflow-y: auto; /* Allow scrolling for extensive menus */
         padding-bottom: 3rem;
     }
+
     .mobile-menus-icon ul li.mail,
     .mobile-menus-icon ul li.search {
         border-bottom: 1px solid #dad8d4;
         width: 100% !important;
         padding: 15px 0 !important;
     }
+
     .mobile-menus-icon ul li.search.active .search-screen-wrap {
         display: block !important;
         opacity: 1;
         visibility: visible;
         pointer-events: auto;
     }
+
     .mobile-menus-icon ul li.search .search-screen-wrap {
         display: none !important; /* Hide search screen by default on mobile */
     }
@@ -1080,6 +1163,7 @@ a:hover, a:focus {
         border-right: none !important; /* Remove separator */
         border-bottom: 1px solid #eee; /* Add bottom separator */
     }
+
     .quick-links-parents-div .quick-links-div li:last-child {
         border-bottom: none;
     }
@@ -1099,12 +1183,13 @@ a:hover, a:focus {
     .faqs-section .acco-div ul li h2 {
         padding-right: 40px; /* Space for the + / - icon */
     }
+
     .faqs-section .acco-div ul li h2::after {
         right: 20px;
     }
 }
 
-@media screen and (max-width: 768px) {
+@media screen and (width <= 768px) {
     /* Further adjustments for smaller mobile devices */
     .main-header .wrap .main-nav.active:has(ul li.search.active) {
         overflow-y: visible; /* Prevent scrollbar on search overlay */
