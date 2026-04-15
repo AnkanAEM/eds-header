@@ -1,591 +1,321 @@
-/* Core Layout for the main header wrapper */
+/* Part 1: Core Layout */
+
 .nav-wrapper {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  box-sizing: border-box;
+  justify-content: space-between; /* Distributes items (brand, sections, tools) across the wrapper */
+  align-items: center; /* Vertically aligns all direct children */
+  width: 100%; /* Occupy full available width of its parent */
+  max-width: 1440px; /* Common maximum width for content within a container */
+  margin: 0 auto; /* Centers the wrapper horizontally on larger screens */
+  padding: 0 24px; /* Horizontal padding for inner content */
+  min-height: 80px; /* Minimum height for the header area */
 }
 
-/* Core Layout for the brand/logo area */
 .nav-brand {
-  flex-shrink: 0;
-  /* Specific width often defined by design for logos */
-  /* Example: width: 180px; */
-  /* z-index ensures it's above other elements if needed, but not strictly layout */
+  flex-shrink: 0; /* Prevents the brand area from shrinking */
+  /* Further styling for the logo (e.g., width, height) would be applied to an image or specific brand elements within this container. */
 }
 
-/* Core Layout for the main navigation sections */
 .nav-sections {
-  display: flex;
-  flex-grow: 1;
-  justify-content: center;
-  box-sizing: border-box;
+  display: flex; /* Arranges navigation items horizontally */
+  align-items: center; /* Vertically aligns individual navigation items */
+  flex-grow: 1; /* Allows the navigation section to expand and take available horizontal space */
+  justify-content: center; /* Centers the navigation items within the allocated space */
+  gap: 32px; /* Spacing between individual navigation links */
 }
 
-/* Core Layout for auxiliary navigation tools/icons */
 .nav-tools {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-  /* margin-left: auto; is often used here to push tools to the right when flex-grow is on nav-sections */
-  box-sizing: border-box;
+  display: flex; /* Arranges tool items (e.g., search, contact icons) horizontally */
+  align-items: center; /* Vertically aligns individual tool items */
+  flex-shrink: 0; /* Prevents the tools area from shrinking */
+  gap: 20px; /* Spacing between individual tool icons/links */
 }
 
-/* Part 2: Mega-Menu Fidelity for https://www.mahindra.com/ */
-
-/* Root variables for common colors (assuming these from the site's palette) */
-:root {
-  --color-mahindra-red: #DD052B;
-  --color-dark: #1c1c1c; /* A deep charcoal/black */
-  --color-text-grey: #657786; /* For descriptive text, from Twitter feed data */
-  --color-light-grey: #fafafa; /* For subtle background variations */
-  --color-white: #fff;
-  --color-border-light: rgba(0, 0, 0, 0.1); /* Light border/shadow color */
-}
-
-/* ------------------------------------ */
-/* Base Mega-Menu Container Styles      */
-/* ------------------------------------ */
-.main-header .main-nav ul > li.has-child {
-  position: relative; /* Essential for absolute positioning of mega-menu */
-}
-
-.main-header .main-nav ul > li.has-child .mega-menu {
+/* Mega-Menu Container Styles */
+header.main-header .main-nav ul > li.has-child > .mega-menu {
   position: absolute;
   left: 0;
-  width: 100%; /* Mega-menu spans the full width of the main header */
-  background-color: var(--color-white);
-  box-shadow: 0 4px 8px var(--color-border-light); /* Subtle shadow for depth */
+  right: 0;
+  /* top: varies based on header height, e.g., 101px on desktop */
+  background-color: #fff;
+  padding: 3.5rem 0;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease-in-out;
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out, transform 0.3s ease-in-out;
-  transform: translateY(10px); /* Slight initial offset for dropdown animation */
-  z-index: 1000; /* Ensures the menu is above other page content */
-  pointer-events: none; /* Prevents interaction when hidden */
+  pointer-events: none;
 }
 
-/* Adjust top positioning for desktop, based on observed layout */
-@media screen and (min-width: 992px) {
-  .main-header .main-nav ul > li.has-child .mega-menu {
-    top: 101px; /* Specific value observed in the provided HTML's inline styles */
-  }
-}
-
-/* State when parent main nav item is hovered */
-.main-header .main-nav ul > li.has-child:hover .mega-menu {
+/* Mega-Menu Visibility on Hover */
+header.main-header .main-nav ul > li.has-child:hover > .mega-menu {
   opacity: 1;
   visibility: visible;
-  transform: translateY(0);
-  pointer-events: auto; /* Allows interaction when visible */
+  pointer-events: all;
+  z-index: 10; /* Ensure it overlays other content */
 }
 
-/* ------------------------------------ */
-/* Inner Layout (center-div) for multi-column structure */
-/* ------------------------------------ */
-.main-header .main-nav .mega-menu .wrap.container .center-div {
+/* Mega-Menu Inner Layout (Desktop: two main columns) */
+.mega-menu .center-div {
   display: flex;
   justify-content: space-between;
-  padding: 30px;
-  gap: 30px; /* Horizontal spacing between left-div and sub-nav-wrap */
-  max-width: 1200px; /* Constrain content width */
-  margin: 0 auto; /* Center content horizontally */
+  align-items: flex-start;
+  max-width: 1300px; /* Or appropriate container width */
+  margin: 0 auto;
+  padding: 0 15px; /* Horizontal padding for smaller screens within max-width */
 }
 
-/* ------------------------------------ */
-/* Left-Div Styling (e.g., purpose, key facts, latest news snippets) */
-/* ------------------------------------ */
-.main-header .main-nav .mega-menu .wrap .center-div .left-div {
-  flex-shrink: 0; /* Prevents shrinking */
-  padding-right: 30px;
-  border-right: 1px solid var(--color-border-light); /* Visual separator */
-  /* Specific width adjustments for different left-div types might be needed
-     (e.g., .ir-left-div, .newsroom-left-div) but generalized here */
+/* Left Section of Mega-Menu */
+.mega-menu .left-div {
+  width: 30%; /* Example width, can vary */
+  padding-right: 2rem;
+  box-sizing: border-box;
 }
 
-.main-header .main-nav .mega-menu .wrap .center-div .left-div-heading {
-  font-size: 1.8rem;
+.mega-menu .left-div-heading {
+  font-size: 1.5rem;
   font-weight: 700;
-  margin-bottom: 15px;
-  color: var(--color-dark);
+  margin-bottom: 1rem;
+  color: #1c1c1c; /* Dark text color */
 }
 
-.main-header .main-nav .mega-menu .wrap .center-div .left-div-heading a {
-  color: inherit;
-  text-decoration: none;
-  border-bottom: 2px solid transparent;
-  transition: border-bottom 0.3s ease, color 0.3s ease;
-}
-
-.main-header .main-nav .mega-menu .wrap .center-div .left-div-heading a:hover {
-  border-bottom: 2px solid rgba(0, 0, 0, 0.15); /* Based on inline style */
-  color: var(--color-dark);
-}
-
-.main-header .main-nav .mega-menu .wrap .center-div .left-div .left-div-desc,
-.main-header .main-nav .mega-menu .wrap .center-div .left-div .left-div-subdesc {
-  font-size: 0.95rem;
-  line-height: 1.6;
-  color: var(--color-text-grey);
-  margin-bottom: 10px;
-}
-
-.main-header .main-nav .mega-menu .wrap .center-div .left-div ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.main-header .main-nav .mega-menu .wrap .center-div .left-div ul li {
-  font-size: 1.1rem;
-  line-height: 1.8;
-  color: var(--color-dark);
-}
-
-/* Specific styling for highlighted list items (e.g., facts, stats) */
-.main-header .main-nav .mega-menu .wrap .center-div .left-div ul li.list-text-red {
-  color: var(--color-mahindra-red);
-  position: relative;
-  padding-left: 20px;
-}
-
-.main-header .main-nav .mega-menu .wrap .center-div .left-div ul li.list-text-red::before {
-  content: '•';
-  position: absolute;
-  left: 0;
-  color: var(--color-mahindra-red);
-  font-size: 1.2em;
-  top: 0;
-}
-
-.main-header .main-nav .mega-menu .wrap .center-div .left-div ul li.list-text-red span {
-  display: block;
-  font-size: 0.85rem;
-  color: var(--color-text-grey);
-  margin-top: -5px; /* Adjust spacing */
-}
-
-/* Investor Relations specific left-div width and span positioning for desktop */
-@media screen and (min-width: 992px) {
-  .main-header .wrap .main-nav .left-div.ir-left-div {
-    width: 516px; /* Explicit width as seen in HTML */
-  }
-  .main-header .wrap .main-nav .left-div.ir-left-div ul li.list-text-red span {
-    left: 200px; /* Adjusted left for span within IR section */
-  }
-}
-
-/* Newsroom left-div styling for press releases */
-.main-header .main-nav .mega-menu .wrap .center-div .left-div.newsroom-left-div .latest-two-press-release {
-  margin-top: 20px;
-}
-
-.main-header .main-nav .mega-menu .wrap .center-div .left-div.newsroom-left-div .slides .content .desc p a {
-  font-weight: 600;
-  color: var(--color-dark);
-  text-decoration: none;
-}
-.main-header .main-nav .mega-menu .wrap .center-div .left-div.newsroom-left-div .slides .content .desc p a:hover {
-  color: var(--color-mahindra-red);
-}
-
-.main-header .main-nav .mega-menu .wrap .center-div .left-div.newsroom-left-div .slides .content .desc .date {
-  font-size: 0.85rem;
-  color: var(--color-text-grey);
-  margin-top: 5px;
-}
-
-/* ------------------------------------ */
-/* Sub-Nav-Wrap Styling (Menu items list) */
-/* ------------------------------------ */
-.main-header .main-nav .mega-menu .wrap .center-div .sub-nav-wrap {
-  flex-grow: 1; /* Allows it to take remaining space */
-  display: flex;
-  flex-wrap: wrap; /* Allows multiple columns of lists */
-  gap: 20px 40px; /* Vertical and horizontal spacing between `ul` columns */
-}
-
-.main-header .main-nav .mega-menu .wrap .center-div .sub-nav-wrap ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  flex-basis: calc(50% - 20px); /* Aim for two columns initially */
-}
-
-.main-header .main-nav .mega-menu .wrap .center-div .sub-nav-wrap ul li {
-  margin-bottom: 10px;
-}
-
-.main-header .main-nav .mega-menu .wrap .center-div .sub-nav-wrap ul li a {
-  color: var(--color-dark);
-  text-decoration: none;
-  font-size: 1rem;
-  transition: color 0.2s ease;
-  display: flex; /* To align link text and arrow icon */
-  align-items: center;
-}
-
-.main-header .main-nav .mega-menu .wrap .center-div .sub-nav-wrap ul li a:hover {
-  color: var(--color-mahindra-red);
-}
-
-/* Styling for arrow icons indicating sub-menus */
-.main-header .main-nav .mega-menu .wrap .center-div .sub-nav-wrap ul li span svg {
-  width: 10px;
-  height: 10px;
-  margin-left: 8px;
-  fill: var(--color-dark); /* Default icon color */
-  transition: fill 0.2s ease, transform 0.2s ease;
-}
-
-/* Arrow icon hover/active state */
-.main-header .main-nav .mega-menu .wrap .center-div .sub-nav-wrap ul li:hover > span svg {
-  fill: var(--color-mahindra-red);
-  transform: translateX(3px); /* Subtle slide effect */
-}
-
-/* Investor Relations specific sub-nav layout for list grouping */
-.main-header .main-nav .mega-menu .wrap .center-div .sub-nav-wrap.element-block {
-    flex-direction: column; /* Stacks these content blocks */
-    gap: 0;
-}
-
-.main-header .main-nav .mega-menu .wrap .center-div .sub-nav-wrap.element-block .inner-sub-nav-wrap-list {
-    display: flex;
-    gap: 40px; /* Spacing between the two ul columns within this block */
-    flex-wrap: wrap;
-    margin-top: 20px; /* Space from the single link above */
-}
-
-.main-header .main-nav .mega-menu .wrap .center-div .sub-nav-wrap.element-block .inner-sub-nav-wrap-list ul {
-    flex-basis: calc(50% - 20px); /* Two columns within this sub-section */
-    margin-bottom: 0;
-}
-
-/* ------------------------------------ */
-/* Nested Sub-Menus (Desktop & Mobile)  */
-/* ------------------------------------ */
-
-/* Desktop-specific behavior for nested sub-menus */
-@media screen and (min-width: 992px) {
-  .main-header .main-nav .mega-menu .has-sub-child,
-  .main-header .main-nav .mega-menu .
-
-/* Part 3: Interactive Fidelity */
-
-/* ==========================================================================
-   1. General Interactive Transitions & Hovers
-   ========================================================================== */
-
-/* Header & Navigation */
-.main-header .wrap {
-  transition: all 0.3s ease-in-out;
-}
-
-.main-header .wrap .main-nav ul > li.has-child .mega-menu .wrap .center-div .left-div .left-div-heading a:hover {
-  border-bottom: 2px solid #00000026; /* Example: Adds underline on hover */
+.mega-menu .left-div-heading a:hover {
+  border-bottom: 2px solid #00000026; /* Subtle underline effect */
   color: #1c1c1c;
 }
 
-/* Search Icon and Screen */
-.main-header .wrap li.search:hover::before {
-  background-color: transparent !important;
+.mega-menu .left-div-desc,
+.mega-menu .left-div-subdesc {
+  font-size: 1rem;
+  line-height: 1.5;
+  color: #555; /* Medium grey text */
+  margin-top: 0.5rem;
 }
 
-/* Quick Links (from spotlight section) */
-.quick-links-div a {
-  /* Assumed base transition for links if not explicit */
-  transition: color 0.3s ease, border-color 0.3s ease;
+.mega-menu .left-div-subdesc {
+  font-weight: bold; /* As seen in "Bold. Agile. Collaborative." */
+  color: #1c1c1c;
 }
 
-.quick-links-div a:hover {
-  /* Example: Add hover style if not explicitly provided for these links */
-  color: #dd052b; /* Example: Mahindra brand red */
-  border-color: #dd052b;
+/* Specific styling for Investor Relations left-div highlights */
+.mega-menu .left-div.ir-left-div ul {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0 0 0;
+}
+.mega-menu .left-div.ir-left-div ul li.list-text-red {
+  display: flex;
+  align-items: center;
+  justify-content: space-between; /* To align number to the right */
+  margin-bottom: 0.5rem;
+  color: #1c1c1c;
+  font-size: 1.1rem;
+}
+.mega-menu .left-div.ir-left-div ul li.list-text-red span {
+  font-size: 1.5rem; /* Larger font for the number */
+  font-weight: bold;
+  color: #dd052b; /* Primary red color */
+  /* Specific positioning can be added with `position: relative` and `left` */
+}
+@media screen and (min-width: 992px) {
+  .main-header .wrap .main-nav .left-div.ir-left-div {
+      width: 516px; /* Specific width for IR left div on desktop */
+  }
+  .main-header .wrap .main-nav .left-div.ir-left-div ul li.list-text-red span {
+     left: 200px; /* Adjusted position on desktop */
+  }
 }
 
-/* Buttons */
-.btn-primary {
-  transition: background-color 0.3s ease, color 0.3s ease;
+/* Specific styling for Newsroom left-div press releases */
+.mega-menu .left-div.newsroom-left-div .latest-two-press-release .slides .wrap .content .desc p a {
+  color: #1c1c1c;
+  text-decoration: none;
+  font-weight: 500;
+  line-height: 1.4;
+  display: block;
 }
-
-.btn-primary:hover {
-  opacity: 0.9; /* Example: slight opacity change on hover */
-}
-
-/* Image Cards (Purpose Led, Performance Driven, Future Ready) */
-.purpose-led-grid .card-wrap .card-image img,
-.performace-driven-card-wrapper .card-image img {
-  transition: transform 0.3s ease;
-}
-
-.purpose-led-grid .card-wrap:hover .card-image img {
-  transform: scale(1.05);
-}
-
-.performace-driven-cards-link .performace-driven-card-wrapper .card-image img {
-  transition: transform 0.3s ease;
-}
-
-.performace-driven-cards-link:hover .performace-driven-card-wrapper .card-image img {
-  transform: scale(1.05); /* Assuming similar effect for these image cards */
-}
-
-/* What we do section links */
-.our-business-verticals .wrap .title img {
-  transition: transform 0.3s ease;
-}
-
-.our-business-verticals .wrap:hover .title img {
-  transform: translateX(5px); /* Example: slight arrow movement on hover */
-}
-
-
-/* FAQs Accordion */
-.faqs-section .acco-div li h2 {
-  transition: background-color 0.3s ease, color 0.3s ease;
-  cursor: pointer;
-}
-
-.faqs-section .acco-div li.active h2,
-.faqs-section .acco-div li h2:hover {
-  background-color: #f0f0f0; /* Example: Highlight active/hovered FAQ */
-}
-
-.faqs-section .acco-div .acco-content-div {
-  transition: max-height 0.5s ease-out, opacity 0.3s ease-out;
-  overflow: hidden;
-}
-
-/* Footer Links */
-.footer-main .footer-menu .link-blocks .head .footer-inner-list li > a {
-  transition: color 0.3s ease;
-}
-
-.footer-main .footer-menu .link-blocks .head .footer-inner-list li:hover > a,
-.footer-main .footer-menu .link-blocks .head .footer-inner-list li:has(.has-footer-sub-child.active) > a,
-.footer-main .footer-menu .link-blocks .head .footer-inner-list li:has(.has-footer-inner-sub-child.active-inner-child) > a {
+.mega-menu .left-div.newsroom-left-div .latest-two-press-release .slides .wrap .content .desc p a:hover {
   color: #dd052b;
-}
-
-.footer-main .footer-menu .link-blocks .head .footer-inner-list li > span svg path {
-  transition: stroke 0.3s ease, fill 0.3s ease;
-}
-
-.footer-main .footer-menu .link-blocks .head .footer-inner-list li:hover > span svg path,
-.footer-main .footer-menu .link-blocks .head .footer-inner-list li:has(.has-footer-sub-child.active) > span svg path,
-.footer-main .footer-menu .link-blocks .head .footer-inner-list li:has(.has-footer-inner-sub-child.active-inner-child) > span svg path {
-  stroke: #dd052b !important;
-  fill: #dd052b !important;
-}
-
-.footer-main .footer-menu .link-blocks .head .footer-inner-list li:hover > span,
-.footer-main .footer-menu .link-blocks .head .footer-inner-list li:has(.has-footer-sub-child.active) > span,
-.footer-main .footer-menu .link-blocks .head .footer-inner-list li:has(.has-footer-inner-sub-child.active-inner-child) > span {
-  cursor: pointer;
-}
-
-/* ==========================================================================
-   2. Specific Component Interactions (e.g., ElfSight Twitter Feed, Swiper)
-   ========================================================================== */
-
-/* ElfSight Widget Toolbar */
-div.eapps-widget.eapps-widget-show-toolbar:before {
-  transition: border 0.3s ease;
-}
-
-.eapps-widget-toolbar {
-  transition: all 0.3s ease;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.eapps-widget:hover .eapps-widget-toolbar {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.eapps-widget-toolbar-panel {
-  transition: all 0.3s ease;
-  opacity: 0;
-}
-
-.eapps-widget:hover .eapps-widget-toolbar-panel {
-  opacity: 1;
-}
-
-.eapps-widget-toolbar-panel-share:hover .eapps-widget-toolbar-panel-share-block {
-  opacity: 1;
-  pointer-events: all;
-}
-
-.eapps-widget-toolbar-panel-share-block {
-  opacity: 0;
-  pointer-events: none;
-  transition: all 0.3s ease;
-}
-
-.eapps-widget-toolbar-panel-share-block:hover {
-  opacity: 1;
-  pointer-events: all;
-}
-
-.eapps-widget-toolbar-panel-share-block-actions-item {
-  transition: all 0.3s ease;
-}
-
-.eapps-widget-toolbar-panel-share-block-actions-item:hover {
-  background-color: #fafafa;
-}
-
-/* ElfSight Twitter Feed Header */
-.eapps-twitter-feed-header {
-  opacity: 0;
-  transition: 0.3s ease all;
-}
-
-.eapps-twitter-feed-header-show {
-  opacity: 1;
-}
-
-.eapps-twitter-feed-header-title-hash a:hover {
   text-decoration: underline;
 }
-
-.eapps-twitter-feed-header-user-info-name-wrapper .eapps-twitter-feed-header-user-info-screen-name a:hover,
-.eapps-twitter-feed-header-user-info-name-wrapper .eapps-twitter-feed-header-user-info-name a:hover {
-  text-decoration: underline;
-  color: #14171a; /* Specific color for hover */
+.mega-menu .left-div.newsroom-left-div .latest-two-press-release .slides .wrap .content .date {
+  font-size: 0.85rem;
+  color: #666;
+  margin-top: 0.5rem;
+}
+.mega-menu .left-div.newsroom-left-div .latest-two-press-release .slides .wrap .content .date em {
+  font-style: normal;
+  margin-right: 0.5rem;
 }
 
-.eapps-twitter-feed-color-scheme--dark .eapps-twitter-feed-header-user-info-name-wrapper .eapps-twitter-feed-header-user-info-screen-name a:hover,
-.eapps-twitter-feed-color-scheme--dark .eapps-twitter-feed-header-user-info-name-wrapper .eapps-twitter-feed-header-user-info-name a:hover {
-  color: #e1e1e1; /* Dark scheme hover color */
+/* Right Section of Mega-Menu (Navigation Columns) */
+.mega-menu .sub-nav-wrap {
+  width: 65%; /* Example width, adjust based on left-div */
+  display: flex;
+  gap: 20px; /* Space between navigation columns */
+  flex-wrap: wrap; /* Allow columns to wrap on smaller screens */
 }
 
-.eapps-twitter-feed-header-user-info-follow {
-  transition: 0.2s ease all;
-  opacity: 1;
+.mega-menu .sub-nav-wrap ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  flex: 1; /* Distribute space evenly among columns */
+  min-width: 150px; /* Minimum width for each column to prevent excessive squeezing */
 }
 
-.eapps-twitter-feed-header-user-info-follow:hover {
+.mega-menu .sub-nav-wrap ul li {
+  margin-bottom: 0.25rem; /* Spacing between list items */
+}
+
+.mega-menu .sub-nav-wrap ul li a {
+  display: block;
+  padding: 0.5rem 0;
+  color: #1c1c1c;
   text-decoration: none;
-  opacity: 0.9;
+  transition: color 0.2s ease-in-out;
+  font-size: 1rem;
 }
 
-/* ElfSight Twitter Feed Posts */
-.eapps-twitter-feed-posts-item-show {
-  opacity: 1; /* Not a hover, but a state change for visibility */
-}
-
-.eapps-twitter-feed-posts-item-repost-status-label-link:hover {
+.mega-menu .sub-nav-wrap ul li a:hover {
+  color: #dd052b; /* Primary red on hover */
   text-decoration: underline;
 }
 
-.eapps-twitter-feed-posts-item-user a:hover {
-  text-decoration: underline;
+.mega-menu .sub-nav-wrap ul li.top-level-li > a {
+  font-weight: bold; /* Differentiate top-level links */
+  color: #000; /* Stronger color for top-level links */
 }
 
-.eapps-twitter-feed-posts-item-user-post {
-  transition: 0.3s ease all;
-}
-
-.eapps-twitter-feed-posts-item-user-post:hover {
-  opacity: 1;
-}
-
-.eapps-twitter-feed-posts-item-user-post:hover svg {
-  fill: #1da1f2;
-}
-
-.eapps-twitter-feed-posts-item-text a {
-  transition: all 0.2s ease;
-}
-
-.eapps-twitter-feed-posts-item-text a:hover {
-  text-decoration: underline;
-}
-
-.eapps-twitter-feed-posts-item-media-item:hover .eapps-twitter-feed-posts-item-media-item-play-icon {
-  transform: translate3d(-50%, -50%, 0) scale(1);
-  opacity: 1;
-}
-
-.eapps-twitter-feed-posts-item-link-inner {
-  transition: 0.3s ease all;
+/* Nested Sub-menus within Mega-Menu (for mobile interaction) */
+.mega-menu .sub-nav-wrap ul li .has-sub-child,
+.mega-menu .sub-nav-wrap ul li .has-inner-sub-child {
+  max-height: 0;
+  overflow: hidden;
   opacity: 0;
+  transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out;
 }
 
-.eapps-twitter-feed-posts-item-link-loaded .eapps-twitter-feed-posts-item-link-inner {
+/* Active states for nested sub-menus (controlled by JS on mobile) */
+.mega-menu .sub-nav-wrap ul li.active > .has-sub-child,
+.mega-menu .sub-nav-wrap ul li.first-level-li.active-child > .has-inner-sub-child {
+  max-height: 850px; /* Sufficiently large to show all content */
   opacity: 1;
 }
 
-.eapps-twitter-feed-posts-item-actions-item-icon,
-.eapps-twitter-feed-posts-item-actions-item-icon svg,
-.eapps-twitter-feed-posts-item-actions-item-text {
-  transition: all 0.2s ease;
-  pointer-events: none;
+/* Styling for expand/collapse icons (SVGs) */
+.mega-menu .sub-nav-wrap ul li span svg {
+  width: 15px;
+  height: 15px;
+  fill: #000000; /* Default icon color */
+  stroke: #000000; /* Default stroke color */
+  stroke-width: 4.851456;
+  transition: transform 0.3s ease;
+  vertical-align: middle;
+  margin-left: 5px;
 }
 
-.eapps-twitter-feed-posts-item-actions-item-comments:hover .eapps-twitter-feed-posts-item-actions-item-text {
-  color: #1da1f2 !important;
+.mega-menu .sub-nav-wrap ul li.active > span svg {
+  transform: rotate(90deg); /* Rotate icon when active */
+  fill: #dd052b;
+  stroke: #dd052b;
 }
 
-.eapps-twitter-feed-posts-item-actions-item-comments:hover .eapps-twitter-feed-posts-item-actions-item-icon svg {
-  fill: #1da1f2 !important;
+.mega-menu .sub-nav-wrap ul li a:hover + span svg path,
+.mega-menu .sub-nav-wrap ul li.active > a + span svg path {
+  fill: #dd052b;
+  stroke: #dd052b;
 }
 
-.eapps-twitter-feed-posts-item-actions-item-repost:hover .eapps-twitter-feed-posts-item-actions-item-text {
-  color: #17bf64 !important;
+/* Responsive adjustments for mobile menu */
+@media screen and (max-width: 991px) {
+  header.main-header .main-nav ul > li.has-child > .mega-menu {
+    position: relative; /* Position relative for mobile */
+    box-shadow: none;
+    padding: 0; /* Adjust padding for mobile view */
+    background-color: transparent; /* Or match mobile nav background */
+  }
+
+  .mega-menu .center-div {
+    flex-direction: column; /* Stack left and right sections vertically */
+    align-items: stretch;
+    max-width: 100%;
+    padding: 0;
+  }
+
+  .mega-menu .left-div,
+  .mega-menu .sub-nav-wrap {
+    width: 100%; /* Full width for both sections */
+    padding: 1rem 0; /* Adjust padding */
+    border-bottom: 1px solid #eee; /* Separator for sections */
+  }
+  .mega-menu .left-div:last-child {
+      border-bottom: none;
+  }
+
+  .mega-menu .sub-nav-wrap {
+    flex-direction: column; /* Stack navigation columns vertically */
+    gap: 0; /* Remove gap between stacked columns */
+  }
+
+  .mega-menu .sub-nav-wrap ul {
+    width: 100%; /* Full width for each navigation list */
+    min-width: unset;
+  }
+  
+  .mega-menu .sub-nav-wrap ul li a {
+      padding: 0.75rem 0;
+  }
+
+  /* Specific mobile active state adjustments from inline style */
+  .main-header .wrap .main-nav ul > li.has-child .mega-menu .wrap .sub-nav-wrap .has-sub-child.active,
+  .main-header .wrap .main-nav ul > li.has-child .mega-menu .wrap .sub-nav-wrap .has-sub-child .has-inner-sub-child.active-child {
+    max-height: 850px; /* Use a larger height for expanded sub-menus */
+    opacity: 1;
+  }
+
+  .mega-menu .left-div.ir-left-div,
+  .mega-menu .left-div.newsroom-left-div,
+  .mega-menu .left-div.career-left-div {
+    width: 100%;
+    padding: 1rem 0; /* Adjust padding for mobile */
+  }
+  
+  .mega-menu .left-div.ir-left-div ul li.list-text-red span {
+      position: static; /* Remove absolute positioning */
+      left: unset;
+  }
 }
 
-.eapps-twitter-feed-posts-item-actions-item-repost:hover .eapps-twitter-feed-posts-item-actions-item-icon svg {
-  fill: #17bf64 !important;
+/* Part 3: Interactive Fidelity (Hover transitions, animations, mobile-specific overrides, icon styling) */
+
+/* General Interactive Transitions */
+a, button, input[type="submit"], .btn, .wrap, .card-wrap, .performace-driven-home-box-card {
+    transition: all 0.3s ease-in-out;
 }
 
-.eapps-twitter-feed-posts-item-actions-item-likes:hover .eapps-twitter-feed-posts-item-actions-item-text {
-  color: #e0235e !important;
+/* Header - Navigation Hover Effects */
+.main-header .wrap .main-nav ul > li > a {
+    position: relative;
+    padding-bottom: 5px; /* Adjust as needed for underline */
+    display: inline-block;
+    color: #1c1c1c; /* Default color, already in base CSS */
 }
 
-.eapps-twitter-feed-posts-item-actions-item-likes:hover .eapps-twitter-feed-posts-item-actions-item-icon svg {
-  fill: #e0235e !important;
+.main-header .wrap .main-nav ul > li:hover > a {
+    color: #dd052b; /* Mahindra Red on hover */
 }
 
-.eapps-twitter-feed-posts-item-actions-item-share:hover {
-  text-decoration: none;
+/* Underline animation for top-level links */
+.main-header .wrap .main-nav ul > li > a::after {
+    content: '';
+    position: absolute;
+    width: 0;
+    height: 2px;
+    background: #dd052b;
+    bottom: 0;
+    left: 0;
+    transition: width 0.3s ease-in-out;
 }
 
-.eapps-twitter-feed-posts-item-actions-item-share:hover .eapps-twitter-feed-posts-item-actions-item-icon svg {
-  fill: #32a0c2 !important;
-}
-
-.eapps-twitter-feed-posts-item-actions-item-share:hover .eapps-twitter-feed-posts-item-actions-item-text {
-  color: #32a0c2 !important;
-  text-decoration: none;
-}
-
-.eapps-twitter-feed-posts-item-actions-item a:hover {
-  text-decoration: underline;
-}
-
-/* ElfSight Twitter Feed Popups */
-.eapps-twitter-feed-popup-overlay {
-  transition: all 0.1s ease;
-}
-
-.eapps-twitter-feed-popup-close {
-  transition: all 0.25s ease;
-}
-
-.eapps-twitter-feed-popup-overlay:hover + .eapps-twitter-feed-popup-close,
-.eapps-twitter-feed-popup-close:hover {
-  opacity: 1;
-}
-
-.eapps-twitter-feed-popup-arrow {
-  transition: all 0.3s ease;
-  opacity: 0.5;
-}
-
-.eapps-twitter-feed-popup-arrow:hover {
-  opacity: 1;
+.main-header .wrap .main-nav ul > li:hover > a::after {
+    width: 100
