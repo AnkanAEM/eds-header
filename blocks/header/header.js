@@ -1,116 +1,127 @@
-import { loadFragment } from '../../scripts/aem.js';
-import { createFragment } from '../../fragment/fragment.js';
+import { getMetadata } from '../../scripts/aem.js';
+import { loadFragment } from '../fragment/fragment.js';
 
 /**
- * decorates the header block (Part 1: Structure).
- * Creates the nav-wrapper, identifies Brand, Nav, and Tools sections,
- * and moves relevant DOM elements into their new structured containers.
- * @param {Element} block The header block element (e.g., <div id="block-header">)
+ * Part 1 (Structure): Decorates the main content area by converting existing divs
+ * into standard EDS sections, including nav-wrapper and section identification logic.
+ * This function assumes 'block' is the <main> element of the page.
+ *
+ * @param {Element} block The <main> element of the page.
  */
 export default async function decorate(block) {
-    // Find the actual header HTML content within the AEM block
-    const headerElement = block.querySelector('.main-header');
-    if (!headerElement) {
-        console.warn('Header element with class "main-header" not found within the block.');
-        return;
-    }
+    const main = block;
 
-    // Create the main semantic <nav> element as the primary navigation container
-    const navWrapper = document.createElement('nav');
-    navWrapper.classList.add('nav-wrapper');
+    // Iterate over direct child divs of <main>.
+    // On mahindra.com, these divs (e.g., div#block-header, div#block-homeslider)
+    // represent the main logical sections of the page.
+    main.querySelectorAll(':scope > div').forEach((originalDiv) => {
+        // Extract a meaningful name from the div's ID or class for class assignment.
+        // e.g., 'block-header' -> 'header'
+        const sectionId = originalDiv.id;
+        let sectionName = '';
+        if (sectionId && sectionId.startsWith('block-')) {
+            sectionName = sectionId.substring('block-'.length);
+        } else if (originalDiv.classList.length > 0) {
+            // Fallback to the first class if no block- ID is present.
+            sectionName = originalDiv.classList[0];
+        }
 
-    // Create sub-containers for different parts of the navigation
-    const navBrand = document.createElement('div');
-    navBrand.classList.add('nav-brand');
+        // If a valid section name is identified, apply the EDS section structure.
+        if (sectionName) {
+            // Create the outer <section> element.
+            const newSection = document.createElement('section');
+            newSection.classList.add(`${sectionName}-container`); // Standard EDS container class
 
-    const navSections = document.createElement('div');
-    navSections.classList.add('nav-sections');
+            // Create the inner wrapper <div> for content.
+            const sectionWrapper = document.createElement('div');
+            sectionWrapper.classList.add(`${sectionName}-wrapper`); // Standard EDS wrapper class
 
-    const navTools = document.createElement('div');
-    navTools.classList.add('nav-tools');
+            // Move all children from the original div into the new section wrapper.
+            // This preserves the existing content while wrapping it in the new structure.
+            while (originalDiv.firstChild) {
+                sectionWrapper.appendChild(originalDiv.firstChild);
+            }
+            newSection.appendChild(sectionWrapper);
 
-    // The original header has a structure like .main-header > .container > .wrap
-    // We will extract content from within the .wrap for restructuring.
-    const headerWrap = headerElement.querySelector('.wrap');
-    if (!headerWrap) {
-        console.warn('Header wrap element not found within the main header.');
-        return;
-    }
+            // Replace the original div with the newly constructed <section> element.
+            originalDiv.parentNode.replaceChild(newSection, originalDiv);
 
-    // --- Brand Identification and DOM Element Creation ---
-    // Identify and move the main company logo
-    const mainLogo = headerWrap.querySelector('.logo:not(.year-80-logo)');
-    if (mainLogo) {
-        navBrand.append(mainLogo);
-    }
+            // Add specific classes for global structural elements (header and footer).
+            if (sectionName === 'header') {
+                newSection.classList.add('global-header');
+            } else if (sectionName === 'footer') {
+                newSection.classList.add('global-footer');
+            }
+        }
+    });
 
-    // Identify and move the 80th-year anniversary logo (if present)
-    const year80Logo = headerWrap.querySelector('.logo.year-80-logo');
-    if (year80Logo) {
-        navBrand.append(year80Logo);
-    }
-
-    // Identify and move the hamburger menu icon (for mobile navigation toggle)
-    const hamburger = headerWrap.querySelector('.hamburger');
-    if (hamburger) {
-        navBrand.append(hamburger);
-    }
-
-    // --- Navigation Sections Identification and DOM Element Creation ---
-    // Identify and move the main navigation links container
-    const mainNavElement = headerWrap.querySelector('.main-nav');
-    if (mainNavElement) {
-        navSections.append(mainNavElement);
-    }
-
-    // --- Tools Identification and DOM Element Creation ---
-    // Identify and move the mobile-specific utility icons (Contact Us, Search)
-    const mobileIconNav = headerWrap.querySelector('.icon-nav.mobile-menus-icon');
-    if (mobileIconNav) {
-        navTools.append(mobileIconNav);
-    }
-
-    // Identify and move the desktop-specific utility icons (Contact Us, Search)
-    const desktopIconNav = headerWrap.querySelector('.icon-nav.desktop-menus-icon');
-    if (desktopIconNav) {
-        navTools.append(desktopIconNav);
-    }
-
-    // Assemble the new navigation structure
-    navWrapper.append(navBrand, navSections, navTools);
-
-    // Clear the original AEM block content and append the newly structured navWrapper
-    block.innerHTML = '';
-    block.append(navWrapper);
-
-    // Further enhancements like event listeners, dynamic content loading,
-    // and specific styling classes will be handled in Part 2 (Enhancement)
+    // Note: Specific decoration of content *within* these newly formed sections
+    // (e.g., decorating individual navigation items inside the header or cards inside a content section)
+    // would typically be handled by dedicated block decorators or subsequent steps in the decoration process.
+    // This part focuses purely on the top-level structural transformation.
 }
 
+/**
+ * Part 2: Mega-Menu Behaviors
+ * Decorates the mega-menu functionality within the given block element.
+ *
+ * This script implements:
+ * - Hamburger menu toggle for mobile navigation.
+ * - Desktop hover functionality for main navigation items.
+ * - Mobile click functionality for main and nested navigation items, with mutual exclusivity.
+ * - Closing mechanism for mobile menu on outside clicks.
+ * - Resetting menu states on window resize between mobile and desktop.
+ *
+ * @param {HTMLElement} block The HTML element to which the mega-menu behaviors should be applied.
+ *                            In this context, it is expected to be a container for the main header (or document.body).
+ */
+function decorateMegaMenuBehaviors(block) {
+    if (!block) {
+        console.warn('decorateMegaMenuBehaviors: No block element provided.');
+        return;
+    }
+
+    // Find the header element, either directly the block or a descendant
+    const header = block.closest('.main-header') || block.querySelector('.main-header');
+    if (!header) {
+        console.warn('decorateMegaMenuBehaviors: Could not find .main-header within or relative to the block.');
+        return;
+    }
+
+    const mainNav = header.querySelector('.main-nav');
+    const hamburger = header.querySelector('.hamburger');
+    // Media query to differentiate between mobile and desktop layouts
+    const mediaQuery = window.matchMedia('(max-
+
+/**
+ * Part 3: Mobile & Utilities (including responsive menu, search, and footer interactions)
+ *
+ * This script handles:
+ * 1. Mobile navigation menu toggling (hamburger icon).
+ * 2. Opening and closing of multi-level sub-menus within the main navigation on mobile.
+ * 3. Search overlay functionality, including opening/closing and keyword interaction.
+ * 4. Collapsible menus in the footer, specifically for mobile display.
+ * 5. General utility link handling (e.g., preventing default for hash links).
+ * 6. Ensures proper state (e.g., closing menus/search) on window resize events.
+ */
 export default function decorate(block) {
-  const mainHeader = block.querySelector('.main-header');
-  const hamburger = block.querySelector('.hamburger');
-  const mainNav = block.querySelector('.main-nav');
-  const hasChildLIs = block.querySelectorAll('.main-nav > ul > li.has-child');
-  const searchToggle = block.querySelector('.icon-nav .search');
-  const searchScreenWrap = block.querySelector('.search-screen-wrap');
-  const searchCloseButton = block.querySelector('.icon-nav .search .close');
+  // Initialize all utility handlers
+  handleMobileMenu();
+  handleSearchFunctionality();
+  handleFooterMenus();
+  handleQuickLinks();
+}
 
-  const mobileBreakpoint = 991; // Based on media queries in the provided CSS
-  const isMobile = () => window.innerWidth <= mobileBreakpoint;
+/**
+ * Manages the mobile main navigation menu and its nested sub-menus.
+ */
+function handleMobileMenu() {
+  const hamburger = document.querySelector('.hamburger');
+  const mainNav = document.querySelector('.main-nav');
+  const mobileMenusIcon = document.querySelector('.mobile-menus-icon'); // Container for mobile contact/search
+  const body = document.body;
+  const desktopBreakpoint = 992; // CSS breakpoint for desktop navigation
 
-  // Global state management for scroll and to avoid duplicate event listeners
-  let lastScrollY = window.scrollY;
-  let scrollThrottleTimeout = null;
-  let isMobileListenersActive = false;
-  let isDesktopListenersActive = false;
-
-  // --- Helper to close all open menus/overlays ---
-  const closeAllNavigation = () => {
-    // Close mobile navigation
-    if (mainNav.classList.contains('active')) {
-      mainNav.classList.remove('active');
-      if (hamburger) hamburger.classList.remove('active');
-      document.body.classList.remove('nav-open');
-      // Recursively close all open sub-menus
-      block.querySelectorAll('.has-child.active, .top-level-li.
+  if (hamburger && mainNav && mobileMenusIcon) {
+    hamburger.addEventListener('click', (e) => {
+      e.preventDefault();
