@@ -18,7 +18,8 @@
   ],
   "models": [
     {
-      "id": "header"
+      "id": "header",
+      "fields": []
     }
   ],
   "filters": []
