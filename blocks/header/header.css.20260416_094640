@@ -1,0 +1,496 @@
+/* -- CSS Variables (Adjust values based on design system) -- */
+:root {
+  --header-height: 80px;
+  --nav-breakpoint: 900px; /* Corresponds to TABLET_BREAKPOINT in JS */
+  --color-primary: #EE4E27; /* Example brand primary color */
+  --color-text-dark: #333;
+  --color-text-light: #555;
+  --color-white: #fff;
+  --color-gray-light: #f8f8f8;
+  --color-gray-border: #ddd;
+  --font-family-body: 'Poppins', sans-serif;
+  --font-family-heading: 'Libre Baskerville', serif;
+  --box-shadow-light: 0 2px 5px rgb(0 0 0 / 10%);
+  --transition-speed: 0.3s ease-in-out;
+}
+
+/* Base header styling */
+.header {
+  background-color: var(--color-white);
+  box-shadow: var(--box-shadow-light);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  width: 100%;
+}
+
+.header .header-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1440px; /* Adjust to match site's content width */
+  margin: 0 auto;
+  padding: 0 20px;
+  min-height: var(--header-height);
+  box-sizing: border-box;
+}
+
+/* Brand/Logo */
+.header .nav-brand {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.header .nav-brand a {
+  display: block;
+}
+
+.header .nav-brand img {
+  height: 50px; /* Adjust as needed */
+  width: auto;
+  display: block;
+  object-fit: contain;
+}
+
+/* Hamburger Menu Toggle (Mobile) */
+.header .nav-hamburger {
+  display: none; /* Hidden on desktop by default */
+  cursor: pointer;
+  padding: 10px;
+  position: relative;
+  z-index: 1002; /* Above nav-sections when open */
+  background: none;
+  border: none;
+  order: 2;
+}
+
+.header .nav-hamburger-icon,
+.header .nav-hamburger-icon::before,
+.header .nav-hamburger-icon::after {
+  content: '';
+  display: block;
+  width: 25px;
+  height: 3px;
+  background-color: var(--color-text-dark);
+  transition: var(--transition-speed);
+  position: relative;
+}
+
+.header .nav-hamburger-icon::before {
+  top: -8px;
+}
+
+.header .nav-hamburger-icon::after {
+  top: 8px;
+}
+
+/* Hamburger active state (menu open) */
+.header .nav-hamburger[aria-expanded='true'] .nav-hamburger-icon {
+  background-color: transparent;
+}
+
+.header .nav-hamburger[aria-expanded='true'] .nav-hamburger-icon::before {
+  transform: translateY(8px) rotate(45deg);
+}
+
+.header .nav-hamburger[aria-expanded='true'] .nav-hamburger-icon::after {
+  transform: translateY(-8px) rotate(-45deg);
+}
+
+/* Main Navigation Sections */
+.header .nav-sections {
+  flex-grow: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.header .nav-sections > ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  font-family: var(--font-family-body);
+  font-weight: 600;
+}
+
+.header .nav-sections > ul > li {
+  margin: 0 15px;
+  position: relative;
+}
+
+.header .nav-sections > ul > li > a,
+.header .nav-sections > ul > li > span {
+  display: block;
+  padding: 10px 0;
+  text-decoration: none;
+  color: var(--color-text-dark);
+  font-size: 16px;
+  white-space: nowrap;
+  transition: color var(--transition-speed);
+}
+
+.header .nav-sections > ul > li > a:hover,
+.header .nav-sections > ul > li > span:hover {
+  color: var(--color-primary);
+}
+
+/* Dropdown styling (Desktop) */
+.header .nav-drop > ul {
+  display: none; /* Hidden by default */
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: var(--color-white);
+  box-shadow: var(--box-shadow-light);
+  min-width: 200px;
+  padding: 15px 0;
+  list-style: none;
+  z-index: 100;
+  border-top: 3px solid var(--color-primary);
+  border-radius: 0 0 5px 5px;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--transition-speed), visibility var(--transition-speed);
+}
+
+/* Show dropdown on hover (Desktop) */
+.header .nav-drop:hover > ul,
+.header .nav-drop[aria-expanded='true'] > ul {
+  display: flex; /* Changed from block to flex for multi-column layouts */
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Specific styling for "Our Products" mega-menu */
+.header .nav-sections > ul > li > ul.cmp-header__product-items {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr); /* Example: 3 columns */
+  gap: 20px;
+  padding: 20px;
+  min-width: 800px; /* Adjust as needed for wide menu */
+  left: 0; /* Align mega-menu to the left edge of the parent */
+  transform: translateX(0); /* Override translateX(-50%) */
+}
+
+.header .nav-sections > ul > li > ul.cmp-header__product-items > li {
+    padding: 0;
+}
+
+.header .nav-sections > ul > li > ul.cmp-header__product-items > li > a,
+.header .nav-sections > ul > li > ul.cmp-header__product-items > li > span {
+    font-weight: 600;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--color-gray-border);
+    margin-bottom: 10px;
+}
+
+/* Nested dropdowns for categories (e.g., Atta, Salt) */
+.header .nav-drop-nested > ul {
+    position: static; /* Stack vertically within the column */
+    background-color: transparent;
+    box-shadow: none;
+    padding: 0;
+    border-top: none;
+    border-radius: 0;
+    opacity: 1;
+    visibility: visible;
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+}
+
+.header .nav-drop-nested > ul li {
+    margin: 0;
+}
+
+.header .nav-drop-nested > ul li > a {
+    font-weight: 400;
+    padding: 5px 0;
+    color: var(--color-text-light);
+    font-size: 15px;
+    border-bottom: none;
+}
+
+.header .nav-drop-nested > ul li > a:hover {
+    color: var(--color-primary);
+    text-decoration: underline;
+}
+
+/* Utility Tools */
+.header .nav-tools {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  order: 3;
+}
+
+.header .nav-tools > div {
+  margin-left: 20px;
+}
+
+.header .nav-tools button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 5px;
+  color: var(--color-text-dark);
+  font-family: var(--font-family-body);
+  font-size: 14px;
+  transition: color var(--transition-speed);
+}
+
+.header .nav-tools button:hover {
+  color: var(--color-primary);
+}
+
+/* Icon styling (using background images for better control) */
+
+/* These icons should be placed in the /icons folder relative to the project root */
+.header .icon-search,
+.header .icon-accessibility,
+.header .icon-profile,
+.header .icon-instagram,
+.header .icon-facebok,
+.header .icon-twitter,
+.header .icon-youtube {
+  display: inline-block;
+  width: 20px; /* Adjust size */
+  height: 20px;
+  background-size: contain;
+  background-repeat: no-repeat;
+  margin-right: 5px;
+  vertical-align: middle;
+  filter: invert(20%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(0%) contrast(100%); /* Default dark color for SVG */
+  transition: filter var(--transition-speed);
+}
+
+/* Hover effect for utility icons */
+.header .nav-tools button:hover .icon-search,
+.header .nav-tools a:hover .icon-accessibility,
+.header .nav-tools a:hover .icon-profile,
+.header .cmp-header__social-media a:hover .icon-instagram,
+.header .cmp-header__social-media a:hover .icon-facebok,
+.header .cmp-header__social-media a:hover .icon-twitter,
+.header .cmp-header__social-media a:hover .icon-youtube {
+    filter: invert(41%) sepia(91%) saturate(2250%) hue-rotate(345deg) brightness(97%) contrast(92%); /* Color for --color-primary */
+}
+
+.header .icon-search {
+  background-image: url('/icons/search.svg');
+}
+
+.header .icon-accessibility {
+  background-image: url('/icons/accessibility.svg');
+  margin-right: 0; /* No text next to it */
+}
+
+.header .icon-profile {
+  background-image: url('/icons/profile.svg');
+  margin-right: 0; /* No text next to it */
+}
+
+.header .icon-instagram {
+  background-image: url('/icons/instagram.svg');
+}
+
+.header .icon-facebok {
+  background-image: url('/icons/facebook.svg');
+}
+
+.header .icon-twitter {
+  background-image: url('/icons/twitter.svg');
+}
+
+.header .icon-youtube {
+  background-image: url('/icons/youtube.svg');
+}
+
+/* Hide accessibility and login icons on desktop by default as per original HTML */
+.header .nav-tools .cmp-header__hide-icon {
+    display: none; /* Original HTML had this class */
+}
+
+/* Mobile-specific styles */
+@media (width <= 900px) {
+  .header .header-wrapper {
+    padding: 0 15px;
+    justify-content: space-between;
+  }
+
+  .header .nav-brand img {
+    height: 40px; /* Smaller logo on mobile */
+  }
+
+  .header .nav-hamburger {
+    display: block; /* Show hamburger on mobile */
+  }
+
+  .header .nav-tools {
+    margin-left: auto;
+  }
+
+  .header .nav-tools > div {
+      margin-left: 10px; /* Closer spacing on mobile */
+  }
+
+  .header .nav-tools .cmp-header__hide-icon {
+      display: block; /* Show accessibility and login icons on mobile */
+  }
+
+  .header .nav-sections {
+    display: block; /* Take full width on mobile */
+    position: fixed;
+    top: 0;
+    left: -100%; /* Hidden off-screen */
+    width: 100%;
+    height: 100vh;
+    overflow-y: auto;
+    background-color: var(--color-white);
+    box-shadow: var(--box-shadow-light);
+    transition: left var(--transition-speed);
+    z-index: 1001;
+    padding-top: var(--header-height); /* Offset for fixed header */
+    box-sizing: border-box;
+  }
+
+  .header .nav-sections.open {
+    left: 0; /* Slide in */
+  }
+
+  .header .nav-sections > ul {
+    flex-direction: column;
+    padding: 20px;
+    align-items: flex-start;
+  }
+
+  .header .nav-sections > ul > li {
+    margin: 0;
+    width: 100%;
+    border-bottom: 1px solid var(--color-gray-border);
+  }
+
+  .header .nav-sections > ul > li:last-of-type {
+      border-bottom: none;
+  }
+
+  .header .nav-sections > ul > li > a,
+  .header .nav-sections > ul > li > span {
+    padding: 15px 0;
+    font-size: 18px;
+  }
+
+  /* Mobile dropdowns (nested menu items become visible on click) */
+  .header .nav-drop > ul {
+    position: static; /* No absolute positioning on mobile */
+    display: none;
+    background-color: var(--color-gray-light); /* Slight background for nested */
+    box-shadow: none;
+    border-top: none;
+    padding: 10px 20px;
+    width: 100%;
+    min-width: unset;
+    transform: translateX(0);
+    opacity: 1;
+    visibility: visible;
+    border-radius: 0;
+    flex-direction: column; /* Ensure vertical stacking for multi-column on mobile */
+    gap: 0;
+  }
+
+  .header .nav-drop[aria-expanded='true'] > ul {
+    display: flex; /* Show dropdown */
+  }
+
+  /* Specific styling for "Our Products" to stack columns on mobile */
+  .header .nav-sections > ul > li > ul.cmp-header__product-items {
+    grid-template-columns: 1fr; /* Single column on mobile */
+    padding: 10px 0;
+  }
+
+  .header .nav-sections > ul > li > ul.cmp-header__product-items > li > a,
+  .header .nav-sections > ul > li > ul.cmp-header__product-items > li > span {
+      font-size: 16px;
+      padding: 10px 0;
+      border-bottom: none;
+      margin-bottom: 0;
+  }
+
+  .header .nav-drop-nested > ul {
+      padding-left: 15px; /* Indent nested lists */
+      background-color: transparent; /* No extra background */
+  }
+
+  /* Add arrow for dropdowns on mobile */
+  .header .nav-sections > ul > li.nav-drop {
+      position: relative;
+  }
+
+  .header .nav-sections > ul > li.nav-drop > a::after,
+  .header .nav-sections > ul > li.nav-drop > span::after {
+    content: '❯'; /* Unicode arrow right */
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%) rotate(90deg); /* Default pointing down */
+    transition: transform var(--transition-speed);
+    font-size: 12px;
+  }
+
+  .header .nav-sections > ul > li.nav-drop[aria-expanded='true'] > a::after,
+  .header .nav-sections > ul > li.nav-drop[aria-expanded='true'] > span::after {
+    transform: translateY(-50%) rotate(-90deg); /* Rotate arrow when open */
+  }
+
+  /* Mobile specific: Policy & Social links */
+  .header .cmp-header__mobile-list {
+      display: block;
+      padding: 20px;
+      margin-top: 20px;
+      background-color: var(--color-gray-light);
+      border-top: 1px solid var(--color-gray-border);
+  }
+
+  .header .cmp-header__policy {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 20px;
+  }
+
+  .header .cmp-header__policy-list {
+      margin-bottom: 10px;
+  }
+
+  .header .cmp-header__policy-list a {
+      color: var(--color-text-dark);
+      text-decoration: none;
+      font-size: 15px;
+      display: block;
+      padding: 5px 0;
+  }
+
+  .header .cmp-header__social-media {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      flex-wrap: wrap;
+  }
+
+  /* Search toggle on mobile: hide 'Search' text */
+  .header .nav-search button span {
+      display: none;
+  }
+}
+
+/* Body scroll lock when nav is open */
+body.scroll-locked {
+  overflow: hidden;
+}
+
+/* General Link Styling (ensure consistency) */
+.header a {
+    text-decoration: none;
+}
