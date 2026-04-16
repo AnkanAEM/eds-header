@@ -1,4 +1,4 @@
-import { getMetadata } from '../../scripts/aem.js';
+// import { getMetadata } from '../../scripts/aem.js';
 import { loadFragment } from '../fragment/fragment.js';
 import { moveInstrumentation } from '../../scripts/scripts.js';
 
@@ -22,6 +22,7 @@ function closeOnEscape(e) {
       navHamburger.focus(); // Re-focus hamburger after closing
 
       document.removeEventListener('keydown', closeOnEscape);
+      // eslint-disable-next-line no-use-before-define
       document.removeEventListener('click', closeOnOutsideClick);
     }
   }
@@ -53,11 +54,11 @@ function closeOnOutsideClick(e) {
         });
       }
     } else {
-        // If click is inside the nav but not on a dropdown toggle, close all dropdowns.
-        navSections.querySelectorAll('.nav-dropdown.open').forEach((dropdown) => {
-            dropdown.classList.remove('open');
-            dropdown.previousElementSibling.setAttribute('aria-expanded', 'false');
-        });
+      // If click is inside the nav but not on a dropdown toggle, close all dropdowns.
+      navSections.querySelectorAll('.nav-dropdown.open').forEach((dropdown) => {
+        dropdown.classList.remove('open');
+        dropdown.previousElementSibling.setAttribute('aria-expanded', 'false');
+      });
     }
   }
 }
@@ -106,18 +107,18 @@ function setupDropdowns(navElement) {
         });
         // Add desktop hover functionality
         li.addEventListener('mouseenter', () => {
-            if (!window.matchMedia('(max-width: 991px)').matches) {
-                if (!dropdown.classList.contains('open')) {
-                    toggleMenu(dropdown, link);
-                }
+          if (!window.matchMedia('(max-width: 991px)').matches) {
+            if (!dropdown.classList.contains('open')) {
+              toggleMenu(dropdown, link);
             }
+          }
         });
         li.addEventListener('mouseleave', () => {
-            if (!window.matchMedia('(max-width: 991px)').matches) {
-                if (dropdown.classList.contains('open')) {
-                    toggleMenu(dropdown, link);
-                }
+          if (!window.matchMedia('(max-width: 991px)').matches) {
+            if (dropdown.classList.contains('open')) {
+              toggleMenu(dropdown, link);
             }
+          }
         });
       }
       dropdown.classList.add('nav-dropdown');
@@ -127,30 +128,30 @@ function setupDropdowns(navElement) {
   // Ensure top-level 'Our Products' link only toggles on mobile, navigates on desktop
   const ourProductsLink = navElement.querySelector('ul > li > a[href="/our-products.html"]');
   if (ourProductsLink) {
-      const ourProductsDropdown = ourProductsLink.nextElementSibling;
-      if (ourProductsDropdown) {
-          // On desktop, the first click on 'Our Products' should navigate, not open dropdown
-          // The hover event will still open dropdown. This is a common pattern.
-          ourProductsLink.classList.remove('nav-has-dropdown'); // Don't show dropdown arrow by default
-          ourProductsLink.addEventListener('click', (e) => {
-              const isMobile = window.matchMedia('(max-width: 991px)').matches;
-              if (isMobile) {
-                  e.preventDefault();
-                  toggleMenu(ourProductsDropdown, ourProductsLink);
-              }
-              // Else on desktop, allow default navigation
-          });
-          // Re-add arrow for mobile only
-          const mobileToggleLink = () => {
-              if (window.matchMedia('(max-width: 991px)').matches) {
-                  ourProductsLink.classList.add('nav-has-dropdown');
-              } else {
-                  ourProductsLink.classList.remove('nav-has-dropdown');
-              }
-          };
-          window.addEventListener('resize', mobileToggleLink);
-          mobileToggleLink(); // Initial check
-      }
+    const ourProductsDropdown = ourProductsLink.nextElementSibling;
+    if (ourProductsDropdown) {
+      // On desktop, the first click on 'Our Products' should navigate, not open dropdown
+      // The hover event will still open dropdown. This is a common pattern.
+      ourProductsLink.classList.remove('nav-has-dropdown'); // Don't show dropdown arrow by default
+      ourProductsLink.addEventListener('click', (e) => {
+        const isMobile = window.matchMedia('(max-width: 991px)').matches;
+        if (isMobile) {
+          e.preventDefault();
+          toggleMenu(ourProductsDropdown, ourProductsLink);
+        }
+        // Else on desktop, allow default navigation
+      });
+      // Re-add arrow for mobile only
+      const mobileToggleLink = () => {
+        if (window.matchMedia('(max-width: 991px)').matches) {
+          ourProductsLink.classList.add('nav-has-dropdown');
+        } else {
+          ourProductsLink.classList.remove('nav-has-dropdown');
+        }
+      };
+      window.addEventListener('resize', mobileToggleLink);
+      mobileToggleLink(); // Initial check
+    }
   }
 }
 
@@ -194,7 +195,7 @@ export default async function decorate(block) {
       // Remove AEM specific classes from list items and groups
       navElement.querySelectorAll('ul, li, a').forEach((el) => {
         // Keep classes starting with 'icon-' for styling
-        el.className = el.className.split(' ').filter(c => !c.startsWith('cmp-') || c.startsWith('icon-')).join(' ');
+        el.className = el.className.split(' ').filter((c) => !c.startsWith('cmp-') || c.startsWith('icon-')).join(' ');
       });
 
       // Special handling for nested structures like cmp-header__product-items
@@ -240,17 +241,17 @@ export default async function decorate(block) {
 
     // Filter relevant icon divs and append
     Array.from(navIconsDiv.children).forEach((child) => {
-        // Remove any original AEM specific classes, keep icon specific ones
-        child.className = child.className.split(' ').filter(c => !c.startsWith('cmp-') || c.startsWith('icon-')).join(' ');
+      // Remove any original AEM specific classes, keep icon specific ones
+      child.className = child.className.split(' ').filter((c) => !c.startsWith('cmp-') || c.startsWith('icon-')).join(' ');
 
-        if (child.classList.contains('search')) {
-            child.classList.add('nav-search');
-        } else if (child.classList.contains('accessbility')) {
-            child.classList.add('nav-accessibility');
-        } else if (child.classList.contains('login')) {
-            child.classList.add('nav-login');
-        }
-        navTools.appendChild(child);
+      if (child.classList.contains('search')) {
+        child.classList.add('nav-search');
+      } else if (child.classList.contains('accessbility')) {
+        child.classList.add('nav-accessibility');
+      } else if (child.classList.contains('login')) {
+        child.classList.add('nav-login');
+      }
+      navTools.appendChild(child);
     });
     headerWrapper.append(navTools);
   }
