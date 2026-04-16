@@ -1,4 +1,4 @@
-import { getMetadata, createOptimizedPicture } from '../../scripts/aem.js';
+import { createOptimizedPicture } from '../../scripts/aem.js';
 import { loadFragment } from '../fragment/fragment.js';
 import { moveInstrumentation } from '../../scripts/scripts.js';
 
@@ -186,7 +186,7 @@ export default async function decorate(block) {
     // Check for social media links within the section
     const socialLinks = section.querySelectorAll('a[href*="facebook.com"], a[href*="instagram.com"], a[href*="twitter.com"], a[href*="youtube.com"]');
     if (socialLinks.length > 0) {
-      socialLinks.forEach(link => {
+      socialLinks.forEach((link) => {
         const clonedLink = link.cloneNode(true);
         // Add specific icon classes based on href for styling
         if (clonedLink.href.includes('instagram')) clonedLink.classList.add('icon-instagram');
@@ -201,7 +201,7 @@ export default async function decorate(block) {
     // Check for policy/contact links (these were often grouped in original AEM output for mobile)
     const policyLinks = section.querySelectorAll('a[href*="contact-us.html"], a[href*="terms-of-use.html"], a[href*="privacy-policy.html"], a[href*="faqs.html"]');
     if (policyLinks.length > 0) {
-      policyLinks.forEach(link => {
+      policyLinks.forEach((link) => {
         const li = document.createElement('li');
         li.append(link.cloneNode(true));
         mobilePolicyList.append(li);
@@ -214,29 +214,30 @@ export default async function decorate(block) {
     const submenuUl = section.querySelector('ul'); // Find direct <ul> for submenu
 
     if (mainAnchorWrapper && mainAnchorWrapper.querySelector('a')) {
-        const li = document.createElement('li');
-        li.append(mainAnchorWrapper.querySelector('a').cloneNode(true)); // Copy the main link
-        if (submenuUl) {
-            li.append(submenuUl.cloneNode(true)); // Copy the submenu
-        }
-        mainNavList.append(li);
-        return; // Section processed
+      const li = document.createElement('li');
+      li.append(mainAnchorWrapper.querySelector('a').cloneNode(true)); // Copy the main link
+      if (submenuUl) {
+        li.append(submenuUl.cloneNode(true)); // Copy the submenu
+      }
+      mainNavList.append(li);
+      return; // Section processed
     }
 
     // Fallback: If any other content remains in a section, append it to mobile utility.
     // This ensures no content from the fragment is lost.
     if (section.children.length > 0) {
-        Array.from(section.children).forEach(child => {
-            // Avoid duplicating already processed items if they were part of a larger section
-            if (!child.closest('.mobile-utility-wrapper') && !child.closest('.main-nav-list')) {
-                mobileUtilityWrapper.append(child.cloneNode(true));
-            }
-        });
+      Array.from(section.children).forEach((child) => {
+        // Avoid duplicating already processed items if they were part of a larger section
+        if (!child.closest('.mobile-utility-wrapper') && !child.closest('.main-nav-list')) {
+          mobileUtilityWrapper.append(child.cloneNode(true));
+        }
+      });
     }
   });
 
   // Remove empty mobile utility wrapper if no content was added to it
-  if (!mobilePolicyList.children.length && !mobileSocialList.children.length && !mobileUtilityWrapper.children.length) {
+  if (!mobilePolicyList.children.length && !mobileSocialList.children.length
+    && !mobileUtilityWrapper.children.length) {
     mobileUtilityWrapper.remove();
   }
 
