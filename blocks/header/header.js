@@ -109,7 +109,6 @@ function setupMobileHamburger(block, headerNavContainer) {
   });
 }
 
-
 export default async function decorate(block) {
   const navContent = await loadFragment('/nav');
   block.textContent = '';
@@ -141,7 +140,7 @@ export default async function decorate(block) {
 
     unwrapParagraphLinks(targetSection);
 
-    // --- LOGO --- 
+    // --- LOGO ---
     const logoLink = targetSection.querySelector('a:has(img)');
     if (logoLink && !logoSectionProcessed) {
       const img = logoLink.querySelector('img');
@@ -152,15 +151,15 @@ export default async function decorate(block) {
         logoSectionProcessed = true;
         // Capture any other elements within the logo section if present, move to tools
         Array.from(targetSection.children).forEach((child) => {
-            if (child !== logoLink) {
-                headerTools.appendChild(child.cloneNode(true));
-            }
+          if (child !== logoLink) {
+            headerTools.appendChild(child.cloneNode(true));
+          }
         });
         return;
       }
     }
 
-    // --- MAIN NAVIGATION --- 
+    // --- MAIN NAVIGATION ---
     const mainUl = targetSection.querySelector('ul');
     if (mainUl && !mainNavSectionProcessed) {
       const clonedUl = mainUl.cloneNode(true);
@@ -175,26 +174,27 @@ export default async function decorate(block) {
 
     // --- TOOLS (fallback for any remaining significant content) ---
     if (targetSection.children.length > 0) {
-        Array.from(targetSection.children).forEach((child) => {
-            // Ensure no empty <p> tags or similar are accidentally copied
-            if (child.textContent.trim() || child.querySelector('img')) {
-                headerTools.appendChild(child.cloneNode(true));
-            }
-        });
+      Array.from(targetSection.children).forEach((child) => {
+        // Ensure no empty <p> tags or similar are accidentally copied
+        if (child.textContent.trim() || child.querySelector('img')) {
+          headerTools.appendChild(child.cloneNode(true));
+        }
+      });
     }
   });
 
-  // Add hardcoded utility icons (Search, Accessibility, Login) as they are present in the original site's structure
+  // Add hardcoded utility icons (Search, Accessibility, Login) as they are
+  // present in the original site's structure
   // and typically not driven by /nav content directly for simple fragments.
   const createToolItem = (iconClass, text, href) => {
-      const wrapper = document.createElement('div');
-      wrapper.classList.add('header-tool-item');
-      const link = document.createElement('a');
-      link.href = href;
-      link.classList.add(iconClass.replace('icon-', '')); // Add semantic class for styling
-      link.innerHTML = `<span class="${iconClass}"></span><span class="text">${text}</span>`;
-      wrapper.appendChild(link);
-      return wrapper;
+    const wrapper = document.createElement('div');
+    wrapper.classList.add('header-tool-item');
+    const link = document.createElement('a');
+    link.href = href;
+    link.classList.add(iconClass.replace('icon-', '')); // Add semantic class for styling
+    link.innerHTML = `<span class="${iconClass}"></span><span class="text">${text}</span>`;
+    wrapper.appendChild(link);
+    return wrapper;
   };
 
   // Check if these are already present from the fragment, otherwise add.
@@ -210,7 +210,7 @@ export default async function decorate(block) {
   }
 
   headerWrapper.appendChild(headerLogo);
-  
+
   const navMainAndToolsWrapper = document.createElement('div');
   navMainAndToolsWrapper.classList.add('header-nav-and-tools-wrapper');
   navMainAndToolsWrapper.id = 'nav-main-wrapper';
