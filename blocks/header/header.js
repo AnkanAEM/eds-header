@@ -55,7 +55,7 @@ function setupDropdowns(navSections) {
       if (dropBtn) {
         dropBtn.setAttribute('role', 'button');
         dropBtn.setAttribute('aria-expanded', 'false');
-        
+
         // Mobile click handler for dropdowns
         dropBtn.addEventListener('click', (e) => {
           // Only prevent default navigation on mobile if it's a dropdown toggle
@@ -153,12 +153,12 @@ export default async function decorate(block) {
     }
     // Also check for mobile list directly in sections or within navLinksDiv
     if (section.querySelector('.cmp-header__mobile-list')) {
-        mobileListDiv = section.querySelector('.cmp-header__mobile-list');
+      mobileListDiv = section.querySelector('.cmp-header__mobile-list');
     }
   });
   // Fallback to find mobileListDiv within navLinksDiv if not found directly
   if (!mobileListDiv && navLinksDiv) {
-      mobileListDiv = navLinksDiv.querySelector('.cmp-header__mobile-list');
+    mobileListDiv = navLinksDiv.querySelector('.cmp-header__mobile-list');
   }
 
   // Construct the new header structure
@@ -167,25 +167,26 @@ export default async function decorate(block) {
   headerWrapper.classList.add('header-wrapper');
   block.append(headerWrapper);
 
-  // --- Brand/Logo --- 
+  // --- Brand/Logo ---
   const headerBrand = document.createElement('div');
   headerBrand.classList.add('nav-brand');
   if (logoDiv) {
     const logoLink = logoDiv.querySelector('a');
     if (logoLink) {
-        const logoImg = logoLink.querySelector('img');
-        if (logoImg) {
-            const optimizedLogo = createOptimizedPicture(logoImg.src, logoImg.alt || 'Aashirvaad Logo', true, [{ width: '150' }]);
-            logoLink.replaceChildren(optimizedLogo);
-        }
-        headerBrand.append(logoLink);
+      const logoImg = logoLink.querySelector('img');
+      if (logoImg) {
+        const optimizedLogo = createOptimizedPicture(logoImg.src, logoImg.alt || 'Aashirvaad Logo', true, [{ width: '150' }]);
+        logoLink.replaceChildren(optimizedLogo);
+      }
+      headerBrand.append(logoLink);
     } else {
-        headerBrand.append(...logoDiv.children); // Fallback to append all children
+      headerBrand.append(...logoDiv.children); // Fallback to append all children
     }
   }
   headerWrapper.append(headerBrand);
 
-  // --- Hamburger Toggle --- 
+  // --- Hamburger Toggle ---
+  const navSections = document.createElement('div');
   const navHamburger = document.createElement('button'); // Use button for accessibility
   navHamburger.classList.add('nav-hamburger');
   navHamburger.innerHTML = '<div class="nav-hamburger-icon"></div>';
@@ -204,8 +205,7 @@ export default async function decorate(block) {
   });
   headerWrapper.append(navHamburger);
 
-  // --- Main Navigation Sections --- 
-  const navSections = document.createElement('div');
+  // --- Main Navigation Sections ---
   navSections.classList.add('nav-sections');
   headerWrapper.append(navSections);
 
@@ -226,18 +226,18 @@ export default async function decorate(block) {
         // Remove promotional/invalid wrappers like .cmp-header__category-menu
         // These divs are invalid direct children of <ul> or nested <ul>
         // We pull their list items out to flatten the structure
-        li.querySelectorAll('.cmp-header__category-menu').forEach(invalidDiv => {
-            Array.from(invalidDiv.children).forEach(child => {
-                if (child.tagName === 'LI') {
-                    invalidDiv.parentNode.insertBefore(child, invalidDiv);
-                }
-            });
-            invalidDiv.remove(); // Remove the invalid div
+        li.querySelectorAll('.cmp-header__category-menu').forEach((invalidDiv) => {
+          Array.from(invalidDiv.children).forEach((child) => {
+            if (child.tagName === 'LI') {
+              invalidDiv.parentNode.insertBefore(child, invalidDiv);
+            }
+          });
+          invalidDiv.remove(); // Remove the invalid div
         });
       });
 
       // Remove any remaining promotional/image sections that are not navigation items
-      mainNavUl.querySelectorAll('.cmp-header__image-text, .productofmonth').forEach(el => el.remove());
+      mainNavUl.querySelectorAll('.cmp-header__image-text, .productofmonth').forEach((el) => el.remove());
 
       navSections.append(mainNavUl);
 
@@ -248,7 +248,7 @@ export default async function decorate(block) {
     }
   }
 
-  // --- Utility Tools (Search, Accessibility, Login) --- 
+  // --- Utility Tools (Search, Accessibility, Login) ---
   const navTools = document.createElement('div');
   navTools.classList.add('nav-tools');
 
@@ -273,14 +273,14 @@ export default async function decorate(block) {
 
   // Add other utility icons from the fragment
   if (navIconsDiv) {
-    Array.from(navIconsDiv.children).forEach(iconDiv => {
-        // Exclude the search component as we've handled it separately
-        if (!iconDiv.classList.contains('cmp-header__search')) {
-            const clonedIcon = iconDiv.cloneNode(true);
-            // Clean up AEM specific classes that are not part of our new styling
-            clonedIcon.classList.remove('cmp-header__accessbility', 'cmp-header__login', 'cmp-header__hide-icon');
-            navTools.append(clonedIcon);
-        }
+    Array.from(navIconsDiv.children).forEach((iconDiv) => {
+      // Exclude the search component as we've handled it separately
+      if (!iconDiv.classList.contains('cmp-header__search')) {
+        const clonedIcon = iconDiv.cloneNode(true);
+        // Clean up AEM specific classes that are not part of our new styling
+        clonedIcon.classList.remove('cmp-header__accessbility', 'cmp-header__login', 'cmp-header__hide-icon');
+        navTools.append(clonedIcon);
+      }
     });
   }
   headerWrapper.append(navTools);
@@ -294,15 +294,15 @@ export default async function decorate(block) {
 
   // Cleanup AEM-specific component classes and data attributes from all elements
   block.querySelectorAll('[class*="cmp-"]').forEach((el) => {
-    Array.from(el.attributes).forEach(attr => {
-        if (attr.name.startsWith('data-cmp-') || attr.name === 'sly') {
-            el.removeAttribute(attr.name);
-        }
+    Array.from(el.attributes).forEach((attr) => {
+      if (attr.name.startsWith('data-cmp-') || attr.name === 'sly') {
+        el.removeAttribute(attr.name);
+      }
     });
     // Filter out classes that start with 'cmp-'
-    el.className = Array.from(el.classList).filter(cls => !cls.startsWith('cmp-')).join(' ');
+    el.className = Array.from(el.classList).filter((cls) => !cls.startsWith('cmp-')).join(' ');
     if (el.className === '') {
-        el.removeAttribute('class');
+      el.removeAttribute('class');
     }
   });
 
