@@ -122,7 +122,7 @@ export default async function decorate(block) {
       if (navSection.querySelector('ul')) {
         navSection.classList.add('nav-drop');
         if (navSection.querySelectorAll('ul li ul').length > 0) {
-            navSection.classList.add('nav-mega-menu');
+          navSection.classList.add('nav-mega-menu');
         }
       }
       navSection.addEventListener('click', () => {
