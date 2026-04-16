@@ -1,0 +1,316 @@
+import { createOptimizedPicture } from '../../scripts/aem.js';
+import { loadFragment } from '../fragment/fragment.js';
+import { moveInstrumentation } from '../../scripts/scripts.js';
+
+function closeAllDropdowns(container) {
+  container.querySelectorAll('.has-dropdown[aria-expanded="true"]').forEach((dropdown) => {
+    dropdown.querySelector('.header-dropdown-toggle')?.setAttribute('aria-expanded', 'false');
+    dropdown.setAttribute('aria-expanded', 'false');
+  });
+}
+
+function handleEscape(event, block) {
+  if (event.key === 'Escape') {
+    const headerEl = block.querySelector('.header');
+    if (headerEl) {
+      closeAllDropdowns(headerEl);
+      headerEl.querySelector('.header-toggle')?.setAttribute('aria-expanded', 'false');
+      document.body.classList.remove('nav-open');
+    }
+  }
+}
+
+function handleOutsideClick(event, block) {
+  const headerEl = block.querySelector('.header');
+  if (headerEl && !headerEl.contains(event.target)) {
+    closeAllDropdowns(headerEl);
+    headerEl.querySelector('.header-toggle')?.setAttribute('aria-expanded', 'false');
+    document.body.classList.remove('nav-open');
+  }
+}
+
+export default async function decorate(block) {
+  const navContent = await loadFragment('/nav');
+
+  // Create main header elements
+  const headerEl = document.createElement('header');
+  headerEl.classList.add('header');
+
+  const headerWrapper = document.createElement('div');
+  headerWrapper.classList.add('header-wrapper');
+  headerEl.append(headerWrapper);
+
+  // 1. Brand/Logo Area (hardcoded based on aashirvaad.com header)
+  const headerBrand = document.createElement('div');
+  headerBrand.classList.add('header-brand');
+  const logoLink = document.createElement('a');
+  logoLink.href = '/';
+  logoLink.classList.add('header-brand-link');
+  // Using actual logo from the original site's HTML
+  const logoImage = createOptimizedPicture(
+    'https://s7ap1.scene7.com/is/content/itcportalprod/Logo_2',
+    'Aashirvaad Logo',
+    true,
+    [{ width: '200' }],
+  );
+  // Ensure image is visible in DOM
+  const imgElement = logoImage.querySelector('img');
+  if (imgElement) {
+    imgElement.loading = 'eager'; // For LCP
+  }
+  logoLink.append(logoImage);
+  headerBrand.append(logoLink);
+  headerWrapper.append(headerBrand);
+
+  // 2. Main Navigation Menu
+  const headerNav = document.createElement('nav');
+  headerNav.classList.add('header-nav');
+  headerNav.setAttribute('aria-label', 'Main navigation');
+
+  const headerToggle = document.createElement('button');
+  headerToggle.classList.add('header-toggle');
+  headerToggle.setAttribute('aria-label', 'Open navigation');
+  headerToggle.setAttribute('aria-expanded', 'false');
+  headerNav.append(headerToggle);
+
+  const headerMenu = document.createElement('div');
+  headerMenu.classList.add('header-menu');
+  headerNav.append(headerMenu);
+  headerWrapper.append(headerNav);
+
+  const mainNavUl = document.createElement('ul');
+  mainNavUl.classList.add('header-nav-group');
+  headerMenu.append(mainNavUl);
+
+  // Process navContent for navigation links
+  // The fragment is a series of divs, each potentially a top-level nav item or a submenu
+  Array.from(navContent.children).forEach((section) => {
+    // Remove empty <p> tags, which AEM sometimes outputs
+    section.querySelectorAll('p:empty').forEach((p) => p.remove());
+
+    const anchorWrapper = section.querySelector('p'); // Main link is typically in a p tag
+    const ulElement = section.querySelector('ul'); // Submenu, if exists
+
+    // If there's an anchor or a UL, it's part of the nav
+    if (anchorWrapper || ulElement) {
+      const listItem = document.createElement('li');
+      listItem.classList.add('header-nav-item');
+
+      let mainLink;
+      if (anchorWrapper) {
+        mainLink = anchorWrapper.querySelector('a')?.cloneNode(true);
+      } else if (ulElement) {
+        // If a UL is present without a direct anchorWrapper,
+        // try to extract the main link from first LI
+        const firstLi = ulElement.querySelector('li');
+        const firstLiAnchor = firstLi?.querySelector('a');
+        if (firstLiAnchor && !firstLiAnchor.href) {
+          // Case for unclickable category title from raw HTML
+          mainLink = document.createElement('span');
+          mainLink.textContent = firstLiAnchor.textContent;
+          firstLiAnchor.remove(); // Remove it from the original UL to avoid duplication
+        } else if (firstLiAnchor) { // Case for clickable category link
+          mainLink = firstLiAnchor.cloneNode(true);
+        }
+      }
+
+      if (mainLink) {
+        listItem.append(mainLink);
+      }
+
+      if (ulElement) {
+        listItem.classList.add('has-dropdown');
+        listItem.setAttribute('aria-haspopup', 'true');
+        listItem.setAttribute('aria-expanded', 'false');
+
+        const toggleBtn = document.createElement('button');
+        toggleBtn.classList.add('header-dropdown-toggle');
+        toggleBtn.setAttribute('aria-label', 'Toggle submenu');
+        toggleBtn.setAttribute('aria-expanded', 'false');
+        listItem.append(toggleBtn);
+
+        const dropdownWrapper = document.createElement('div');
+        dropdownWrapper.classList.add('header-dropdown-wrapper');
+
+        const categoryMenu = document.createElement('div');
+        categoryMenu.classList.add('header-category-menu');
+        dropdownWrapper.append(categoryMenu);
+
+        // Recursive function to process nested ULs
+        const processSubmenu = (currentUl, level) => {
+          const newUl = document.createElement('ul');
+          newUl.classList.add('header-submenu', `level-${level}`);
+          Array.from(currentUl.children).forEach((li) => {
+            const newLi = document.createElement('li');
+            newLi.classList.add('header-nav-item');
+
+            const liAnchor = li.querySelector('a');
+            const liTextNode = Array.from(li.childNodes)
+              .find((node) => node.nodeType === Node.TEXT_NODE
+                && node.textContent.trim().length > 0);
+            const liText = liTextNode ? liTextNode.textContent.trim() : '';
+
+            if (liAnchor) {
+              newLi.append(liAnchor.cloneNode(true));
+            } else if (liText) {
+              // Handle case where text is directly in LI (e.g., category title without link)
+              const span = document.createElement('span');
+              span.textContent = liText;
+              newLi.append(span);
+            }
+
+            const nestedUl = li.querySelector('ul');
+            if (nestedUl) {
+              newLi.classList.add('has-dropdown');
+              newLi.setAttribute('aria-haspopup', 'true');
+              newLi.setAttribute('aria-expanded', 'false');
+              const nestedToggle = document.createElement('button');
+              nestedToggle.classList.add('header-dropdown-toggle');
+              nestedToggle.setAttribute('aria-label', `Toggle sub-submenu for ${liAnchor?.textContent || liText}`);
+              nestedToggle.setAttribute('aria-expanded', 'false');
+              newLi.append(nestedToggle);
+              newLi.append(processSubmenu(nestedUl, level + 1)); // Recursive call
+            }
+            newUl.append(newLi);
+          });
+          return newUl;
+        };
+
+        categoryMenu.append(processSubmenu(ulElement, 1));
+        listItem.append(dropdownWrapper);
+      }
+      mainNavUl.append(listItem);
+    }
+  });
+
+  // Add mobile-specific meta (policy links, social media)
+  // hardcoded based on original HTML structure
+  const mobileMeta = document.createElement('div');
+  mobileMeta.classList.add('header-mobile-meta');
+
+  const policyUl = document.createElement('ul');
+  policyUl.classList.add('header-policy');
+  [
+    { text: 'Contact us', href: '/more/contact-us.html' },
+    { text: 'Terms of use', href: '/conditions-policy/terms-of-use.html' },
+    { text: 'Privacy Policy', href: '/conditions-policy/privacy-policy.html' },
+  ].forEach((item) => {
+    const li = document.createElement('li');
+    li.classList.add('header-policy-list');
+    const a = document.createElement('a');
+    a.href = item.href;
+    a.textContent = item.text;
+    li.append(a);
+    policyUl.append(li);
+  });
+  mobileMeta.append(policyUl);
+
+  const socialMedia = document.createElement('div');
+  socialMedia.classList.add('header-social-media');
+  [
+    { class: 'icon-instagram', href: 'https://www.instagram.com/aashirvaad/', label: 'Instagram' },
+    { class: 'icon-facebok', href: 'https://www.facebook.com/Aashirvaad/', label: 'Facebook' },
+    { class: 'icon-twitter', href: 'https://twitter.com/AashirvaadAtta', label: 'Twitter' },
+    { class: 'icon-youtube', href: 'https://www.youtube.com/user/AashirvaadAtta', label: 'Youtube' },
+  ].forEach((item) => {
+    const a = document.createElement('a');
+    a.href = item.href;
+    a.target = '_blank';
+    a.classList.add(item.class);
+    a.setAttribute('aria-label', item.label);
+    socialMedia.append(a);
+  });
+  mobileMeta.append(socialMedia);
+  headerMenu.append(mobileMeta);
+
+  // 3. Utility Tools (Search, Accessibility, Login)
+  // hardcoded based on original aashirvaad.com header
+  const headerTools = document.createElement('div');
+  headerTools.classList.add('header-tools');
+  headerWrapper.append(headerTools);
+
+  const createToolItem = (className, iconClass, textContent, label, href = '#', isHidden = false) => {
+    const toolLink = document.createElement('a');
+    toolLink.href = href;
+    toolLink.classList.add('header-tool-item', className);
+    if (isHidden) {
+      toolLink.classList.add('header-tool-item-hidden');
+    }
+    toolLink.setAttribute('aria-label', label);
+
+    const iconDiv = document.createElement('span');
+    iconDiv.classList.add(iconClass);
+    toolLink.append(iconDiv);
+
+    if (textContent) {
+      const textDiv = document.createElement('span');
+      textDiv.classList.add('header-tool-text');
+      textDiv.textContent = textContent;
+      toolLink.append(textDiv);
+    }
+    return toolLink;
+  };
+
+  headerTools.append(createToolItem('header-tool-accessibility', 'icon-accessibility', '', 'Accessibility', '#', true));
+  headerTools.append(createToolItem('header-tool-search', 'icon-search', 'Search', 'Search'));
+  headerTools.append(createToolItem('header-tool-login', 'icon-profile', '', 'Login', '#', true));
+
+  // Event Listeners for mobile menu toggle
+  headerToggle.addEventListener('click', () => {
+    const isExpanded = headerToggle.getAttribute('aria-expanded') === 'true';
+    headerToggle.setAttribute('aria-expanded', !isExpanded);
+    document.body.classList.toggle('nav-open', !isExpanded);
+    closeAllDropdowns(headerNav); // Close dropdowns when toggling main menu
+  });
+
+  // Event Listeners for dropdowns (desktop hover, mobile click)
+  headerNav.querySelectorAll('.has-dropdown').forEach((dropdownParent) => {
+    const toggleBtn = dropdownParent.querySelector('.header-dropdown-toggle');
+
+    // Desktop hover logic
+    let hoverTimeout;
+    dropdownParent.addEventListener('mouseenter', () => {
+      clearTimeout(hoverTimeout);
+      if (window.innerWidth >= 900) { // Assuming 900px as desktop breakpoint
+        closeAllDropdowns(headerNav); // Close all other top-level dropdowns
+        dropdownParent.setAttribute('aria-expanded', 'true');
+        toggleBtn?.setAttribute('aria-expanded', 'true');
+      }
+    });
+
+    dropdownParent.addEventListener('mouseleave', () => {
+      if (window.innerWidth >= 900) {
+        hoverTimeout = setTimeout(() => {
+          dropdownParent.setAttribute('aria-expanded', 'false');
+          toggleBtn?.setAttribute('aria-expanded', 'false');
+        }, 200); // Small delay to allow moving between submenus
+      }
+    });
+
+    // Mobile click logic
+    toggleBtn?.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation(); // Prevent document click from closing
+      const isExpanded = dropdownParent.getAttribute('aria-expanded') === 'true';
+      // Only close siblings at the same level, not all dropdowns across the whole nav
+      Array.from(dropdownParent.parentNode.children).forEach((sibling) => {
+        if (sibling !== dropdownParent && sibling.classList.contains('has-dropdown')) {
+          sibling.setAttribute('aria-expanded', 'false');
+          sibling.querySelector('.header-dropdown-toggle')?.setAttribute('aria-expanded', 'false');
+        }
+      });
+      dropdownParent.setAttribute('aria-expanded', !isExpanded);
+      toggleBtn.setAttribute('aria-expanded', !isExpanded);
+    });
+  });
+
+  // Close on Escape and Outside Click
+  document.addEventListener('keydown', (e) => handleEscape(e, block)); // Pass block element
+  document.addEventListener('click', (e) => handleOutsideClick(e, block)); // Pass block element
+
+  // Add the final header to the block
+  block.innerHTML = ''; // Clear original block content
+  block.append(headerEl);
+
+  moveInstrumentation(navContent, block);
+}
