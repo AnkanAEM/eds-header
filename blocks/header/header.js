@@ -1,328 +1,334 @@
-import { getMetadata, createOptimizedPicture } from '../../scripts/aem.js';
+import { createOptimizedPicture } from '../../scripts/aem.js';
 import { loadFragment } from '../fragment/fragment.js';
 import { moveInstrumentation } from '../../scripts/scripts.js';
 
 function unwrapInvalidChildren(parent) {
-    if (!parent) return;
-    // Iterate in reverse to avoid issues when removing/inserting children
-    for (let i = parent.children.length - 1; i >= 0; i--) {
-        const child = parent.children[i];
-        // Unwrapping any non-LI elements directly inside a UL, and any DIVs which are invalid children of UL
-        if (parent.tagName === 'UL' && child.tagName !== 'LI') {
-            while (child.firstChild) {
-                parent.insertBefore(child.firstChild, child);
-            }
-            child.remove();
-        } else if (parent.tagName === 'LI' && child.tagName === 'DIV' && (child.classList.contains('cmp-header__category-menu') || child.classList.contains('cmp-header__image-text'))) {
-             // This handles the <div class="cmp-header__category-menu"> and <div class="cmp-header__image-text"> inside LI and UL
-            while (child.firstChild) {
-                parent.insertBefore(child.firstChild, child);
-            }
-            child.remove();
-        }
-        unwrapInvalidChildren(child); // Recurse for nested elements
+  if (!parent) return;
+  // Iterate in reverse to avoid issues when removing/inserting children
+  for (let i = parent.children.length - 1; i >= 0; i -= 1) {
+    const child = parent.children[i];
+    // Unwrapping any non-LI elements directly inside a UL, and any DIVs
+    // which are invalid children of UL
+    if (parent.tagName === 'UL' && child.tagName !== 'LI') {
+      while (child.firstChild) {
+        parent.insertBefore(child.firstChild, child);
+      }
+      child.remove();
+    } else if (parent.tagName === 'LI' && child.tagName === 'DIV'
+      && (child.classList.contains('cmp-header__category-menu')
+        || child.classList.contains('cmp-header__image-text'))) {
+      // This handles the <div class="cmp-header__category-menu"> and
+      // <div class="cmp-header__image-text"> inside LI and UL
+      while (child.firstChild) {
+        parent.insertBefore(child.firstChild, child);
+      }
+      child.remove();
     }
+    unwrapInvalidChildren(child); // Recurse for nested elements
+  }
 }
 
 // Function to recursively remove AEM-specific classes
 function removeAEMClasses(element) {
-    if (!element || typeof element.classList === 'undefined') return;
-    Array.from(element.classList).forEach(cls => {
-        if (cls.startsWith('cmp-') || cls.startsWith('aem-')) {
-            element.classList.remove(cls);
-        }
-    });
-    Array.from(element.children).forEach(removeAEMClasses);
-}
-
-export default async function decorate(block) {
-    const navContent = await loadFragment('/nav');
-    // Ensure instrumentation is moved BEFORE manipulating navContent
-    moveInstrumentation(navContent, block);
-
-    // Apply cleanup for AEM classes to the entire fragment first
-    removeAEMClasses(navContent);
-
-    block.innerHTML = ''; // Clear the initial empty block
-
-    // Assume navContent contains the full AEM header HTML structure
-    // We're looking for the 'header' block within the experience fragment structure
-    const cmpHeaderContainer = navContent.querySelector('.header');
-    const cmpHeader = cmpHeaderContainer ? cmpHeaderContainer.querySelector('.cmp-header') : null;
-    
-    if (!cmpHeader) {
-        console.error('cmp-header not found in nav fragment. The fragment might not contain the expected structure.');
-        // Fallback: if cmp-header is not found, try to use navContent directly, assuming it might be the cmp-header itself.
-        // This is a safety measure if the fragment structure is flatter than expected.
-        if (navContent.querySelector('.cmp-header')) {
-            cmpHeader = navContent.querySelector('.cmp-header');
-        } else {
-             return; // If still not found, exit.
-        }
+  if (!element || typeof element.classList === 'undefined') return;
+  Array.from(element.classList).forEach((cls) => {
+    if (cls.startsWith('cmp-') || cls.startsWith('aem-')) {
+      element.classList.remove(cls);
     }
-
-    // Create the new header structure
-    const headerWrapper = document.createElement('div');
-    headerWrapper.classList.add('header-wrapper');
-
-    const headerTop = document.createElement('div');
-    headerTop.classList.add('header-top');
-
-    const headerBrand = document.createElement('div');
-    headerBrand.classList.add('header-brand');
-
-    const headerNav = document.createElement('nav');
-    headerNav.classList.add('header-nav');
-    headerNav.setAttribute('aria-label', 'Main navigation');
-
-    const headerTools = document.createElement('div');
-    headerTools.classList.add('header-tools');
-
-    const navToggle = document.createElement('button');
-    navToggle.classList.add('nav-toggle');
-    navToggle.setAttribute('aria-label', 'Open navigation');
-    navToggle.setAttribute('aria-expanded', 'false');
-    navToggle.innerHTML = '<span class="icon-hamburger"></span>';
-
-    // 1. Extract Logo
-    const logoDiv = cmpHeader.querySelector('.logo.image');
-    if (logoDiv) {
-        const logoLink = logoDiv.querySelector('a');
-        if (logoLink) {
-            const img = logoLink.querySelector('img');
-            if (img) {
-                const src = img.getAttribute('src');
-                const alt = img.getAttribute('alt');
-                // Using createOptimizedPicture only if src is available and needs optimization
-                if (src && src.includes('s7ap1.scene7.com')) { // Only optimize external S7 images
-                    const optimizedPicture = createOptimizedPicture(src, alt, true, [{ width: '200' }]);
-                    logoLink.innerHTML = ''; // Clear original image structure
-                    logoLink.appendChild(optimizedPicture);
-                } else {
-                     // Append original picture element if it exists and no optimization needed
-                     const originalPicture = logoLink.querySelector('picture');
-                     if (originalPicture) logoLink.innerHTML = '';
-                     if (originalPicture) logoLink.appendChild(originalPicture);
-                }
-            }
-            headerBrand.appendChild(logoLink);
-        }
-    }
-
-    // 2. Extract Main Navigation
-    const navigationWrapper = cmpHeader.querySelector('.cmp-header__nav-links');
-    if (navigationWrapper) {
-        const mainNavElement = navigationWrapper.querySelector('.cmp-navigation');
-        if (mainNavElement) {
-            // Clean up invalid nested divs in ULs and LIs
-            unwrapInvalidChildren(mainNavElement);
-            headerNav.appendChild(mainNavElement);
-        }
-    }
-
-    // 3. Extract Utility Icons (Search, Accessibility, Login)
-    const navIcons = cmpHeader.querySelector('.cmp-header__nav-icons');
-    if (navIcons) {
-        // Iterate over children to maintain order and custom classes
-        Array.from(navIcons.children).forEach(child => {
-            const link = child.querySelector('a');
-            if (link) {
-                // Add descriptive classes for styling
-                if (child.classList.contains('cmp-header__search')) {
-                    link.classList.add('search-icon');
-                    link.setAttribute('aria-label', 'Search');
-                } else if (child.classList.contains('cmp-header__accessbility')) {
-                    link.classList.add('utility-icon', 'icon-accessibility');
-                    link.setAttribute('aria-label', 'Accessibility');
-                }
-                if (child.classList.contains('cmp-header__login')) {
-                    link.classList.add('utility-icon', 'icon-profile');
-                    link.setAttribute('aria-label', 'Profile / Login');
-                }
-                headerTools.appendChild(link); // Move the cleaned link
-            }
-        });
-    }
-
-    // 4. Extract Search Component (if present in the fragment, usually outside the main cmp-header or at the same level)
-    // The original HTML shows it as `<div class="search aem-GridColumn aem-GridColumn--default--12"><section id="search-48d9bd3936" class="cmp-search" ...>`
-    const searchComponent = navContent.querySelector('.search .cmp-search');
-    if (searchComponent) {
-        searchComponent.classList.add('header-search-overlay');
-        searchComponent.style.display = 'none'; // Initially hidden
-        block.appendChild(searchComponent); // Append outside header-wrapper for overlay positioning
-    }
-
-    // Assemble headerTop
-    headerTop.appendChild(headerBrand);
-    headerTop.appendChild(navToggle);
-    headerTop.appendChild(headerTools);
-
-    // Assemble final block
-    headerWrapper.appendChild(headerTop);
-    headerWrapper.appendChild(headerNav);
-    block.appendChild(headerWrapper);
-
-    // Setup interactivity
-    setupNavigationInteractions(block, navToggle, headerNav);
+  });
+  Array.from(element.children).forEach(removeAEMClasses);
 }
 
 function setupNavigationInteractions(block, navToggle, headerNav) {
-    const body = document.body;
-    const mainUl = headerNav.querySelector('ul.cmp-navigation__group'); // The main UL in the transformed nav
+  const { body } = document;
+  const mainUl = headerNav.querySelector('ul.cmp-navigation__group'); // The main UL in the transformed nav
 
-    // Hamburger toggle
-    navToggle.addEventListener('click', () => {
-        const isExpanded = navToggle.getAttribute('aria-expanded') === 'true';
-        navToggle.setAttribute('aria-expanded', !isExpanded);
-        headerNav.classList.toggle('is-open', !isExpanded);
-        body.classList.toggle('nav-open', !isExpanded);
-        if (!isExpanded) {
-            // Focus on the first focusable element in the opened nav for accessibility
-            const firstFocusable = headerNav.querySelector('a, button');
-            if (firstFocusable) firstFocusable.focus();
-        } else {
-            navToggle.focus(); // Return focus to the hamburger button when closing
-        }
-    });
-
-    // Dropdown / Mega Menu logic
-    // Using filter for broader browser compatibility than :has()
-    const allDropdowns = Array.from(headerNav.querySelectorAll('li')).filter(li => li.querySelector('ul'));
-
-    function closeAllDropdowns(excludeItem = null) {
-        allDropdowns.forEach((li) => {
-            if (li === excludeItem) return;
-            li.classList.remove('is-open');
-            const anchor = li.querySelector(':scope > a');
-            if (anchor) anchor.setAttribute('aria-expanded', 'false');
-            const subMenu = li.querySelector(':scope > ul');
-            if (subMenu) subMenu.setAttribute('aria-hidden', 'true');
-        });
+  // Hamburger toggle
+  navToggle.addEventListener('click', () => {
+    const isExpanded = navToggle.getAttribute('aria-expanded') === 'true';
+    navToggle.setAttribute('aria-expanded', !isExpanded);
+    headerNav.classList.toggle('is-open', !isExpanded);
+    body.classList.toggle('nav-open', !isExpanded);
+    if (!isExpanded) {
+      // Focus on the first focusable element in the opened nav for accessibility
+      const firstFocusable = headerNav.querySelector('a, button');
+      if (firstFocusable) firstFocusable.focus();
+    } else {
+      navToggle.focus(); // Return focus to the hamburger button when closing
     }
+  });
 
-    function toggleDropdown(listItem, forceState) {
-        const isOpen = listItem.classList.contains('is-open');
-        const newState = forceState !== undefined ? forceState : !isOpen;
-        const anchor = listItem.querySelector(':scope > a');
-        const subMenu = listItem.querySelector(':scope > ul');
+  // Dropdown / Mega Menu logic
+  // Using filter for broader browser compatibility than :has()
+  const allDropdowns = Array.from(headerNav.querySelectorAll('li')).filter((li) => li.querySelector('ul'));
 
-        if (newState) {
-            // Close other top-level dropdowns if opening a new one, but only if it's a direct child of mainUl
-            if (listItem.parentElement === mainUl) {
-                closeAllDropdowns(listItem);
-            }
-        } 
-        
-        listItem.classList.toggle('is-open', newState);
-        if (anchor) anchor.setAttribute('aria-expanded', newState);
-        if (subMenu) subMenu.setAttribute('aria-hidden', !newState);
-    }
-
+  function closeAllDropdowns(excludeItem = null) {
     allDropdowns.forEach((li) => {
-        const anchor = li.querySelector(':scope > a');
-        const subMenu = li.querySelector(':scope > ul');
-
-        if (anchor && subMenu) {
-            anchor.setAttribute('aria-haspopup', 'true');
-            anchor.setAttribute('aria-expanded', 'false');
-            subMenu.setAttribute('aria-hidden', 'true');
-            subMenu.setAttribute('role', 'menu');
-
-            // Create a dropdown indicator/toggle button for mobile
-            const dropdownIndicator = document.createElement('button');
-            dropdownIndicator.classList.add('dropdown-indicator');
-            dropdownIndicator.innerHTML = '<span class="icon-chevron-down"></span>';
-            dropdownIndicator.setAttribute('aria-label', `Toggle submenu for ${anchor.textContent}`);
-            // Insert after the anchor within the LI
-            anchor.insertAdjacentElement('afterend', dropdownIndicator);
-
-            // Desktop (mouse events)
-            li.addEventListener('mouseenter', () => {
-                if (window.innerWidth >= 900) { // breakpoint matching CSS
-                    toggleDropdown(li, true);
-                }
-            });
-
-            li.addEventListener('mouseleave', () => {
-                if (window.innerWidth >= 900) { // breakpoint matching CSS
-                    toggleDropdown(li, false);
-                }
-            });
-
-            // Mobile (click events) for indicator
-            dropdownIndicator.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                toggleDropdown(li);
-            });
-
-            // Mobile (click events) for anchor with submenu
-            anchor.addEventListener('click', (e) => {
-                if (window.innerWidth < 900) { // breakpoint matching CSS
-                    // If the anchor itself has no functional link (e.g., category header), or it's a menu with a submenu, toggle
-                    if (!anchor.href || anchor.href === '#' || anchor.href.endsWith('/#') || subMenu) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        toggleDropdown(li);
-                    }
-                }
-            });
-        }
+      if (li === excludeItem) return;
+      li.classList.remove('is-open');
+      const anchor = li.querySelector(':scope > a');
+      if (anchor) anchor.setAttribute('aria-expanded', 'false');
+      const subMenu = li.querySelector(':scope > ul');
+      if (subMenu) subMenu.setAttribute('aria-hidden', 'true');
     });
+  }
 
-    // Close dropdowns and nav on escape key
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            if (body.classList.contains('nav-open')) {
-                navToggle.click();
-            }
-            closeAllDropdowns();
+  function toggleDropdown(listItem, forceState) {
+    const isOpen = listItem.classList.contains('is-open');
+    const newState = forceState !== undefined ? forceState : !isOpen;
+    const anchor = listItem.querySelector(':scope > a');
+    const subMenu = listItem.querySelector(':scope > ul');
+
+    if (newState) {
+      // Close other top-level dropdowns if opening a new one,
+      // but only if it's a direct child of mainUl
+      if (listItem.parentElement === mainUl) {
+        closeAllDropdowns(listItem);
+      }
+    }
+
+    listItem.classList.toggle('is-open', newState);
+    if (anchor) anchor.setAttribute('aria-expanded', newState);
+    if (subMenu) subMenu.setAttribute('aria-hidden', !newState);
+  }
+
+  allDropdowns.forEach((li) => {
+    const anchor = li.querySelector(':scope > a');
+    const subMenu = li.querySelector(':scope > ul');
+
+    if (anchor && subMenu) {
+      anchor.setAttribute('aria-haspopup', 'true');
+      anchor.setAttribute('aria-expanded', 'false');
+      subMenu.setAttribute('aria-hidden', 'true');
+      subMenu.setAttribute('role', 'menu');
+
+      // Create a dropdown indicator/toggle button for mobile
+      const dropdownIndicator = document.createElement('button');
+      dropdownIndicator.classList.add('dropdown-indicator');
+      dropdownIndicator.innerHTML = '<span class="icon-chevron-down"></span>';
+      dropdownIndicator.setAttribute('aria-label', `Toggle submenu for ${anchor.textContent}`);
+      // Insert after the anchor within the LI
+      anchor.insertAdjacentElement('afterend', dropdownIndicator);
+
+      // Desktop (mouse events)
+      li.addEventListener('mouseenter', () => {
+        if (window.innerWidth >= 900) { // breakpoint matching CSS
+          toggleDropdown(li, true);
         }
-    });
+      });
 
-    // Close dropdowns and nav on outside click
-    document.addEventListener('click', (e) => {
-        if (!block.contains(e.target) && !navToggle.contains(e.target)) {
-            if (body.classList.contains('nav-open')) {
-                navToggle.click();
-            }
-            closeAllDropdowns();
+      li.addEventListener('mouseleave', () => {
+        if (window.innerWidth >= 900) { // breakpoint matching CSS
+          toggleDropdown(li, false);
         }
-    });
+      });
 
-    // Search functionality
-    const searchIcon = block.querySelector('.search-icon');
-    const searchOverlay = block.querySelector('.header-search-overlay'); // This is the .cmp-search moved
+      // Mobile (click events) for indicator
+      dropdownIndicator.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleDropdown(li);
+      });
 
-    if (searchIcon && searchOverlay) {
-        searchIcon.addEventListener('click', (e) => {
+      // Mobile (click events) for anchor with submenu
+      anchor.addEventListener('click', (e) => {
+        if (window.innerWidth < 900) { // breakpoint matching CSS
+          // If the anchor itself has no functional link (e.g., category header),
+          // or it's a menu with a submenu, toggle
+          if (!anchor.href || anchor.href === '#' || anchor.href.endsWith('/#') || subMenu) {
             e.preventDefault();
             e.stopPropagation();
-            const isOpen = searchOverlay.style.display === 'block';
-            searchOverlay.style.display = isOpen ? 'none' : 'block';
-            if (!isOpen) {
-                // Focus the search input field when it opens
-                const searchInput = searchOverlay.querySelector('input[type="text"]');
-                if (searchInput) searchInput.focus();
-            } else {
-                searchIcon.focus(); // Return focus to the search icon when closing
-            }
-        });
-
-        // Close search when clicking outside
-        document.addEventListener('click', (e) => {
-            if (!searchOverlay.contains(e.target) && !searchIcon.contains(e.target)) {
-                searchOverlay.style.display = 'none';
-            }
-        });
-
-         // Close search on escape
-         searchOverlay.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                searchOverlay.style.display = 'none';
-                searchIcon.focus();
-            }
-         });
+            toggleDropdown(li);
+          }
+        }
+      });
     }
+  });
+
+  // Close dropdowns and nav on escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (body.classList.contains('nav-open')) {
+        navToggle.click();
+      }
+      closeAllDropdowns();
+    }
+  });
+
+  // Close dropdowns and nav on outside click
+  document.addEventListener('click', (e) => {
+    if (!block.contains(e.target) && !navToggle.contains(e.target)) {
+      if (body.classList.contains('nav-open')) {
+        navToggle.click();
+      }
+      closeAllDropdowns();
+    }
+  });
+
+  // Search functionality
+  const searchIcon = block.querySelector('.search-icon');
+  const searchOverlay = block.querySelector('.header-search-overlay'); // This is the .cmp-search moved
+
+  if (searchIcon && searchOverlay) {
+    searchIcon.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const isOpen = searchOverlay.style.display === 'block';
+      searchOverlay.style.display = isOpen ? 'none' : 'block';
+      if (!isOpen) {
+        // Focus the search input field when it opens
+        const searchInput = searchOverlay.querySelector('input[type="text"]');
+        if (searchInput) searchInput.focus();
+      } else {
+        searchIcon.focus(); // Return focus to the search icon when closing
+      }
+    });
+
+    // Close search when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!searchOverlay.contains(e.target) && !searchIcon.contains(e.target)) {
+        searchOverlay.style.display = 'none';
+      }
+    });
+
+    // Close search on escape
+    searchOverlay.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        searchOverlay.style.display = 'none';
+        searchIcon.focus();
+      }
+    });
+  }
+}
+
+export default async function decorate(block) {
+  const navContent = await loadFragment('/nav');
+  // Ensure instrumentation is moved BEFORE manipulating navContent
+  moveInstrumentation(navContent, block);
+
+  // Apply cleanup for AEM classes to the entire fragment first
+  removeAEMClasses(navContent);
+
+  block.innerHTML = ''; // Clear the initial empty block
+
+  // Assume navContent contains the full AEM header HTML structure
+  // We're looking for the 'header' block within the experience fragment structure
+  const cmpHeaderContainer = navContent.querySelector('.header');
+  let cmpHeader = cmpHeaderContainer ? cmpHeaderContainer.querySelector('.cmp-header') : null;
+
+  if (!cmpHeader) {
+    // Fallback: if cmp-header is not found, try to use navContent directly,
+    // assuming it might be the cmp-header itself.
+    if (navContent.querySelector('.cmp-header')) {
+      cmpHeader = navContent.querySelector('.cmp-header');
+    } else {
+      return; // If still not found, exit.
+    }
+  }
+
+  // Create the new header structure
+  const headerWrapper = document.createElement('div');
+  headerWrapper.classList.add('header-wrapper');
+
+  const headerTop = document.createElement('div');
+  headerTop.classList.add('header-top');
+
+  const headerBrand = document.createElement('div');
+  headerBrand.classList.add('header-brand');
+
+  const headerNav = document.createElement('nav');
+  headerNav.classList.add('header-nav');
+  headerNav.setAttribute('aria-label', 'Main navigation');
+
+  const headerTools = document.createElement('div');
+  headerTools.classList.add('header-tools');
+
+  const navToggle = document.createElement('button');
+  navToggle.classList.add('nav-toggle');
+  navToggle.setAttribute('aria-label', 'Open navigation');
+  navToggle.setAttribute('aria-expanded', 'false');
+  navToggle.innerHTML = '<span class="icon-hamburger"></span>';
+
+  // 1. Extract Logo
+  const logoDiv = cmpHeader.querySelector('.logo.image');
+  if (logoDiv) {
+    const logoLink = logoDiv.querySelector('a');
+    if (logoLink) {
+      const img = logoLink.querySelector('img');
+      if (img) {
+        const src = img.getAttribute('src');
+        const alt = img.getAttribute('alt');
+        // Using createOptimizedPicture only if src is available and needs optimization
+        if (src && src.includes('s7ap1.scene7.com')) { // Only optimize external S7 images
+          const optimizedPicture = createOptimizedPicture(src, alt, true, [{ width: '200' }]);
+          logoLink.innerHTML = ''; // Clear original image structure
+          logoLink.appendChild(optimizedPicture);
+        } else {
+          // Append original picture element if it exists and no optimization needed
+          const originalPicture = logoLink.querySelector('picture');
+          if (originalPicture) logoLink.innerHTML = '';
+          if (originalPicture) logoLink.appendChild(originalPicture);
+        }
+      }
+      headerBrand.appendChild(logoLink);
+    }
+  }
+
+  // 2. Extract Main Navigation
+  const navigationWrapper = cmpHeader.querySelector('.cmp-header__nav-links');
+  if (navigationWrapper) {
+    const mainNavElement = navigationWrapper.querySelector('.cmp-navigation');
+    if (mainNavElement) {
+      // Clean up invalid nested divs in ULs and LIs
+      unwrapInvalidChildren(mainNavElement);
+      headerNav.appendChild(mainNavElement);
+    }
+  }
+
+  // 3. Extract Utility Icons (Search, Accessibility, Login)
+  const navIcons = cmpHeader.querySelector('.cmp-header__nav-icons');
+  if (navIcons) {
+    // Iterate over children to maintain order and custom classes
+    Array.from(navIcons.children).forEach((child) => {
+      const link = child.querySelector('a');
+      if (link) {
+        // Add descriptive classes for styling
+        if (child.classList.contains('cmp-header__search')) {
+          link.classList.add('search-icon');
+          link.setAttribute('aria-label', 'Search');
+        } else if (child.classList.contains('cmp-header__accessbility')) {
+          link.classList.add('utility-icon', 'icon-accessibility');
+          link.setAttribute('aria-label', 'Accessibility');
+        }
+        if (child.classList.contains('cmp-header__login')) {
+          link.classList.add('utility-icon', 'icon-profile');
+          link.setAttribute('aria-label', 'Profile / Login');
+        }
+        headerTools.appendChild(link); // Move the cleaned link
+      }
+    });
+  }
+
+  // 4. Extract Search Component (if present in the fragment,
+  // usually outside the main cmp-header or at the same level)
+  // The original HTML shows it as a search section inside an aem-GridColumn
+  const searchComponent = navContent.querySelector('.search .cmp-search');
+  if (searchComponent) {
+    searchComponent.classList.add('header-search-overlay');
+    searchComponent.style.display = 'none'; // Initially hidden
+    block.appendChild(searchComponent); // Append outside header-wrapper for overlay positioning
+  }
+
+  // Assemble headerTop
+  headerTop.appendChild(headerBrand);
+  headerTop.appendChild(navToggle);
+  headerTop.appendChild(headerTools);
+
+  // Assemble final block
+  headerWrapper.appendChild(headerTop);
+  headerWrapper.appendChild(headerNav);
+  block.appendChild(headerWrapper);
+
+  // Setup interactivity
+  setupNavigationInteractions(block, navToggle, headerNav);
 }
