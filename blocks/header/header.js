@@ -1,4 +1,4 @@
-import { getMetadata, createOptimizedPicture } from '../../scripts/aem.js';
+import { createOptimizedPicture } from '../../scripts/aem.js';
 import { loadFragment } from '../fragment/fragment.js';
 import { moveInstrumentation } from '../../scripts/scripts.js';
 
@@ -100,18 +100,20 @@ export default async function decorate(block) {
       if (anchorWrapper) {
         mainLink = anchorWrapper.querySelector('a')?.cloneNode(true);
       } else if (ulElement) {
-        // If a UL is present without a direct anchorWrapper, try to extract the main link from first LI
+        // If a UL is present without a direct anchorWrapper,
+        // try to extract the main link from first LI
         const firstLi = ulElement.querySelector('li');
         const firstLiAnchor = firstLi?.querySelector('a');
-        if (firstLiAnchor && !firstLiAnchor.href) { // Case for unclickable category title from raw HTML
-            mainLink = document.createElement('span');
-            mainLink.textContent = firstLiAnchor.textContent;
-            firstLiAnchor.remove(); // Remove it from the original UL to avoid duplication
+        if (firstLiAnchor && !firstLiAnchor.href) {
+          // Case for unclickable category title from raw HTML
+          mainLink = document.createElement('span');
+          mainLink.textContent = firstLiAnchor.textContent;
+          firstLiAnchor.remove(); // Remove it from the original UL to avoid duplication
         } else if (firstLiAnchor) { // Case for clickable category link
-            mainLink = firstLiAnchor.cloneNode(true);
+          mainLink = firstLiAnchor.cloneNode(true);
         }
       }
-      
+
       if (mainLink) {
         listItem.append(mainLink);
       }
@@ -143,12 +145,15 @@ export default async function decorate(block) {
             newLi.classList.add('header-nav-item');
 
             const liAnchor = li.querySelector('a');
-            const liTextNode = Array.from(li.childNodes).find(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim().length > 0);
+            const liTextNode = Array.from(li.childNodes)
+              .find((node) => node.nodeType === Node.TEXT_NODE
+                && node.textContent.trim().length > 0);
             const liText = liTextNode ? liTextNode.textContent.trim() : '';
 
             if (liAnchor) {
               newLi.append(liAnchor.cloneNode(true));
-            } else if (liText) { // Handle case where text is directly in LI (e.g., category title without link)
+            } else if (liText) {
+              // Handle case where text is directly in LI (e.g., category title without link)
               const span = document.createElement('span');
               span.textContent = liText;
               newLi.append(span);
@@ -178,7 +183,8 @@ export default async function decorate(block) {
     }
   });
 
-  // Add mobile-specific meta (policy links, social media) - hardcoded based on original HTML structure
+  // Add mobile-specific meta (policy links, social media)
+  // hardcoded based on original HTML structure
   const mobileMeta = document.createElement('div');
   mobileMeta.classList.add('header-mobile-meta');
 
@@ -217,8 +223,8 @@ export default async function decorate(block) {
   mobileMeta.append(socialMedia);
   headerMenu.append(mobileMeta);
 
-
-  // 3. Utility Tools (Search, Accessibility, Login) - hardcoded based on original aashirvaad.com header
+  // 3. Utility Tools (Search, Accessibility, Login)
+  // hardcoded based on original aashirvaad.com header
   const headerTools = document.createElement('div');
   headerTools.classList.add('header-tools');
   headerWrapper.append(headerTools);
@@ -228,7 +234,7 @@ export default async function decorate(block) {
     toolLink.href = href;
     toolLink.classList.add('header-tool-item', className);
     if (isHidden) {
-      toolLink.classList.add('header-tool-item--hidden');
+      toolLink.classList.add('header-tool-item-hidden');
     }
     toolLink.setAttribute('aria-label', label);
 
@@ -249,7 +255,6 @@ export default async function decorate(block) {
   headerTools.append(createToolItem('header-tool-search', 'icon-search', 'Search', 'Search'));
   headerTools.append(createToolItem('header-tool-login', 'icon-profile', '', 'Login', '#', true));
 
-
   // Event Listeners for mobile menu toggle
   headerToggle.addEventListener('click', () => {
     const isExpanded = headerToggle.getAttribute('aria-expanded') === 'true';
@@ -261,7 +266,7 @@ export default async function decorate(block) {
   // Event Listeners for dropdowns (desktop hover, mobile click)
   headerNav.querySelectorAll('.has-dropdown').forEach((dropdownParent) => {
     const toggleBtn = dropdownParent.querySelector('.header-dropdown-toggle');
-    
+
     // Desktop hover logic
     let hoverTimeout;
     dropdownParent.addEventListener('mouseenter', () => {
@@ -284,18 +289,18 @@ export default async function decorate(block) {
 
     // Mobile click logic
     toggleBtn?.addEventListener('click', (event) => {
-        event.preventDefault();
-        event.stopPropagation(); // Prevent document click from closing
-        const isExpanded = dropdownParent.getAttribute('aria-expanded') === 'true';
-        // Only close siblings at the same level, not all dropdowns across the whole nav
-        Array.from(dropdownParent.parentNode.children).forEach(sibling => {
-            if (sibling !== dropdownParent && sibling.classList.contains('has-dropdown')) {
-                sibling.setAttribute('aria-expanded', 'false');
-                sibling.querySelector('.header-dropdown-toggle')?.setAttribute('aria-expanded', 'false');
-            }
-        });
-        dropdownParent.setAttribute('aria-expanded', !isExpanded);
-        toggleBtn.setAttribute('aria-expanded', !isExpanded);
+      event.preventDefault();
+      event.stopPropagation(); // Prevent document click from closing
+      const isExpanded = dropdownParent.getAttribute('aria-expanded') === 'true';
+      // Only close siblings at the same level, not all dropdowns across the whole nav
+      Array.from(dropdownParent.parentNode.children).forEach((sibling) => {
+        if (sibling !== dropdownParent && sibling.classList.contains('has-dropdown')) {
+          sibling.setAttribute('aria-expanded', 'false');
+          sibling.querySelector('.header-dropdown-toggle')?.setAttribute('aria-expanded', 'false');
+        }
+      });
+      dropdownParent.setAttribute('aria-expanded', !isExpanded);
+      toggleBtn.setAttribute('aria-expanded', !isExpanded);
     });
   });
 
