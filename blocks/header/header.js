@@ -1,446 +1,373 @@
-import { createOptimizedPicture } from '../../scripts/aem.js';
+import { getMetadata, createOptimizedPicture } from '../../scripts/aem.js';
 import { loadFragment } from '../fragment/fragment.js';
 import { moveInstrumentation } from '../../scripts/scripts.js';
 
-/**
- * Closes all open dropdowns and removes body scroll lock.
- * @param {Event} event The event object.
- */
-function closeOnEscape(event) {
-  if (event.key === 'Escape') {
-    const openDropdowns = document.querySelectorAll('.header-nav-item.open');
-    openDropdowns.forEach((dropdown) => dropdown.classList.remove('open'));
-    document.body.classList.remove('no-scroll'); // Remove body scroll lock
-    const hamburger = document.querySelector('.header-hamburger');
-    if (hamburger) {
-      hamburger.setAttribute('aria-expanded', 'false');
-    }
-    const openSearch = document.querySelector('.header-search.open');
-    if (openSearch) {
-      openSearch.classList.remove('open');
-    }
+// Statically parse the raw HTML navigation structure once to derive correct labels
+const rawHtmlNavContent = `
+    <nav id="navigation-3f62f7748f" class="cmp-navigation" itemscope="" itemtype="http://schema.org/SiteNavigationElement" role="navigation">
+        <ul class="cmp-navigation__group cmp-header__nav-group">
+            <li class="cmp-navigation__item cmp-navigation__item--level-0 cmp-header__nav-products cmp-header__nav-products-click mobile-icon-our-products">
+                <a href="/our-products.html" class="cmp-navigation__item-link">Our Products</a>
+                <ul class="cmp-navigation__group cmp-header__product-items"></ul>
+            </li>
+            <li class="cmp-navigation__item cmp-navigation__item--level-0 cmp-header__nav-products cmp-header__no-items mobile-icon-our-story">
+                <a href="/our-story.html" class="cmp-navigation__item-link">Our Story</a>
+            </li>
+            <li class="cmp-navigation__item cmp-navigation__item--level-0 cmp-header__nav-products cmp-header__no-items mobile-icon-recipes">
+                <a href="/recipe-listing.html" class="cmp-navigation__item-link">Recipe</a>
+            </li>
+            <li class="cmp-navigation__item cmp-navigation__item--level-0 cmp-header__nav-products cmp-header__no-items mobile-icon-community">
+                <a href="/blogs.html" class="cmp-navigation__item-link">Blogs</a>
+            </li>
+            <li class="cmp-navigation__item cmp-navigation__item--level-0 cmp-header__nav-products cmp-header__nav-products-click mobile-icon-community">
+                <a href="/csr-initiatives.html" class="cmp-navigation__item-link">CSR Initiatives</a>
+                <ul class="cmp-navigation__group cmp-header__product-items"></ul>
+            </li>
+            <li class="cmp-navigation__item cmp-navigation__item--level-0 cmp-header__nav-products cmp-header__no-items">
+                <a href="/faqs.html" class="cmp-navigation__item-link">FAQs</a>
+            </li>
+        </ul>
+        <div class="cmp-header__mobile-list">
+            <ul class="cmp-header__policy">
+                <li class="cmp-header__policy-list">
+                    <a href="/more/contact-us.html" target="_blank">Contact us</a>
+                </li>
+                <li class="cmp-header__policy-list">
+                    <a href="/conditions-policy/terms-of-use.html" target="_blank">Terms of use</a>
+                </li>
+                <li class="cmp-header__policy-list">
+                    <a href="/conditions-policy/privacy-policy.html" target="_blank">Privacy Policy</a>
+                </li>
+            </ul>
+            <div class="cmp-header__social-media">
+                <a href="https://www.instagram.com/aashirvaad/" target="_blank" class="icon-instagram" data-social="instagram"></a>
+                <a href="https://www.facebook.com/Aashirvaad/" target="_blank" class="icon-facebok" data-social="facebook"></a>
+                <a href="https://twitter.com/AashirvaadAtta" target="_blank" class="icon-twitter" data-social="twitter"></a>
+                <a href="https://www.youtube.com/user/AashirvaadAtta" target="_blank" class="icon-youtube" data-social="youtube"></a>
+            </div>
+        </div>
+    </nav>
+    <div class="cmp-header__nav-icons">
+        <div class="cmp-header__search ">
+            <a href="#" class="cmp-header__icon-img">
+                <div class="icon-search"></div>
+                <div class="cmp-header__icon-text">Search</div>
+            </a>
+        </div>
+        <div class="cmp-header__login cmp-header__hide-icon">
+            <a href="#" class="cmp-header__icon-img">
+                <div class="icon-profile"></div>
+            </a>
+        </div>
+    </div>
+`;
+const rawHtmlDoc = new DOMParser().parseFromString(rawHtmlNavContent, 'text/html');
+
+function getOriginalLabel(href) {
+  // Clean href to ensure a match, e.g., remove query params or hash
+  const cleanedHref = href ? href.split('#')[0].split('?')[0] : '';
+  // Find the exact link in the parsed raw HTML to get its text content
+  const link = rawHtmlDoc.querySelector(`a[href="${cleanedHref}"]`);
+  if (link && link.textContent) {
+    return link.textContent.trim();
   }
+  return null;
 }
 
-/**
- * Closes all open dropdowns and removes body scroll lock if click is outside header.
- * @param {Event} event The event object.
- */
-function closeOnOutsideClick(event) {
-  const header = document.querySelector('.header-wrapper');
-  if (!header.contains(event.target)) {
-    const openDropdowns = document.querySelectorAll('.header-nav-item.open');
-    openDropdowns.forEach((dropdown) => dropdown.classList.remove('open'));
-    document.body.classList.remove('no-scroll'); // Remove body scroll lock
-    const hamburger = document.querySelector('.header-hamburger');
-    if (hamburger) {
-      hamburger.setAttribute('aria-expanded', 'false');
-    }
-    const openSearch = document.querySelector('.header-search.open');
-    if (openSearch) {
-      openSearch.classList.remove('open');
-    }
+// Helper for creating DOM elements with optional classes and attributes
+function createElement(tag, classes = [], attributes = {}) {
+  const el = document.createElement(tag);
+  if (classes.length > 0) {
+    el.classList.add(...classes);
   }
+  for (const key in attributes) {
+    el.setAttribute(key, attributes[key]);
+  }
+  return el;
 }
 
-/**
- * Sets up dropdown interactions for desktop (hover) and mobile (click).
- * @param {HTMLElement} block The header block element.
- */
-function setupDropdowns(block) {
-  const L0Items = block.querySelectorAll('.header-nav-L0.has-submenu');
-  L0Items.forEach((L0Item) => {
-    const L0Link = L0Item.querySelector(':scope > a, :scope > span');
-    if (!L0Link) return;
+function toggleNav(nav, forceExpanded = null) {
+  const expanded = forceExpanded !== null ? forceExpanded : nav.getAttribute('aria-expanded') === 'false';
+  nav.setAttribute('aria-expanded', expanded);
+  document.body.classList.toggle('nav-open', expanded);
+  nav.querySelector('.nav-hamburger')?.setAttribute('aria-label', expanded ? 'Close navigation' : 'Open navigation');
+}
 
-    // Add a dropdown indicator
-    const indicator = document.createElement('span');
-    indicator.classList.add('header-dropdown-indicator');
-    L0Link.append(indicator);
+function closeAllDropdowns(container = document) {
+  container.querySelectorAll('.has-dropdown[aria-expanded="true"]').forEach((li) => {
+    li.setAttribute('aria-expanded', 'false');
+    li.classList.remove('active-hover'); // Remove active-hover for desktop too
+  });
+}
 
-    let leaveTimeout;
+function setupDropdowns(ul, level = 0) {
+  ul.querySelectorAll(`:scope > li`).forEach((li) => {
+    const anchor = li.querySelector(':scope > a');
+    const submenu = li.querySelector(':scope > ul');
 
-    // Desktop (hover)
-    L0Item.addEventListener('mouseenter', () => {
-      if (window.innerWidth >= 992) { // Assuming 992px as breakpoint for desktop
-        clearTimeout(leaveTimeout);
-        L0Item.classList.add('open');
-        document.body.classList.add('no-scroll'); // Lock body scroll when mega menu is open
-      }
-    });
+    if (submenu) {
+      li.classList.add('has-dropdown');
+      anchor?.setAttribute('aria-haspopup', 'true');
+      li.setAttribute('aria-expanded', 'false');
 
-    L0Item.addEventListener('mouseleave', () => {
-      if (window.innerWidth >= 992) {
-        leaveTimeout = setTimeout(() => {
-          L0Item.classList.remove('open');
-          if (!block.querySelector('.header-nav-item.open')) { // Only remove if no other dropdowns are open
-            document.body.classList.remove('no-scroll');
-          }
-        }, 300); // Small delay before closing
-      }
-    });
+      // Add chevron icon to dropdown parents
+      const chevron = createElement('span', ['icon-chevron-down']);
+      anchor?.appendChild(chevron);
 
-    // Mobile (click) - Prevent default link behavior on L0 if it has submenu on mobile
-    L0Link.addEventListener('click', (e) => {
-      if (window.innerWidth < 992) { // Assuming 992px as breakpoint for mobile
-        e.preventDefault();
-        e.stopPropagation(); // Prevent propagation to document click listener
-        L0Item.classList.toggle('open');
-        if (L0Item.classList.contains('open')) {
-          document.body.classList.add('no-scroll');
-        } else if (!block.querySelector('.header-nav-item.open')) {
-          document.body.classList.remove('no-scroll');
-        }
-      }
-    });
-
-    const L1Items = L0Item.querySelectorAll('.header-nav-L1.has-submenu');
-    L1Items.forEach((L1Item) => {
-      const L1Link = L1Item.querySelector(':scope > a');
-      if (!L1Link) return;
-
-      const L1Indicator = document.createElement('span');
-      L1Indicator.classList.add('header-dropdown-indicator');
-      L1Link.append(L1Indicator);
-
-      // Desktop (hover)
-      L1Item.addEventListener('mouseenter', (e) => {
-        if (window.innerWidth >= 992) {
-          e.stopPropagation(); // Stop propagation to parent L0
-          clearTimeout(leaveTimeout); // Clear L0 leave timeout if hovering over L1
-          L1Item.classList.add('open');
-        }
-      });
-
-      L1Item.addEventListener('mouseleave', (e) => {
-        if (window.innerWidth >= 992) {
-          e.stopPropagation();
-          L1Item.classList.remove('open');
-        }
-      });
-
-      // Mobile (click) - Prevent default link behavior on L1 if it has submenu on mobile
-      L1Link.addEventListener('click', (e) => {
-        if (window.innerWidth < 992) {
+      // Toggle dropdown on click for mobile/tablet and for desktop if not already open by hover
+      anchor?.addEventListener('click', (e) => {
+        if (window.innerWidth <= 1024 || !li.classList.contains('active-hover')) {
           e.preventDefault();
           e.stopPropagation();
-          L1Item.classList.toggle('open');
+          const isExpanded = li.getAttribute('aria-expanded') === 'true';
+
+          // Close siblings at the same level
+          Array.from(li.parentNode.children).forEach(sibling => {
+            if (sibling !== li && sibling.classList.contains('has-dropdown')) {
+              sibling.setAttribute('aria-expanded', 'false');
+              sibling.classList.remove('active-hover');
+            }
+          });
+
+          li.setAttribute('aria-expanded', !isExpanded);
+          li.classList.toggle('active-hover', !isExpanded); // Keep active-hover for visual consistency on click
         }
       });
-    });
+
+      // Hover for desktop
+      const handleMouseEnter = () => {
+        if (window.innerWidth > 1024) {
+          Array.from(li.parentNode.children).forEach(sibling => {
+            if (sibling !== li && sibling.classList.contains('has-dropdown')) {
+              sibling.setAttribute('aria-expanded', 'false');
+              sibling.classList.remove('active-hover');
+            }
+          });
+          li.setAttribute('aria-expanded', 'true');
+          li.classList.add('active-hover');
+        }
+      };
+
+      const handleMouseLeave = () => {
+        if (window.innerWidth > 1024) {
+          // Only close if no child dropdowns are open and mouse is truly leaving
+          if (!li.contains(document.activeElement) && !li.querySelector('.has-dropdown[aria-expanded="true"]')) {
+            li.setAttribute('aria-expanded', 'false');
+            li.classList.remove('active-hover');
+          }
+        }
+      };
+
+      li.addEventListener('mouseenter', handleMouseEnter);
+      li.addEventListener('mouseleave', handleMouseLeave);
+
+      setupDropdowns(submenu, level + 1); // Recurse for nested menus
+    }
   });
-
-  // Event listeners for closing on escape and outside click
-  document.addEventListener('keydown', closeOnEscape);
-  document.addEventListener('click', closeOnOutsideClick);
 }
 
-/**
- * Creates an icon span with the specified class name.
- * @param {string} iconName The name of the icon class.
- * @returns {HTMLSpanElement} The icon span element.
- */
-function createIcon(iconName) {
-  const iconSpan = document.createElement('span');
-  iconSpan.classList.add('icon', `icon-${iconName}`);
-  return iconSpan;
-}
-
-/**
- * Decorates the header block with navigation, logo, and utility elements.
- * @param {HTMLElement} block The header block element.
- */
 export default async function decorate(block) {
+  // Fetch nav content
   const navContent = await loadFragment('/nav');
   if (!navContent) {
     return;
   }
 
-  // Main header container
-  const headerWrapper = document.createElement('div');
-  headerWrapper.classList.add('header-wrapper');
-
-  // Brand/Logo area
-  const brand = document.createElement('div');
-  brand.classList.add('header-brand');
-
-  // Main navigation area
-  const nav = document.createElement('nav');
-  nav.classList.add('header-nav');
-  nav.setAttribute('aria-label', 'Main Navigation');
-  const mainNavUl = document.createElement('ul');
-  mainNavUl.classList.add('header-nav-group');
-  nav.append(mainNavUl);
-
-  // Tools/Utility area
-  const tools = document.createElement('div');
-  tools.classList.add('header-tools');
-
-  // Hamburger menu button (for mobile)
-  const hamburger = document.createElement('button');
-  hamburger.classList.add('header-hamburger');
-  hamburger.setAttribute('aria-label', 'Open navigation');
-  hamburger.setAttribute('aria-expanded', 'false');
-  hamburger.innerHTML = '<span></span><span></span><span></span>';
-
-  hamburger.addEventListener('click', () => {
-    nav.classList.toggle('open');
-    const expanded = nav.classList.contains('open');
-    hamburger.setAttribute('aria-expanded', expanded);
-    document.body.classList.toggle('no-scroll', expanded);
-  });
-
-  // Iterate through top-level divs in the fragment (AEM sections)
-  // NOTE: navContent.children is used, assuming each direct child div is a logical section.
-  const fragmentSections = Array.from(navContent.children);
-
-  // Temporary storage for elements before final assembly
-  let logoElement = null;
-  const navItems = [];
-  const mobileUtilityItems = [];
-  const desktopUtilityItems = [];
-
-  fragmentSections.forEach((section) => {
-    // Skip empty sections or those containing only empty p tags
-    if (section.textContent.trim() === '' && section.querySelectorAll('img, a, button, ul').length === 0) {
-      return;
-    }
-
-    // 1. LOGO Detection (usually the first substantial item with an image link)
-    // Looks for an <a> tag directly containing an <img> or a <picture> tag.
-    const potentialLogoLink = section.querySelector('a img, a picture');
-    if (potentialLogoLink && !logoElement) {
-      const logoA = potentialLogoLink.closest('a');
-      let optimizedPicture;
-      if (potentialLogoLink.tagName === 'IMG') {
-        optimizedPicture = createOptimizedPicture(potentialLogoLink.src, potentialLogoLink.alt || 'Brand Logo', true, [{ width: '150' }]);
-      } else { // It's a picture element
-        optimizedPicture = potentialLogoLink.cloneNode(true);
-        // Ensure proper source sets for the optimized picture
-        const img = optimizedPicture.querySelector('img');
-        if (img) {
-          img.setAttribute('src', img.getAttribute('src') || '');
-          img.setAttribute('alt', img.getAttribute('alt') || 'Brand Logo');
-          img.setAttribute('loading', 'eager');
-        }
-      }
-
-      if (logoA) {
-        logoA.innerHTML = ''; // Clear existing content
-        logoA.append(optimizedPicture);
-        logoElement = logoA;
-      } else {
-        // If img/picture is not in an A, wrap it in one linking to home
-        const homeLink = document.createElement('a');
-        homeLink.href = '/';
-        homeLink.append(optimizedPicture);
-        logoElement = homeLink;
-      }
-      return; // Logo found, move to next section
-    }
-
-    // 2. MAIN NAVIGATION Items (L0 with optional L1/L2 submenus)
-    // Find an L0 link (p > a) and its potential sibling UL (L1 group)
-    const L0LinkContainer = section.querySelector('p:first-of-type > a');
-    const L1Group = section.querySelector('ul:not(.header-nav-group)'); // Avoid re-selecting already processed ULs
-
-    if (L0LinkContainer) {
-      const L0ItemLi = document.createElement('li');
-      L0ItemLi.classList.add('header-nav-item', 'header-nav-L0');
-
-      // Move the L0 link (remove p wrapper)
-      L0ItemLi.append(L0LinkContainer);
-      if (L0LinkContainer.parentElement) {
-        L0LinkContainer.parentElement.remove(); // Remove the original p tag
-      }
-
-      if (L1Group) {
-        L0ItemLi.classList.add('has-submenu');
-        L1Group.classList.add('header-nav-group', 'header-nav-L1-group');
-
-        // Process L1 and L2 items
-        Array.from(L1Group.children).forEach((L1Li) => {
-          if (L1Li.tagName === 'LI') {
-            L1Li.classList.add('header-nav-item', 'header-nav-L1');
-            const L2Group = L1Li.querySelector(':scope > ul'); // Check for L2
-            if (L2Group) {
-              L1Li.classList.add('has-submenu');
-              L2Group.classList.add('header-nav-group', 'header-nav-L2-group');
-              // Add L2 classes
-              Array.from(L2Group.children).forEach((L2Li) => {
-                if (L2Li.tagName === 'LI') {
-                  L2Li.classList.add('header-nav-item', 'header-nav-L2');
-                }
-              });
-            }
-          }
-        });
-        L0ItemLi.append(L1Group); // Append processed L1Group to L0ItemLi
-      }
-
-      // Capture other direct children of the 'section' div to be promo content
-      // These elements would be siblings to the p-link and UL within the same section.
-      const promoElements = Array.from(section.children).filter((child) => {
-        const isL0P = L0LinkContainer.parentElement === child;
-        const isL1Ulist = L1Group === child;
-        return child.textContent.trim() !== '' && !isL0P && !isL1Ulist;
-      });
-
-      if (promoElements.length > 0) {
-        const promoContainer = document.createElement('div');
-        promoContainer.classList.add('header-mega-menu-promo');
-        promoElements.forEach((promoEl) => promoContainer.append(promoEl));
-        L0ItemLi.append(promoContainer);
-      }
-
-      navItems.push(L0ItemLi);
-      return; // Nav item processed, move to next section
-    }
-
-    // 3. UTILITY / TOOL Sections
-    // Social media icons:
-    const socialLinks = section.querySelector('a[href*="facebook"], a[href*="instagram"], a[href*="twitter"], a[href*="youtube"]');
-    const policyUl = section.querySelector('ul'); // Check for policy links ul
-
-    if (socialLinks || (policyUl && policyUl.querySelectorAll('a[href*="policy"], a[href*="contact"], a[href*="terms"]').length > 0)) {
-      // This is likely the mobile utility and social media block from the AEM nav structure
-      const mobileUtilities = document.createElement('div');
-      mobileUtilities.classList.add('header-mobile-utility');
-
-      if (policyUl) {
-        policyUl.classList.add('header-policy-list');
-        mobileUtilities.append(policyUl);
-      }
-
-      if (socialLinks) {
-        const socialWrapper = document.createElement('div');
-        socialWrapper.classList.add('header-social-media');
-        // Find all social links within the section (they might be in a p or div)
-        const allSocialLinks = section.querySelectorAll('a[href*="facebook"], a[href*="instagram"], a[href*="twitter"], a[href*="youtube"]');
-        allSocialLinks.forEach((socialA) => {
-          const iconClass = socialA.href.includes('instagram') ? 'instagram'
-            : socialA.href.includes('facebook') ? 'facebook'
-              : socialA.href.includes('twitter') ? 'twitter'
-                : socialA.href.includes('youtube') ? 'youtube'
-                  : null;
-          if (iconClass) {
-            socialA.prepend(createIcon(iconClass));
-            socialA.classList.add(`icon-${iconClass}`);
-          }
-          socialWrapper.append(socialA.cloneNode(true)); // Clone to avoid moving out of original section before cleanup
-          socialA.remove(); // Remove original social link elements from the section
-        });
-        mobileUtilities.append(socialWrapper);
-      }
-
-      // Append any other direct non-empty children of this section to mobileUtilities
-      Array.from(section.children).filter((child) => child.textContent.trim() !== '').forEach((child) => {
-        mobileUtilities.append(child.cloneNode(true)); // Clone to not interfere with main processing
-        child.remove();
-      });
-
-      mobileUtilityItems.push(mobileUtilities);
-      return; // Mobile utilities processed
-    }
-
-    // Search, Login, Accessibility (desktop tools typically)
-    const textContentLower = section.textContent.toLowerCase();
-    if (textContentLower.includes('search') || textContentLower.includes('login') || textContentLower.includes('accessibility') || textContentLower.includes('profile')) {
-      const toolItem = document.createElement('div');
-      toolItem.classList.add('header-tool-item');
-
-      const link = section.querySelector('a'); // Try to find a link first
-      if (link) {
-        if (textContentLower.includes('search')) {
-          toolItem.classList.add('header-search');
-          link.innerHTML = '';
-          link.append(createIcon('search'), document.createTextNode('Search'));
-          link.addEventListener('click', (e) => {
-            e.preventDefault();
-            toolItem.classList.toggle('open');
-            const searchInput = toolItem.querySelector('.header-search-input');
-            if (searchInput) {
-              setTimeout(() => searchInput.focus(), 100); // Focus after transition
-            }
-          });
-          // Add dummy search input field
-          const searchInput = document.createElement('input');
-          searchInput.type = 'search';
-          searchInput.placeholder = 'Start Typing...';
-          searchInput.classList.add('header-search-input');
-          toolItem.append(searchInput);
-        } else if (textContentLower.includes('login') || textContentLower.includes('profile')) {
-          toolItem.classList.add('header-login');
-          link.innerHTML = '';
-          link.append(createIcon('profile'));
-        } else if (textContentLower.includes('accessibility')) {
-          toolItem.classList.add('header-accessibility');
-          link.innerHTML = '';
-          link.append(createIcon('accessibility'));
-        }
-        toolItem.append(link);
-      } else {
-        // Fallback for simple text, create dummy link/button
-        if (textContentLower.includes('search')) {
-          const searchBtn = document.createElement('button');
-          searchBtn.classList.add('header-search-btn');
-          searchBtn.append(createIcon('search'), document.createTextNode('Search'));
-          toolItem.append(searchBtn);
-          searchBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            toolItem.classList.toggle('open');
-            const searchInput = toolItem.querySelector('.header-search-input');
-            if (searchInput) {
-              setTimeout(() => searchInput.focus(), 100);
-            }
-          });
-          const searchInput = document.createElement('input');
-          searchInput.type = 'search';
-          searchInput.placeholder = 'Start Typing...';
-          searchInput.classList.add('header-search-input');
-          toolItem.append(searchInput);
-        } else if (textContentLower.includes('login') || textContentLower.includes('profile')) {
-          const loginA = document.createElement('a');
-          loginA.href = '#'; // Placeholder
-          loginA.append(createIcon('profile'));
-          toolItem.append(loginA);
-        } else if (textContentLower.includes('accessibility')) {
-          const accessA = document.createElement('a');
-          accessA.href = '#'; // Placeholder
-          accessA.append(createIcon('accessibility'));
-          toolItem.append(accessA);
-        }
-      }
-      desktopUtilityItems.push(toolItem);
-      return; // Desktop utility processed
-    }
-
-    // Fallback: If any section is not classified and has content, append its content to a generic tools area
-    // This ensures no content is lost.
-    if (section.children.length > 0) {
-      Array.from(section.children).forEach((child) => tools.append(child.cloneNode(true)));
-      section.remove(); // Remove original section content after cloning
-    }
-  });
-
-  // Assemble the header
-  if (logoElement) {
-    brand.append(logoElement);
-  }
-  navItems.forEach((item) => mainNavUl.append(item));
-  desktopUtilityItems.forEach((item) => tools.append(item));
-  mobileUtilityItems.forEach((item) => nav.append(item)); // Mobile utilities go inside the main nav for mobile menu
-
-  headerWrapper.append(brand, hamburger, nav, tools);
-  block.innerHTML = '';
-  block.append(headerWrapper);
-
-  // Final clean up for any stray p tags if not handled during initial processing
-  block.querySelectorAll('p:empty').forEach((p) => p.remove());
-
-  // Setup interactive elements
-  setupDropdowns(block);
-
-  // Move instrumentation metadata from navContent to the block
+  // Move instrumentation from fragment to block for proper tracking
   moveInstrumentation(navContent, block);
+
+  block.textContent = ''; // Clear block content
+
+  const headerElement = createElement('header');
+  const nav = createElement('nav', ['header-nav'], { 'aria-expanded': 'false' });
+  const headerWrapper = createElement('div', ['header-wrapper']);
+
+  const navBrand = createElement('div', ['header-brand']);
+  const navSections = createElement('div', ['header-sections'], { 'id': 'header-navigation-menu' });
+  const navTools = createElement('div', ['header-tools']);
+
+  // Hamburger Menu Button
+  const menuToggle = createElement('button', ['nav-hamburger'], { 'aria-label': 'Open navigation', 'aria-controls': 'header-navigation-menu' });
+  menuToggle.innerHTML = `
+    <span class="nav-hamburger-icon"></span>
+    <span class="nav-hamburger-icon"></span>
+    <span class="nav-hamburger-icon"></span>
+  `;
+  menuToggle.addEventListener('click', () => toggleNav(nav));
+
+  // --- Process navContent children to classify and restructure ---
+  let mainNavUl = createElement('ul', ['header-main-nav']);
+  let mobileFooterNavUl = createElement('ul', ['header-mobile-footer-nav']);
+  let socialMediaLinksDiv = createElement('div', ['header-social-media']);
+
+  Array.from(navContent.children).forEach((section) => {
+    // Clean up generic AEM wrapper divs and empty paragraphs
+    if (section.classList.contains('section')) {
+        section.classList.remove('section');
+    }
+    if (section.firstElementChild?.tagName === 'DIV' && section.firstElementChild.classList.contains('default-content-wrapper')) {
+        section = section.firstElementChild; // Dive into the wrapper
+    }
+
+    const img = section.querySelector('img');
+    const link = section.querySelector('a');
+    const p = section.querySelector('p');
+    const ul = section.querySelector('ul');
+
+    // 1. Logo Section
+    if ((img || link?.querySelector('img')) && navBrand.children.length === 0) {
+        const logoLink = link || createElement('a', [], { href: '/' });
+        if (!logoLink.querySelector('img') && img) {
+            logoLink.prepend(img);
+        }
+        logoLink.classList.add('header-logo');
+
+        // Create optimized picture for logo if not already one
+        const existingImg = logoLink.querySelector('img');
+        if (existingImg && !existingImg.closest('picture')) {
+            const optimizedPicture = createOptimizedPicture(existingImg.src, existingImg.alt, true, [{ width: '750' }]);
+            logoLink.replaceChild(optimizedPicture, existingImg);
+        }
+
+        navBrand.append(logoLink);
+    } else if (ul) {
+      // 2. Navigation List Sections (Main Nav, Mobile Footer Nav, Social)
+
+      const parentLi = createElement('li');
+      let isMainNavParent = false;
+
+      if (p && link) { // This structure indicates a potential L0 item with a link
+        const clonedLink = link.cloneNode(true);
+        // Smart Labeling: Replace generic 'Button'/'Link' text with actual labels from raw HTML
+        if (['Button', 'Link'].includes(clonedLink.textContent.trim())) {
+          const originalLabel = getOriginalLabel(clonedLink.href);
+          if (originalLabel) {
+            clonedLink.textContent = originalLabel;
+          }
+        }
+        parentLi.append(clonedLink);
+        isMainNavParent = true;
+      } else if (section.textContent.trim() !== '') {
+        // If there's content but not a <p><a>, might be a header for a list, e.g., 'Atta' with no link
+        const headerText = createElement('span'); // Use a span if it's just text to avoid unlinked LI
+        headerText.textContent = section.textContent.trim();
+        parentLi.append(headerText);
+        isMainNavParent = true;
+      }
+
+      if (ul) {
+        const clonedUl = ul.cloneNode(true);
+        // Check if this UL contains social media links
+        if (clonedUl.querySelector('a[data-social]')) {
+          socialMediaLinksDiv.append(clonedUl);
+          isMainNavParent = false; // Not part of the main navigation
+        } else if (clonedUl.querySelector('a[href*="contact"], a[href*="policy"], a[href*="terms"], a[href*="sitemap"]')) {
+          mobileFooterNavUl.append(clonedUl);
+          isMainNavParent = false; // Not part of the main navigation
+        } else if (isMainNavParent) {
+          // This is a submenu for a main nav item
+          parentLi.append(clonedUl);
+          mainNavUl.append(parentLi);
+        } else {
+            // Fallback: If it's a UL but not clear where it belongs, add to main nav as a new top-level. 
+            // This might happen for fragments that start directly with a UL.
+            // To avoid duplicate, iterate its LIs and add them directly if no parentLi was created.
+            Array.from(clonedUl.children).forEach(childLi => {
+                if (childLi.tagName === 'LI') {
+                    mainNavUl.append(childLi.cloneNode(true));
+                }
+            });
+        }
+      } else if (isMainNavParent) {
+        // It was a P > A, but no UL followed, just a standalone top-level link
+        mainNavUl.append(parentLi);
+      }
+    } else if (link) {
+      // Catch-all for standalone links that might be tools
+      const clonedLink = link.cloneNode(true);
+      if (clonedLink.href === '#' && (clonedLink.textContent.toLowerCase().includes('search') || clonedLink.textContent.toLowerCase().includes('profile'))) {
+        // These are tools, we will reconstruct them specifically later
+      } else if (clonedLink.href.includes('instagram.com') || clonedLink.href.includes('facebook.com') || clonedLink.href.includes('twitter.com') || clonedLink.href.includes('youtube.com')) {
+        socialMediaLinksDiv.append(clonedLink);
+      } else if (clonedLink.href.includes('contact-us.html') || clonedLink.href.includes('terms-of-use.html') || clonedLink.href.includes('privacy-policy.html') || clonedLink.href.includes('sitemap.html')) {
+        const li = createElement('li');
+        li.append(clonedLink);
+        mobileFooterNavUl.append(li);
+      }
+    }
+  });
+
+  // Append all collected main nav items to navSections
+  if (mainNavUl.children.length > 0) {
+    navSections.append(mainNavUl);
+  }
+  
+  // Create a mobile specific container for policy and social links
+  const mobileNavExtra = createElement('div', ['header-mobile-extra']);
+  if (mobileFooterNavUl.children.length > 0) {
+    mobileNavExtra.append(mobileFooterNavUl);
+  }
+  if (socialMediaLinksDiv.children.length > 0) {
+    mobileNavExtra.append(socialMediaLinksDiv);
+  }
+  if (mobileNavExtra.children.length > 0) {
+      navSections.append(mobileNavExtra); // Append to navSections to be part of the mobile slide-out
+  }
+
+  // Add hardcoded search and profile icons to navTools (replicates original site's structure)
+  const searchLink = createElement('a', ['header-tool-item', 'header-search-icon'], { href: '#' });
+  searchLink.innerHTML = '<span class="icon-search"></span><span class="header-tool-text">Search</span>';
+  navTools.append(searchLink);
+
+  const profileLink = createElement('a', ['header-tool-item', 'header-profile-icon'], { href: '#' });
+  profileLink.innerHTML = '<span class="icon-profile"></span><span class="header-tool-text">Login</span>';
+  navTools.append(profileLink);
+
+  // Construct the final header DOM
+  headerWrapper.append(navBrand);
+  headerWrapper.append(menuToggle); // Hamburger button
+  headerWrapper.append(navSections); // Main nav and mobile extras
+  headerWrapper.append(navTools); // Search, Login icons
+
+  nav.append(headerWrapper);
+  headerElement.append(nav);
+  block.append(headerElement);
+
+  // Setup dropdown interactions
+  setupDropdowns(mainNavUl);
+
+  // Close dropdowns on outside click
+  document.addEventListener('click', (e) => {
+    const target = e.target;
+    // Check if the click is outside the nav and not on a dropdown content itself
+    if (!nav.contains(target) && !target.closest('.has-dropdown[aria-expanded="true"]')) {
+      closeAllDropdowns();
+    }
+
+    // If clicking on a top-level nav item that is not a dropdown, close all dropdowns
+    // This ensures only one dropdown or no dropdown is open at the top level
+    const clickedLi = target.closest('.header-main-nav > li');
+    if (clickedLi && !clickedLi.classList.contains('has-dropdown')) {
+        closeAllDropdowns();
+    }
+  });
+
+  // Close dropdowns and mobile nav on escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeAllDropdowns();
+      if (document.body.classList.contains('nav-open')) {
+        toggleNav(nav, false);
+      }
+    }
+  });
+
+  // Adjust dropdowns on resize for desktop/mobile interaction changes
+  window.addEventListener('resize', () => {
+    if (window.innerWidth > 1024) {
+      document.body.classList.remove('nav-open');
+      nav.setAttribute('aria-expanded', 'false');
+      closeAllDropdowns(); // Ensure all dropdowns are closed and reset on desktop resize
+    }
+  });
 }
