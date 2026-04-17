@@ -1,4 +1,4 @@
-import { getMetadata, createOptimizedPicture } from '../../scripts/aem.js';
+import { createOptimizedPicture } from '../../scripts/aem.js';
 import { loadFragment } from '../fragment/fragment.js';
 import { moveInstrumentation } from '../../scripts/scripts.js';
 
@@ -334,7 +334,7 @@ export default async function decorate(block) {
       }
 
       // Append any other direct non-empty children of this section to mobileUtilities
-      Array.from(section.children).filter(child => child.textContent.trim() !== '').forEach(child => {
+      Array.from(section.children).filter((child) => child.textContent.trim() !== '').forEach((child) => {
         mobileUtilities.append(child.cloneNode(true)); // Clone to not interfere with main processing
         child.remove();
       });
@@ -418,7 +418,7 @@ export default async function decorate(block) {
     // Fallback: If any section is not classified and has content, append its content to a generic tools area
     // This ensures no content is lost.
     if (section.children.length > 0) {
-      Array.from(section.children).forEach(child => tools.append(child.cloneNode(true)));
+      Array.from(section.children).forEach((child) => tools.append(child.cloneNode(true)));
       section.remove(); // Remove original section content after cloning
     }
   });
