@@ -101,7 +101,7 @@ function closeAllDropdowns(container = document) {
 }
 
 function setupDropdowns(ul, level = 0) {
-  ul.querySelectorAll(`:scope > li`).forEach((li) => {
+  ul.querySelectorAll(':scope > li').forEach((li) => {
     const anchor = li.querySelector(':scope > a');
     const submenu = li.querySelector(':scope > ul');
 
@@ -122,7 +122,7 @@ function setupDropdowns(ul, level = 0) {
           const isExpanded = li.getAttribute('aria-expanded') === 'true';
 
           // Close siblings at the same level
-          Array.from(li.parentNode.children).forEach(sibling => {
+          Array.from(li.parentNode.children).forEach((sibling) => {
             if (sibling !== li && sibling.classList.contains('has-dropdown')) {
               sibling.setAttribute('aria-expanded', 'false');
               sibling.classList.remove('active-hover');
@@ -137,7 +137,7 @@ function setupDropdowns(ul, level = 0) {
       // Hover for desktop
       const handleMouseEnter = () => {
         if (window.innerWidth > 1024) {
-          Array.from(li.parentNode.children).forEach(sibling => {
+          Array.from(li.parentNode.children).forEach((sibling) => {
             if (sibling !== li && sibling.classList.contains('has-dropdown')) {
               sibling.setAttribute('aria-expanded', 'false');
               sibling.classList.remove('active-hover');
@@ -183,7 +183,7 @@ export default async function decorate(block) {
   const headerWrapper = createElement('div', ['header-wrapper']);
 
   const navBrand = createElement('div', ['header-brand']);
-  const navSections = createElement('div', ['header-sections'], { 'id': 'header-navigation-menu' });
+  const navSections = createElement('div', ['header-sections'], { id: 'header-navigation-menu' });
   const navTools = createElement('div', ['header-tools']);
 
   // Hamburger Menu Button
@@ -196,17 +196,17 @@ export default async function decorate(block) {
   menuToggle.addEventListener('click', () => toggleNav(nav));
 
   // --- Process navContent children to classify and restructure ---
-  let mainNavUl = createElement('ul', ['header-main-nav']);
-  let mobileFooterNavUl = createElement('ul', ['header-mobile-footer-nav']);
-  let socialMediaLinksDiv = createElement('div', ['header-social-media']);
+  const mainNavUl = createElement('ul', ['header-main-nav']);
+  const mobileFooterNavUl = createElement('ul', ['header-mobile-footer-nav']);
+  const socialMediaLinksDiv = createElement('div', ['header-social-media']);
 
   Array.from(navContent.children).forEach((section) => {
     // Clean up generic AEM wrapper divs and empty paragraphs
     if (section.classList.contains('section')) {
-        section.classList.remove('section');
+      section.classList.remove('section');
     }
     if (section.firstElementChild?.tagName === 'DIV' && section.firstElementChild.classList.contains('default-content-wrapper')) {
-        section = section.firstElementChild; // Dive into the wrapper
+      section = section.firstElementChild; // Dive into the wrapper
     }
 
     const img = section.querySelector('img');
@@ -216,20 +216,20 @@ export default async function decorate(block) {
 
     // 1. Logo Section
     if ((img || link?.querySelector('img')) && navBrand.children.length === 0) {
-        const logoLink = link || createElement('a', [], { href: '/' });
-        if (!logoLink.querySelector('img') && img) {
-            logoLink.prepend(img);
-        }
-        logoLink.classList.add('header-logo');
+      const logoLink = link || createElement('a', [], { href: '/' });
+      if (!logoLink.querySelector('img') && img) {
+        logoLink.prepend(img);
+      }
+      logoLink.classList.add('header-logo');
 
-        // Create optimized picture for logo if not already one
-        const existingImg = logoLink.querySelector('img');
-        if (existingImg && !existingImg.closest('picture')) {
-            const optimizedPicture = createOptimizedPicture(existingImg.src, existingImg.alt, true, [{ width: '750' }]);
-            logoLink.replaceChild(optimizedPicture, existingImg);
-        }
+      // Create optimized picture for logo if not already one
+      const existingImg = logoLink.querySelector('img');
+      if (existingImg && !existingImg.closest('picture')) {
+        const optimizedPicture = createOptimizedPicture(existingImg.src, existingImg.alt, true, [{ width: '750' }]);
+        logoLink.replaceChild(optimizedPicture, existingImg);
+      }
 
-        navBrand.append(logoLink);
+      navBrand.append(logoLink);
     } else if (ul) {
       // 2. Navigation List Sections (Main Nav, Mobile Footer Nav, Social)
 
@@ -269,14 +269,14 @@ export default async function decorate(block) {
           parentLi.append(clonedUl);
           mainNavUl.append(parentLi);
         } else {
-            // Fallback: If it's a UL but not clear where it belongs, add to main nav as a new top-level. 
-            // This might happen for fragments that start directly with a UL.
-            // To avoid duplicate, iterate its LIs and add them directly if no parentLi was created.
-            Array.from(clonedUl.children).forEach(childLi => {
-                if (childLi.tagName === 'LI') {
-                    mainNavUl.append(childLi.cloneNode(true));
-                }
-            });
+          // Fallback: If it's a UL but not clear where it belongs, add to main nav as a new top-level.
+          // This might happen for fragments that start directly with a UL.
+          // To avoid duplicate, iterate its LIs and add them directly if no parentLi was created.
+          Array.from(clonedUl.children).forEach((childLi) => {
+            if (childLi.tagName === 'LI') {
+              mainNavUl.append(childLi.cloneNode(true));
+            }
+          });
         }
       } else if (isMainNavParent) {
         // It was a P > A, but no UL followed, just a standalone top-level link
@@ -301,7 +301,7 @@ export default async function decorate(block) {
   if (mainNavUl.children.length > 0) {
     navSections.append(mainNavUl);
   }
-  
+
   // Create a mobile specific container for policy and social links
   const mobileNavExtra = createElement('div', ['header-mobile-extra']);
   if (mobileFooterNavUl.children.length > 0) {
@@ -311,7 +311,7 @@ export default async function decorate(block) {
     mobileNavExtra.append(socialMediaLinksDiv);
   }
   if (mobileNavExtra.children.length > 0) {
-      navSections.append(mobileNavExtra); // Append to navSections to be part of the mobile slide-out
+    navSections.append(mobileNavExtra); // Append to navSections to be part of the mobile slide-out
   }
 
   // Add hardcoded search and profile icons to navTools (replicates original site's structure)
@@ -338,7 +338,7 @@ export default async function decorate(block) {
 
   // Close dropdowns on outside click
   document.addEventListener('click', (e) => {
-    const target = e.target;
+    const { target } = e;
     // Check if the click is outside the nav and not on a dropdown content itself
     if (!nav.contains(target) && !target.closest('.has-dropdown[aria-expanded="true"]')) {
       closeAllDropdowns();
@@ -348,7 +348,7 @@ export default async function decorate(block) {
     // This ensures only one dropdown or no dropdown is open at the top level
     const clickedLi = target.closest('.header-main-nav > li');
     if (clickedLi && !clickedLi.classList.contains('has-dropdown')) {
-        closeAllDropdowns();
+      closeAllDropdowns();
     }
   });
 
