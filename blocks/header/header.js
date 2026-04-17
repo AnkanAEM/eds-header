@@ -16,10 +16,10 @@ export default async function decorate(block) {
     // Minimal fallback: if a header tag exists in the fragment, use it directly
     const headerEl = navContent.querySelector('header');
     if (headerEl) {
-        block.append(headerEl);
-        moveInstrumentation(navContent, block);
-        if (navContent.parentNode) navContent.parentNode.removeChild(navContent);
-        return;
+      block.append(headerEl);
+      moveInstrumentation(navContent, block);
+      if (navContent.parentNode) navContent.parentNode.removeChild(navContent);
+      return;
     }
     return; // If expected structure not found, exit.
   }
@@ -53,17 +53,17 @@ export default async function decorate(block) {
     mobileNav.classList.remove('position-fixed', 'd-flex', 'flex-column', 'gap-6'); // Remove original positioning
 
     // Standardize classes for mobile menu items for consistent styling
-    mobileNav.querySelectorAll('.accordion-item').forEach(item => {
+    mobileNav.querySelectorAll('.accordion-item').forEach((item) => {
       item.classList.add('header-mobile-nav-item');
       const heading = item.querySelector('.accordion-header');
       const button = item.querySelector('.accordion-button');
       const collapse = item.querySelector('.accordion-collapse');
       if (heading) heading.classList.add('header-mobile-nav-heading');
       if (button) {
-          button.classList.add('header-mobile-nav-button');
-          button.removeAttribute('type'); // Remove type="button" to prevent default submit
-          button.setAttribute('aria-expanded', 'false'); // Initial state is closed
-          button.classList.remove('collapsed'); // Remove AEM default class
+        button.classList.add('header-mobile-nav-button');
+        button.removeAttribute('type'); // Remove type="button" to prevent default submit
+        button.setAttribute('aria-expanded', 'false'); // Initial state is closed
+        button.classList.remove('collapsed'); // Remove AEM default class
       }
       if (collapse) {
         collapse.classList.add('header-mobile-nav-collapse');
@@ -71,11 +71,11 @@ export default async function decorate(block) {
       }
 
       // Ensure that any rich content within mobile dropdowns also get standardized classes
-      collapse?.querySelectorAll('.sublinksNavigator, .subLevelLinks, .seasonalbanner, .dropdown-item').forEach(subContent => {
-          subContent.classList.add('header-mobile-dropdown-content');
-          subContent.querySelectorAll('ul').forEach(ul => ul.classList.add('header-mobile-submenu'));
-          subContent.querySelectorAll('li').forEach(li => li.classList.add('header-mobile-submenu-item'));
-          subContent.querySelectorAll('a').forEach(a => a.classList.add('header-mobile-submenu-link'));
+      collapse?.querySelectorAll('.sublinksNavigator, .subLevelLinks, .seasonalbanner, .dropdown-item').forEach((subContent) => {
+        subContent.classList.add('header-mobile-dropdown-content');
+        subContent.querySelectorAll('ul').forEach((ul) => ul.classList.add('header-mobile-submenu'));
+        subContent.querySelectorAll('li').forEach((li) => li.classList.add('header-mobile-submenu-item'));
+        subContent.querySelectorAll('a').forEach((a) => a.classList.add('header-mobile-submenu-link'));
       });
     });
 
@@ -103,11 +103,11 @@ export default async function decorate(block) {
     const mainDesktopNavList = desktopNavbar.querySelector('.header__navbar--collapse');
     if (mainDesktopNavList) {
       const ulElement = mainDesktopNavList.querySelector('.header__navbar--list');
-      if(ulElement) {
+      if (ulElement) {
         ulElement.classList.add('header-main-nav'); // Standard class for the main UL
         newHeaderWrapper.append(ulElement);
 
-        ulElement.querySelectorAll('.header__navbar--item').forEach(item => {
+        ulElement.querySelectorAll('.header__navbar--item').forEach((item) => {
           item.classList.add('header-nav-item'); // Standardize L0 item class
           const desktopDropdown = item.querySelector('.header__navbar--dropdown');
           if (desktopDropdown) {
@@ -117,11 +117,11 @@ export default async function decorate(block) {
             desktopDropdown.classList.remove('position-fixed', 'w-100', 'start-0', 'pt-12', 'pb-8'); // Remove conflicting styles
 
             // Standardize classes for content within desktop dropdowns (L1/L2, banners, etc.)
-            desktopDropdown.querySelectorAll('.sublinksNavigator, .subLevelLinks, .seasonalbanner, .dropdown-item').forEach(subContent => {
-                subContent.classList.add('header-dropdown-subitem');
-                subContent.querySelectorAll('ul').forEach(ul => ul.classList.add('header-submenu'));
-                subContent.querySelectorAll('li').forEach(li => li.classList.add('header-submenu-item'));
-                subContent.querySelectorAll('a').forEach(a => a.classList.add('header-submenu-link'));
+            desktopDropdown.querySelectorAll('.sublinksNavigator, .subLevelLinks, .seasonalbanner, .dropdown-item').forEach((subContent) => {
+              subContent.classList.add('header-dropdown-subitem');
+              subContent.querySelectorAll('ul').forEach((ul) => ul.classList.add('header-submenu'));
+              subContent.querySelectorAll('li').forEach((li) => li.classList.add('header-submenu-item'));
+              subContent.querySelectorAll('a').forEach((a) => a.classList.add('header-submenu-link'));
             });
           }
         });
@@ -135,16 +135,16 @@ export default async function decorate(block) {
       desktopTools.classList.add('header-tools'); // Standard class for tools container
 
       // Standardize classes for individual tool elements
-      desktopTools.querySelectorAll('.header__search, .header__notification--trigger, .header__login, .header__hamburger--button').forEach(tool => {
+      desktopTools.querySelectorAll('.header__search, .header__notification--trigger, .header__login, .header__hamburger--button').forEach((tool) => {
         // Extract a simpler class name for styling
-        const baseClass = tool.className.split(' ').find(cls => cls.startsWith('header__'))?.split('__')[1];
+        const baseClass = tool.className.split(' ').find((cls) => cls.startsWith('header__'))?.split('__')[1];
         if (baseClass) {
           tool.classList.add(`header-tool-${baseClass}`);
         }
         // Ensure hamburger button has correct aria attributes for state management
         if (tool.classList.contains('header__hamburger--button')) {
-            tool.setAttribute('aria-haspopup', 'true');
-            tool.setAttribute('aria-expanded', 'false');
+          tool.setAttribute('aria-haspopup', 'true');
+          tool.setAttribute('aria-expanded', 'false');
         }
       });
 
@@ -166,11 +166,11 @@ export default async function decorate(block) {
   block.append(newHeader);
 
   // --- Interaction Logic ---
-  const desktopBreakpoint = 900; 
+  const desktopBreakpoint = 900;
   const isDesktop = () => window.innerWidth >= desktopBreakpoint;
 
   function closeAllDropdowns(container = newHeader) {
-    container.querySelectorAll('[aria-expanded="true"]').forEach(el => {
+    container.querySelectorAll('[aria-expanded="true"]').forEach((el) => {
       el.setAttribute('aria-expanded', 'false');
       const nextSibling = el.nextElementSibling;
       if (nextSibling) {
@@ -213,7 +213,7 @@ export default async function decorate(block) {
   function setupDesktopNavDropdowns() {
     const navItems = newHeader.querySelectorAll('.header-main-nav > .header-nav-item.has-dropdown');
 
-    navItems.forEach(item => {
+    navItems.forEach((item) => {
       const link = item.querySelector('a'); // L0 trigger
       const dropdown = item.querySelector('.header-dropdown-wrapper'); // L1 container
 
@@ -244,7 +244,7 @@ export default async function decorate(block) {
       item.addEventListener('mouseleave', closeDropdown);
 
       // Setup for nested submenus (L1/L2) within the desktop dropdown
-      item.querySelectorAll('.header-dropdown-subitem.has-dropdown').forEach(subItem => {
+      item.querySelectorAll('.header-dropdown-subitem.has-dropdown').forEach((subItem) => {
         const subLink = subItem.querySelector('a');
         const subMenu = subItem.querySelector('.header-submenu');
 
@@ -256,11 +256,11 @@ export default async function decorate(block) {
         const openSubMenu = () => {
           if (isDesktop()) {
             // Close other sibling submenus at this level
-            subItem.parentNode.querySelectorAll('.header-dropdown-subitem.has-dropdown > a[aria-expanded="true"]').forEach(otherSubLink => {
-                if (otherSubLink !== subLink) {
-                    otherSubLink.setAttribute('aria-expanded', 'false');
-                    otherSubLink.nextElementSibling?.classList.remove('is-open');
-                }
+            subItem.parentNode.querySelectorAll('.header-dropdown-subitem.has-dropdown > a[aria-expanded="true"]').forEach((otherSubLink) => {
+              if (otherSubLink !== subLink) {
+                otherSubLink.setAttribute('aria-expanded', 'false');
+                otherSubLink.nextElementSibling?.classList.remove('is-open');
+              }
             });
             subLink.setAttribute('aria-expanded', 'true');
             subMenu.classList.add('is-open');
@@ -285,7 +285,7 @@ export default async function decorate(block) {
   function setupMobileNavAccordion() {
     const mobileNavItems = newHeader.querySelectorAll('.header-mobile-nav-item');
 
-    mobileNavItems.forEach(item => {
+    mobileNavItems.forEach((item) => {
       const button = item.querySelector('.header-mobile-nav-button');
       const collapsePanel = item.querySelector('.header-mobile-nav-collapse');
 
@@ -302,16 +302,16 @@ export default async function decorate(block) {
         const isOpen = button.getAttribute('aria-expanded') === 'true';
 
         // Close other open mobile nav items (L0) in the main mobile menu
-        mobileNavItems.forEach(otherItem => {
+        mobileNavItems.forEach((otherItem) => {
           const otherButton = otherItem.querySelector('.header-mobile-nav-button');
           const otherCollapse = otherItem.querySelector('.header-mobile-nav-collapse');
           if (otherButton && otherButton !== button && otherButton.getAttribute('aria-expanded') === 'true') {
             otherButton.setAttribute('aria-expanded', 'false');
             otherCollapse?.classList.remove('is-open');
             // Also close any nested open submenus within other items
-            otherCollapse?.querySelectorAll('[aria-expanded="true"]').forEach(el => {
-                el.setAttribute('aria-expanded', 'false');
-                el.nextElementSibling?.classList.remove('is-open');
+            otherCollapse?.querySelectorAll('[aria-expanded="true"]').forEach((el) => {
+              el.setAttribute('aria-expanded', 'false');
+              el.nextElementSibling?.classList.remove('is-open');
             });
           }
         });
@@ -320,32 +320,32 @@ export default async function decorate(block) {
         collapsePanel.classList.toggle('is-open', !isOpen);
 
         // Setup for nested submenus within mobile accordion (L1/L2)
-        collapsePanel.querySelectorAll('.header-mobile-submenu-item').forEach(subItem => {
-            const subLink = subItem.querySelector('.header-mobile-submenu-link');
-            const subMenu = subItem.querySelector('.header-mobile-submenu');
-            if (subLink && subMenu) {
-                subLink.setAttribute('aria-expanded', 'false'); // Initial state for nested submenus
-                subLink.setAttribute('aria-haspopup', 'true');
+        collapsePanel.querySelectorAll('.header-mobile-submenu-item').forEach((subItem) => {
+          const subLink = subItem.querySelector('.header-mobile-submenu-link');
+          const subMenu = subItem.querySelector('.header-mobile-submenu');
+          if (subLink && subMenu) {
+            subLink.setAttribute('aria-expanded', 'false'); // Initial state for nested submenus
+            subLink.setAttribute('aria-haspopup', 'true');
 
-                // Remove existing listeners before adding
-                subLink.removeEventListener('click', handleSubLinkClick);
-                subLink.addEventListener('click', handleSubLinkClick);
-            }
+            // Remove existing listeners before adding
+            subLink.removeEventListener('click', handleSubLinkClick);
+            subLink.addEventListener('click', handleSubLinkClick);
+          }
 
-            function handleSubLinkClick(subE) {
-                subE.preventDefault();
-                subE.stopPropagation();
-                const subIsOpen = subLink.getAttribute('aria-expanded') === 'true';
-                // Close other sibling submenus at this level
-                subItem.parentNode.querySelectorAll('.header-mobile-submenu-item > .header-mobile-submenu-link[aria-expanded="true"]').forEach(otherSubLink => {
-                    if (otherSubLink !== subLink) {
-                        otherSubLink.setAttribute('aria-expanded', 'false');
-                        otherSubLink.nextElementSibling?.classList.remove('is-open');
-                    }
-                });
-                subLink.setAttribute('aria-expanded', String(!subIsOpen));
-                subMenu.classList.toggle('is-open', !subIsOpen);
-            }
+          function handleSubLinkClick(subE) {
+            subE.preventDefault();
+            subE.stopPropagation();
+            const subIsOpen = subLink.getAttribute('aria-expanded') === 'true';
+            // Close other sibling submenus at this level
+            subItem.parentNode.querySelectorAll('.header-mobile-submenu-item > .header-mobile-submenu-link[aria-expanded="true"]').forEach((otherSubLink) => {
+              if (otherSubLink !== subLink) {
+                otherSubLink.setAttribute('aria-expanded', 'false');
+                otherSubLink.nextElementSibling?.classList.remove('is-open');
+              }
+            });
+            subLink.setAttribute('aria-expanded', String(!subIsOpen));
+            subMenu.classList.toggle('is-open', !subIsOpen);
+          }
         });
       }
     });
@@ -357,52 +357,52 @@ export default async function decorate(block) {
     const searchClose = searchPanel?.querySelector('.close-search');
 
     if (searchTrigger && searchPanel && searchClose) {
-        // Remove existing listeners before adding
-        searchTrigger.removeEventListener('click', handleSearchTriggerClick);
-        searchClose.removeEventListener('click', handleSearchCloseClick);
-        searchPanel.removeEventListener('click', handlePanelClick);
+      // Remove existing listeners before adding
+      searchTrigger.removeEventListener('click', handleSearchTriggerClick);
+      searchClose.removeEventListener('click', handleSearchCloseClick);
+      searchPanel.removeEventListener('click', handlePanelClick);
 
-        searchTrigger.addEventListener('click', handleSearchTriggerClick);
-        searchClose.addEventListener('click', handleSearchCloseClick);
-        searchPanel.addEventListener('click', handlePanelClick); // Keep panel open on internal clicks
+      searchTrigger.addEventListener('click', handleSearchTriggerClick);
+      searchClose.addEventListener('click', handleSearchCloseClick);
+      searchPanel.addEventListener('click', handlePanelClick); // Keep panel open on internal clicks
 
-        function handleSearchTriggerClick(e) {
-            e.stopPropagation();
-            const isOpen = searchPanel.classList.contains('is-open');
-            closeAllDropdowns(); // Close other open elements
-            searchPanel.classList.toggle('is-open', !isOpen);
-        }
+      function handleSearchTriggerClick(e) {
+        e.stopPropagation();
+        const isOpen = searchPanel.classList.contains('is-open');
+        closeAllDropdowns(); // Close other open elements
+        searchPanel.classList.toggle('is-open', !isOpen);
+      }
 
-        function handleSearchCloseClick() {
-            searchPanel.classList.remove('is-open');
-        }
+      function handleSearchCloseClick() {
+        searchPanel.classList.remove('is-open');
+      }
 
-        function handlePanelClick(e) {
-            e.stopPropagation();
-        }
+      function handlePanelClick(e) {
+        e.stopPropagation();
+      }
     }
 
     const notificationTrigger = newHeader.querySelector('.header-tool-notification--trigger');
     const notificationPanel = newHeader.querySelector('.header-notification-panel');
 
     if (notificationTrigger && notificationPanel) {
-        // Remove existing listeners before adding
-        notificationTrigger.removeEventListener('click', handleNotificationTriggerClick);
-        notificationPanel.removeEventListener('click', handlePanelClick);
+      // Remove existing listeners before adding
+      notificationTrigger.removeEventListener('click', handleNotificationTriggerClick);
+      notificationPanel.removeEventListener('click', handlePanelClick);
 
-        notificationTrigger.addEventListener('click', handleNotificationTriggerClick);
-        notificationPanel.addEventListener('click', handlePanelClick); // Keep panel open on internal clicks
+      notificationTrigger.addEventListener('click', handleNotificationTriggerClick);
+      notificationPanel.addEventListener('click', handlePanelClick); // Keep panel open on internal clicks
 
-        function handleNotificationTriggerClick(e) {
-            e.stopPropagation();
-            const isOpen = notificationPanel.classList.contains('is-open');
-            closeAllDropdowns(); // Close other open elements
-            notificationPanel.classList.toggle('is-open', !isOpen);
-        }
+      function handleNotificationTriggerClick(e) {
+        e.stopPropagation();
+        const isOpen = notificationPanel.classList.contains('is-open');
+        closeAllDropdowns(); // Close other open elements
+        notificationPanel.classList.toggle('is-open', !isOpen);
+      }
 
-        function handlePanelClick(e) {
-            e.stopPropagation();
-        }
+      function handlePanelClick(e) {
+        e.stopPropagation();
+      }
     }
   }
 
@@ -426,30 +426,30 @@ export default async function decorate(block) {
     document.addEventListener('click', handleOutsideClick);
 
     function handleOutsideClick(e) {
-        // If desktop, close desktop dropdowns and panels
-        if (isDesktop()) {
-            const isClickInsideHeader = newHeader.contains(e.target);
-            if (!isClickInsideHeader) {
-                closeAllDropdowns();
-            }
+      // If desktop, close desktop dropdowns and panels
+      if (isDesktop()) {
+        const isClickInsideHeader = newHeader.contains(e.target);
+        if (!isClickInsideHeader) {
+          closeAllDropdowns();
         }
-        // Mobile menu outside click is handled by the overlay already, so no need to duplicate logic here for mobile. 
-        // However, if any tool panels are open in mobile context, they also need to be closed.
-        const mobileNav = newHeader.querySelector('.header-mobile-nav');
-        const searchPanel = newHeader.querySelector('.header-search-panel');
-        const notificationPanel = newHeader.querySelector('.header-notification-panel');
-        const hamburgerBtn = newHeader.querySelector('.header-tool-hamburger--button');
+      }
+      // Mobile menu outside click is handled by the overlay already, so no need to duplicate logic here for mobile.
+      // However, if any tool panels are open in mobile context, they also need to be closed.
+      const mobileNav = newHeader.querySelector('.header-mobile-nav');
+      const searchPanel = newHeader.querySelector('.header-search-panel');
+      const notificationPanel = newHeader.querySelector('.header-notification-panel');
+      const hamburgerBtn = newHeader.querySelector('.header-tool-hamburger--button');
 
-        const searchTrigger = newHeader.querySelector('.header-tool-search');
-        const notificationTrigger = newHeader.querySelector('.header-tool-notification--trigger');
+      const searchTrigger = newHeader.querySelector('.header-tool-search');
+      const notificationTrigger = newHeader.querySelector('.header-tool-notification--trigger');
 
-        // Close search/notification panels if clicked outside and they are open
-        if (searchPanel?.classList.contains('is-open') && !searchPanel.contains(e.target) && !searchTrigger?.contains(e.target)) {
-            searchPanel.classList.remove('is-open');
-        }
-        if (notificationPanel?.classList.contains('is-open') && !notificationPanel.contains(e.target) && !notificationTrigger?.contains(e.target)) {
-            notificationPanel.classList.remove('is-open');
-        }
+      // Close search/notification panels if clicked outside and they are open
+      if (searchPanel?.classList.contains('is-open') && !searchPanel.contains(e.target) && !searchTrigger?.contains(e.target)) {
+        searchPanel.classList.remove('is-open');
+      }
+      if (notificationPanel?.classList.contains('is-open') && !notificationPanel.contains(e.target) && !notificationTrigger?.contains(e.target)) {
+        notificationPanel.classList.remove('is-open');
+      }
     }
   }
 
@@ -461,7 +461,7 @@ export default async function decorate(block) {
   applyGlobalInteractions();
 
   // Final instrumentation and cleanup
-  moveInstrumentation(navContent, block); 
+  moveInstrumentation(navContent, block);
 
   // Safely remove the loaded fragment from the DOM after instrumentation
   if (navContent.parentNode) {
