@@ -1,4 +1,4 @@
-import { getMetadata, createOptimizedPicture } from '../../scripts/aem.js';
+import { createOptimizedPicture } from '../../scripts/aem.js';
 import { loadFragment } from '../fragment/fragment.js';
 import { moveInstrumentation } from '../../scripts/scripts.js';
 
@@ -97,7 +97,7 @@ function setupDropdowns(nav) {
                 subAnchor.setAttribute('aria-expanded', 'false');
               } else {
                 // Close other sub-dropdowns at the same level
-                subLi.parentNode.querySelectorAll('li.dropdown-open').forEach(openSubLi => {
+                subLi.parentNode.querySelectorAll('li.dropdown-open').forEach((openSubLi) => {
                   if (openSubLi !== subLi) {
                     openSubLi.classList.remove('dropdown-open');
                     openSubLi.querySelector(':scope > a').setAttribute('aria-expanded', 'false');
@@ -149,7 +149,8 @@ export default async function decorate(block) {
   Array.from(navContent.children).forEach((section) => {
     section.classList.remove('section');
     const defaultContentWrapper = section.querySelector('.default-content-wrapper');
-    const contentContainer = defaultContentWrapper || section; // Use contentWrapper if available, else section itself
+    const contentContainer = defaultContentWrapper || section;
+    // Use contentWrapper if available, else section itself
 
     // 1. Try to extract Logo
     if (!processedLogo) {
@@ -162,8 +163,9 @@ export default async function decorate(block) {
         link.appendChild(newPicture);
         logoArea.appendChild(link);
         processedLogo = true;
-        // If the section primarily contained the logo, we might skip further processing for this section
-        // However, a section might contain other hidden elements, so we'll let it pass to subsequent checks.
+        // If the section primarily contained the logo, we might skip further
+        // processing for this section. However, a section might contain other
+        // hidden elements, so we'll let it pass to subsequent checks.
         // If we found a logo, we consider this section 'handled' for logo purpose.
         return; // Move to next section
       }
@@ -181,29 +183,30 @@ export default async function decorate(block) {
         primaryNavUlFound = true; // Mark as found to avoid processing other large Uls as main nav
 
         // Append any other direct DIV children of the main navigation section
-        // (e.g., cmp-header__image-text inside product items, if it was a direct sibling to UL in the fragment)
-        Array.from(contentContainer.children).forEach(child => {
+        // (e.g., cmp-header__image-text inside product items, if it was a
+        // direct sibling to UL in the fragment)
+        Array.from(contentContainer.children).forEach((child) => {
           if (child !== sectionUl && child.tagName === 'DIV' && child.textContent.trim().length > 0) {
             // Clone and append, it will be styled by CSS for mega menu
-            mainNavArea.appendChild(child.cloneNode(true)); 
+            mainNavArea.appendChild(child.cloneNode(true));
           }
         });
         return; // Move to next section
       }
     }
-    
+
     // 3. Collect all other non-empty content for mobile utility or toolsArea
     if (contentContainer.textContent.trim().length > 0) {
       // Check for policy/social links to specifically target mobile utility wrapper
       const links = contentContainer.querySelectorAll('a');
       let isMobileUtilityContent = false;
       if (links.length > 0) {
-        const hrefs = Array.from(links).map(a => a.href);
-        if (hrefs.some(href => href.includes('/conditions-policy/') || href.includes('/more/contact-us.html') || href.includes('instagram.com') || href.includes('facebook.com') || href.includes('twitter.com') || hrefs.includes('youtube.com'))) {
-          isMobileUtilityContent = true; 
+        const hrefs = Array.from(links).map((a) => a.href);
+        if (hrefs.some((href) => href.includes('/conditions-policy/') || href.includes('/more/contact-us.html') || href.includes('instagram.com') || href.includes('facebook.com') || href.includes('twitter.com') || hrefs.includes('youtube.com'))) {
+          isMobileUtilityContent = true;
         }
       }
-      
+
       if (isMobileUtilityContent) {
         contentContainer.querySelectorAll('p > a').forEach((a) => {
           contentContainer.insertBefore(a, a.parentNode);
@@ -226,24 +229,24 @@ export default async function decorate(block) {
   accessibilityLink.classList.add('header-icon', 'icon-accessibility');
   accessibilityLink.setAttribute('aria-label', 'Accessibility options');
   accessibilityLink.innerHTML = '<span class="icon-accessibility-svg"></span>';
-  accessibilityLink.addEventListener('click', (e) => { e.preventDefault(); console.log('Accessibility clicked'); });
+  accessibilityLink.addEventListener('click', (e) => { e.preventDefault(); });
 
   const searchLink = document.createElement('a');
   searchLink.href = '#';
   searchLink.classList.add('header-icon', 'icon-search');
   searchLink.setAttribute('aria-label', 'Search website');
   searchLink.innerHTML = '<span class="icon-search-svg"></span><span class="header-icon-text">Search</span>';
-  searchLink.addEventListener('click', (e) => { e.preventDefault(); console.log('Search clicked'); });
+  searchLink.addEventListener('click', (e) => { e.preventDefault(); });
 
   const loginLink = document.createElement('a');
   loginLink.href = '#';
   loginLink.classList.add('header-icon', 'icon-profile');
   loginLink.setAttribute('aria-label', 'Login to account');
   loginLink.innerHTML = '<span class="icon-profile-svg"></span>';
-  loginLink.addEventListener('click', (e) => { e.preventDefault(); console.log('Login clicked'); });
-  
+  loginLink.addEventListener('click', (e) => { e.preventDefault(); });
+
   navIconsContainer.append(accessibilityLink, searchLink, loginLink);
-  toolsArea.prepend(navIconsContainer); // Prepend to tools area to appear before other utility links
+  toolsArea.prepend(navIconsContainer); // Prepend to tools area to appear before other links
 
   // Append mobile utility wrapper inside mainNavArea to be part of the mobile menu panel
   mainNavArea.appendChild(mobileUtilityWrapper);
@@ -275,9 +278,9 @@ export default async function decorate(block) {
     document.body.classList.toggle('header-expanded', isExpanded); // For scroll lock
     closeBtn.setAttribute('aria-expanded', isExpanded);
     if (isExpanded) {
-        closeBtn.focus();
+      closeBtn.focus();
     } else {
-        hamburger.focus();
+      hamburger.focus();
     }
   };
 
@@ -299,7 +302,7 @@ export default async function decorate(block) {
   });
 
   // Add 'has-dropdown' class to all parent list items with a nested UL for styling
-  mainNavArea.querySelectorAll('li:has(ul)').forEach(li => {
+  mainNavArea.querySelectorAll('li:has(ul)').forEach((li) => {
     li.classList.add('has-dropdown');
   });
 
