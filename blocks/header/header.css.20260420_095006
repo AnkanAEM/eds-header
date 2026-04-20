@@ -105,6 +105,15 @@ small {
   font-size:.875em
 }
 
+sub,
+sup {
+  font-size:.75em;line-height:0;position:relative;vertical-align:baseline
+}
+
+sup {
+  top:-.5em
+}
+
 a {
   color:rgba(var(--bs-link-color-rgb),var(--bs-link-opacity,1));text-decoration:underline
 }
@@ -5667,6 +5676,15 @@ ul ul {
 .small,
 small {
   font-size:.875em
+}
+
+sub,
+sup {
+  font-size:.75em;line-height:0;position:relative;vertical-align:baseline
+}
+
+sup {
+  top:-.5em
 }
 
 a {
