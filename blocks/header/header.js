@@ -2,105 +2,178 @@ import { getMetadata, createOptimizedPicture } from '../../scripts/aem.js';
 import { loadFragment } from '../fragment/fragment.js';
 import { moveInstrumentation } from '../../scripts/scripts.js';
 
-// Blueprint to guide the navigation structure extraction
-// This represents the logical structure the nav fragment should provide.
-const NAV_BLUEPRINT = [
-  {
-    "l1Label": "Our Products",
-    "l1Href": "/our-products.html",
-    "menuHtml": "<ul><li>Atta<ul><li><a href=\"/our-products/atta/shudh-chakki-atta.html\">Shudh Chakki Atta</a></li><li><a href=\"/our-products/atta/superior-mp-atta.html\">Superior MP Atta</a></li><li><a href=\"/our-products/atta/multigrain-atta.html\">Multigrain Atta</a></li><li><a href=\"/our-products/atta/organic-atta.html\">Organic Atta</a></li><li><a href=\"/our-products/millets/atta-with-millets.html\">Atta with Millets</a></li><li><a href=\"/our-products/atta/mp-chakki-atta.html\">M.P. Chakki Atta</a></li><li><a href=\"/our-products/atta/sugar-release-control-atta.html\">Sugar Release Control Atta</a></li><li><a href=\"/our-products/atta/fortified-chakki-atta.html\">Fortified Chakki Atta</a></li><li><a href=\"/our-products/atta/gluten-free-flour.html\">Gluten Free Flour</a></li><li><a href=\"/our-products/atta/select-atta.html\">Select Atta</a></li><li><a href=\"/our-products/atta/high-protein-atta.html\">Atta with High Protein</a></li></ul></li><li>Salt<ul><li><a href=\"/our-products/salt/iodized-salt.html\">Iodized Salt</a></li><li><a href=\"/our-products/salt/salt-active.html\">Salt Active</a></li><li><a href=\"/our-products/salt/himalayan-pink-salt.html\">Himalayan Pink Salt</a></li><li><a href=\"/our-products/salt/iodized-crystal-salt.html\">Iodized Crystal Salt</a></li><li><a href=\"/our-products/salt/iodized-saltoffer.html\">Iodized Salt Offer</a></li></ul></li><li>Organic<ul><li><a href=\"/our-products/organic/organic-atta.html\">Organic Atta</a></li><li><a href=\"/our-products/organic/organic-chana-dal.html\">Organic Chana Dal</a></li><li><a href=\"/our-products/organic/organic-tur-dal.html\">Organic Tur Dal</a></li><li><a href=\"/our-products/organic/organic-moong-dal.html\">Organic Moong Dal</a></li><li><a href=\"/our-products/organic/organic-urad-dal.html\">Organic Urad Dal</a></li><li><a href=\"/our-products/organic/organic-masoor-dal.html\">Organic Masoor Dal</a></li><li><a href=\"/our-products/organic/organic-urad-dal-whole.html\">Organic Urad Dal Whole</a></li><li><a href=\"/our-products/organic/organic-rajma.html\">Organic Rajma</a></li><li><a href=\"/our-products/organic/organic-kabuli-chana.html\">Organic Kabuli Chana</a></li></ul></li><li>Besan<ul><li><a href=\"/our-products/besan/besan.html\">Besan</a></li></ul></li><li>Millets<ul><li><a href=\"/our-products/millets/atta-with-millets.html\">Atta with Millets</a></li><li><a href=\"/our-products/millets/batter-mix.html\">Millets Batter mix</a></li><li><a href=\"/our-products/millets/multi-millet-flour.html\">Multi Millet Mix</a></li><li><a href=\"/our-products/millets/ragi-flour.html\">Ragi Flour</a></li></ul></li><li>Vermicelli<ul><li><a href=\"/our-products/vermicelli/vermicelli.html\">Vermicelli</a></li><li><a href=\"/our-products/vermicelli/roasted-vermicelli.html\">Roasted Vermicelli</a></li></ul></li><li>Rava<ul><li><a href=\"/our-products/rava/bansi-rava.html\">Bansi Rava</a></li><li><a href=\"/our-products/rava/double-roasted-suji-rava.html\">Double Roasted Suji Rava</a></li><li><a href=\"/our-products/rava/samba-broken-wheat.html\">Samba Broken Wheat</a></li></ul></li><li>Naans and Parathas<ul><li><a href=\"/our-products/frozen-naans-parathas/garlic-and-coriander-naan.html\">Garlic and Coriander Naan</a></li><li><a href=\"/our-products/frozen-naans-parathas/malabar-paratha.html\">Malabar Paratha</a></li><li><a href=\"/our-products/frozen-naans-parathas/aloo-paratha.html\">Aloo Paratha</a></li><li><a href=\"/our-products/frozen-naans-parathas/paneer-paratha.html\">Paneer Paratha</a></li><li><a href=\"/our-products/frozen-naans-parathas/tandoori-naan.html\">Tandoori Naan</a></li></ul></li><li>Chapati<ul><li><a href=\"/our-products/ready-to-cook-chapati/rtc-chapati.html\">Ready To Cook Chapatis</a></li></ul></li><li>Ghee<ul><li><a href=\"/our-products/ghee/svasti-ghee.html\">Svasti Ghee</a></li></ul></li><li>Instant Mixes<ul><li><a href=\"/our-products/instant-mixes/instant-gulab-jamun-mix.html\">Gulab Jamun Instant Mix</a></li><li><a href=\"/our-products/instant-mixes/instant-rice-idli.html\">Instant Rice Idli</a></li><li><a href=\"/our-products/instant-mixes/instant-rava-idli.html\">Instant Rava Idli</a></li><li><a href=\"/our-products/instant-mixes/instant-rice-dosa.html\">Instant Rice Dosa</a></li></ul></li><li>Instant Meals<ul><li><a href=\"/our-products/instant-meals/instant-upma.html\">Instant Upma</a></li><li><a href=\"/our-products/instant-meals/instant-poha.html\">Instant Poha</a></li><li><a href=\"/our-products/instant-meals/instant-mini-idli-sambar.html\">Instant Mini Idli Sambar</a></li><li><a href=\"/our-products/instant-meals/instant-halwa.html\">Instant Halwa</a></li><li><a href=\"/our-products/instant-meals/dal-makhani.html\">Dal Makhani</a></li><li><a href=\"/our-products/instant-meals/paneer-butter-masala.html\"> Paneer Butter Masala</a></li></ul></li><li>Basic Spices<ul><li><a href=\"/our-products/basic-spices/red-chilli-powder.html\">Chilli Powder</a></li><li><a href=\"/our-products/basic-spices/guntur-byadagi-chilli-powder.html\">Guntur &amp; Byadagi Chilli Powder</a></li><li><a href=\"/our-products/basic-spices/byadagi-chilli-powder.html\">Byadagi chilli powder</a></li><li><a href=\"/our-products/basic-spices/premium-chilli-powder.html\">Premium Chilli Powder</a></li><li><a href=\"/our-products/basic-spices/kashmiri-chilli-powder.html\">Kashmiri Mirch Powder</a></li><li><a href=\"/our-products/basic-spices/turmeric-powder.html\">Turmeric Powder</a></li><li><a href=\"/our-products/basic-spices/coriander-powder.html\">Coriander Powder</a></li><li><a href=\"/our-products/basic-spices/pepper-powder.html\">Pepper Powder</a></li></ul></li><li>Blended Spices<ul><li><a href=\"/our-products/blended-spices/masala-karam.html\">Masala Karam</a></li><li><a href=\"/our-products/blended-spices/sambar-powder.html\">Sambar Powder</a></li><li><a href=\"/our-products/blended-spices/kitchen-king-masala.html\">Kitchen King Masala</a></li><li><a href=\"/our-products/blended-spices/chaat-masala.html\">Chaat Masala</a></li><li><a href=\"/our-products/blended-spices/sabji-masala.html\">Sabji Masala</a></li><li><a href=\"/our-products/blended-spices/paneer-masala.html\">Paneer Masala</a></li><li><a href=\"/our-products/blended-spices/punjabi-chole-masala.html\">Punjabi Chole Masala</a></li><li><a href=\"/our-products/blended-spices/shahi-garam-masala.html\">Shahi Garam Masala</a></li><li><a href=\"/our-products/blended-spices/rasam-powder.html\">Rasam Powder</a></li><li><a href=\"/our-products/blended-spices/dal-masala.html\">Dal Masala</a></li><li><a href=\"/our-products/blended-spices/aloo-dum-masala.html\">Aloo Dum Masala </a></li><li><a href=\"/our-products/blended-spices/pav-bhaji-masala.html\">Pav Bhaji Masala</a></li></ul></li><li>Whole Spices<ul><li><a href=\"/our-products/whole-spices/jeera.html\">Jeera</a></li><li><a href=\"/our-products/whole-spices/cardamom.html\">Cardamom</a></li><li><a href=\"/our-products/whole-spices/mustard.html\">Mustard</a></li><li><a href=\"/our-products/whole-spices/poppy-seeds.html\">Poppy seeds</a></li><li><a href=\"/our-products/whole-spices/black-pepper.html\">Black Pepper</a></li><li><a href=\"/our-products/whole-spices/clove.html\">Clove</a></li><li><a href=\"/our-products/whole-spices/methi.html\">Methi</a></li><li><a href=\"/our-products/whole-spices/saunf.html\">Saunf</a></li><li><a href=\"/our-products/whole-spices/ajwain.html\">Ajwain</a></li><li><a href=\"/our-products/whole-spices/kasuri-methi.html\">Kasuri Methi</a></li></ul></li><li>Plant Protein<ul><li><a href=\"/our-products/plant-protein/soya-chunks.html\">Soya Chunks</a></li></ul></li></ul>"
-  },
-  {
-    "l1Label": "Our Story",
-    "l1Href": "/our-story.html",
-    "menuHtml": ""
-  },
-  {
-    "l1Label": "Recipe",
-    "l1Href": "/recipe-listing.html",
-    "menuHtml": ""
-  },
-  {
-    "l1Label": "Blogs",
-    "l1Href": "/blogs.html",
-    "menuHtml": ""
-  },
-  {
-    "l1Label": "CSR Initiatives",
-    "l1Href": "/csr-initiatives.html",
-    "menuHtml": "<ul><li><a href=\"/csr-initiatives/about-initiative.html\">About Initiative</a></li><li><a href=\"/csr-initiatives/iodine-deficiency.html\">Iodine Deficiency</a></li><li><a href=\"/csr-initiatives/school-contact-program.html\">School Contact Program</a></li><li><a href=\"/csr-initiatives/community-contact-program.html\">Community Contact Program</a></li></ul>"
-  },
-  {
-    "l1Label": "FAQs",
-    "l1Href": "/faqs.html",
-    "menuHtml": ""
-  }
-];
+const breakpoints = {
+  desktop: 900,
+};
 
-function normalizeHref(href) {
-  if (!href) return '';
-  let url = new URL(href, window.location.origin);
-  let path = url.pathname.replace(/\.html$/, '');
-  return path.endsWith('/') ? path.slice(0, -1) : path;
-}
+function setupDropdowns(menuItem, isMobile = false) {
+  const dropdownToggle = menuItem.querySelector('a');
+  const subMenu = menuItem.querySelector('ul');
 
-// Helper function for dropdown interactions
-function setupDropdowns(navUl, isMobile = false) {
-  navUl.querySelectorAll('li.has-dropdown').forEach((li) => {
-    const subMenuWrapper = li.querySelector('.header-dropdown-wrapper');
-    const anchor = li.querySelector('a');
+  if (!dropdownToggle || !subMenu) return;
 
-    if (subMenuWrapper && anchor) {
-      // Clone to remove existing event listeners
-      const newAnchor = anchor.cloneNode(true);
-      anchor.replaceWith(newAnchor);
+  let isL0 = menuItem.classList.contains('cmp-navigation__item--level-0');
 
-      newAnchor.setAttribute('aria-expanded', 'false');
+  // Add ARIA attributes
+  dropdownToggle.setAttribute('aria-haspopup', 'true');
+  dropdownToggle.setAttribute('aria-expanded', 'false');
+  subMenu.setAttribute('aria-hidden', 'true');
 
-      if (isMobile) {
-        newAnchor.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation(); // Prevent parent from closing
-          const isOpen = newAnchor.getAttribute('aria-expanded') === 'true';
+  const closeDropdown = () => {
+    menuItem.classList.remove('is-open');
+    dropdownToggle.setAttribute('aria-expanded', 'false');
+    subMenu.setAttribute('aria-hidden', 'true');
+  };
 
-          // Close other L0 dropdowns if this is a top-level nav item
-          if (li.parentElement === navUl) {
-            navUl.querySelectorAll('li.has-dropdown > a[aria-expanded="true"]').forEach((otherAnchor) => {
-              if (otherAnchor !== newAnchor) {
-                otherAnchor.setAttribute('aria-expanded', 'false');
-                otherAnchor.closest('li')?.classList.remove('is-open');
-              }
-            });
+  const openDropdown = () => {
+    // Close other L0 dropdowns if a new L0 is opened on desktop
+    if (!isMobile && isL0) {
+      menuItem.closest('.cmp-navigation')?.querySelectorAll('.cmp-navigation__item--level-0.is-open')
+        .forEach((openL0) => {
+          if (openL0 !== menuItem) {
+            openL0.classList.remove('is-open');
+            openL0.querySelector('a')?.setAttribute('aria-expanded', 'false');
+            openL0.querySelector('ul')?.setAttribute('aria-hidden', 'true');
           }
-          newAnchor.setAttribute('aria-expanded', !isOpen);
-          li.classList.toggle('is-open', !isOpen);
         });
-      } else { // Desktop (hover)
-        let hoverTimeout;
-        li.addEventListener('mouseenter', () => {
-          clearTimeout(hoverTimeout);
-          newAnchor.setAttribute('aria-expanded', 'true');
-          li.classList.add('is-open');
-        });
-        li.addEventListener('mouseleave', () => {
-          hoverTimeout = setTimeout(() => {
-            newAnchor.setAttribute('aria-expanded', 'false');
-            li.classList.remove('is-open');
-          }, 200);
-        });
+    }
+    menuItem.classList.add('is-open');
+    dropdownToggle.setAttribute('aria-expanded', 'true');
+    subMenu.setAttribute('aria-hidden', 'false');
+  };
+
+  if (isMobile) {
+    // Mobile: click to toggle dropdown
+    dropdownToggle.addEventListener('click', (e) => {
+      // Prevent default for anchor if it has a submenu
+      if (subMenu) e.preventDefault();
+      if (menuItem.classList.contains('is-open')) {
+        closeDropdown();
+      } else {
+        openDropdown();
       }
-      // Recursively setup dropdowns for nested Uls within the subMenu
-      const nestedUl = subMenuWrapper.querySelector('ul');
-      if (nestedUl) {
-        setupDropdowns(nestedUl, isMobile);
+    });
+  } else {
+    // Desktop: hover to open, click to navigate (only if no sub-menu or a direct link)
+    menuItem.addEventListener('mouseover', openDropdown);
+    menuItem.addEventListener('mouseleave', closeDropdown);
+
+    // Allow L0 parent to be clickable if it has a direct href and no submenu OR if it opens submenu
+    // For example, if "Our Products" itself navigates, but also opens a submenu.
+    // In the provided HTML, L0 items like "Our Products" have an href.
+    dropdownToggle.addEventListener('click', (e) => {
+      if (!subMenu && dropdownToggle.href) {
+        // If no submenu, act as a regular link
+        return;
       }
+      // If it has a submenu, prevent default to allow hover-based opening
+      // But if user clicks, and dropdown is already open, navigate.
+      if (menuItem.classList.contains('is-open') && dropdownToggle.href) {
+          // Already open, so navigate on click
+          return;
+      }
+      e.preventDefault();
+      openDropdown();
+    });
+  }
+
+  // Recursively set up dropdowns for sub-levels
+  subMenu.querySelectorAll('li').forEach((subMenuItem) => {
+    if (subMenuItem.querySelector('ul')) {
+      setupDropdowns(subMenuItem, isMobile);
     }
   });
+
+  // Close dropdown on outside click
+  if (isL0) {
+    document.addEventListener('click', (e) => {
+      if (!menuItem.contains(e.target)) {
+        closeDropdown();
+      }
+    });
+  }
+}
+
+function setupGlobalInteractions(block) {
+  const headerWrapper = block.querySelector('.header-wrapper');
+  const hamburger = headerWrapper?.querySelector('.cmp-header__hamburger');
+  const headerNav = headerWrapper?.querySelector('.header-nav');
+  const navList = headerNav?.querySelector('.cmp-navigation__group');
+
+  if (!hamburger || !headerNav || !navList) return;
+
+  // Hamburger / Mobile Menu toggle
+  hamburger.addEventListener('change', () => {
+    const isOpen = hamburger.checked;
+    headerWrapper.classList.toggle('is-open', isOpen);
+    document.body.classList.toggle('no-scroll', isOpen);
+    headerNav.setAttribute('aria-expanded', isOpen);
+  });
+
+  // Close on Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      if (hamburger.checked) {
+        hamburger.checked = false;
+        headerWrapper.classList.remove('is-open');
+        document.body.classList.remove('no-scroll');
+        headerNav.setAttribute('aria-expanded', 'false');
+      }
+      // Close any open dropdowns
+      headerWrapper.querySelectorAll('.cmp-navigation__item.is-open')
+        .forEach((openItem) => {
+          openItem.classList.remove('is-open');
+          openItem.querySelector('a')?.setAttribute('aria-expanded', 'false');
+          openItem.querySelector('ul')?.setAttribute('aria-hidden', 'true');
+        });
+    }
+  });
+
+  // Initial setup for navigation dropdowns
+  const applyDropdownLogic = () => {
+    const isMobile = window.innerWidth < breakpoints.desktop;
+    navList.querySelectorAll('.cmp-navigation__item--level-0').forEach((l0Item) => {
+      setupDropdowns(l0Item, isMobile);
+    });
+  };
+
+  applyDropdownLogic();
+  window.addEventListener('resize', applyDropdownLogic);
+
+  // Search functionality toggle
+  const searchIconLink = headerWrapper.querySelector('.cmp-header__search .cmp-header__icon-img');
+  const searchComponent = headerWrapper.querySelector('.cmp-search');
+
+  if (searchIconLink && searchComponent) {
+    searchIconLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      searchComponent.classList.toggle('is-open');
+      searchIconLink.setAttribute('aria-expanded', searchComponent.classList.contains('is-open'));
+      if (searchComponent.classList.contains('is-open')) {
+        searchComponent.querySelector('input')?.focus();
+      }
+    });
+
+    document.addEventListener('click', (e) => {
+      if (!searchComponent.contains(e.target) && !searchIconLink.contains(e.target)) {
+        searchComponent.classList.remove('is-open');
+        searchIconLink.setAttribute('aria-expanded', 'false');
+      }
+    });
+  }
+
 }
 
 export default async function decorate(block) {
-  block.innerHTML = ''; // Clear block content for idempotency
+  block.textContent = '';
 
+  const navContent = await loadFragment('/nav');
+  if (!navContent) {
+    block.remove();
+    return;
+  }
+
+  // Create header structure
   const headerWrapper = document.createElement('div');
   headerWrapper.classList.add('header-wrapper');
 
@@ -109,265 +182,53 @@ export default async function decorate(block) {
 
   const headerNav = document.createElement('nav');
   headerNav.classList.add('header-nav');
-  const mainNavUl = document.createElement('ul');
-  mainNavUl.classList.add('header-nav-main-ul');
 
   const headerTools = document.createElement('div');
   headerTools.classList.add('header-tools');
 
-  const navContent = await loadFragment('/nav');
-  if (!navContent) {
-    return; // Nothing to decorate if fragment failed to load
+  block.append(headerWrapper);
+  headerWrapper.append(headerBrand, headerNav, headerTools);
+
+  // Extract and move elements from the loaded fragment
+  const originalCmpHeader = navContent.querySelector('.cmp-header');
+  const originalNavigation = originalCmpHeader?.querySelector('.cmp-navigation');
+  const originalLogo = originalCmpHeader?.querySelector('.cmp-header__logo');
+  const originalNavIcons = originalCmpHeader?.querySelector('.cmp-header__nav-icons');
+  const originalHamburger = originalCmpHeader?.querySelector('.cmp-header__hamburger');
+  const originalSearchComponent = navContent.querySelector('.cmp-search');
+
+  if (originalLogo) {
+    headerBrand.append(originalLogo);
   }
 
-  // Clone navContent to safely remove elements without affecting moveInstrumentation
-  const clonedNavContent = navContent.cloneNode(true);
-
-  // --- 1. Extract Brand/Logo ---
-  // Try to find logo.svg within an <a> element, or just an <img>. Prioritize a home link.
-  const logoLinkInFragment = clonedNavContent.querySelector('a[href="/"] img')?.closest('a') || clonedNavContent.querySelector('a img')?.closest('a');
-  const plainImgInFragment = !logoLinkInFragment && clonedNavContent.querySelector('img');
-
-  if (logoLinkInFragment || plainImgInFragment) {
-    const brandElToClone = logoLinkInFragment || plainImgInFragment;
-    const clonedBrandEl = brandElToClone.cloneNode(true);
-
-    // Optimize picture if it's an img or contains one
-    if (clonedBrandEl.tagName === 'IMG' && !clonedBrandEl.dataset.optimized) {
-      const newPic = createOptimizedPicture(clonedBrandEl.src, clonedBrandEl.alt, true, [{ width: '200' }]);
-      headerBrand.appendChild(newPic);
-    } else if (clonedBrandEl.tagName === 'A' && clonedBrandEl.querySelector('img') && !clonedBrandEl.querySelector('img')?.dataset.optimized) {
-      const img = clonedBrandEl.querySelector('img');
-      if (img) {
-        const newPic = createOptimizedPicture(img.src, img.alt, true, [{ width: '200' }]);
-        img.replaceWith(newPic);
-      }
-      headerBrand.appendChild(clonedBrandEl);
-    } else {
-      headerBrand.appendChild(clonedBrandEl);
-    }
-    // Remove the original logo from clonedNavContent to avoid reprocessing
-    brandElToClone.closest('div')?.remove(); // Remove its parent section if it exists
+  // Move Hamburger checkbox to the main header-wrapper for better structural control
+  if (originalHamburger) {
+    headerWrapper.prepend(originalHamburger);
   }
 
-  // --- 2. Extract Tools ---
-  // These are typically identifiable by specific icon classes and are at the end of the header.
-  const toolsDivInFragment = clonedNavContent.querySelector('div:has([class*="icon-search"]), div:has([class*="icon-profile"]), div:has([class*="icon-accessibility"])');
-  if (toolsDivInFragment) {
-    const toolItem = document.createElement('div');
-    toolItem.classList.add('header-tool-item');
-
-    const accessibilityIcon = toolsDivInFragment.querySelector('[class*="icon-accessibility"]');
-    if (accessibilityIcon) {
-      const wrapper = document.createElement('div');
-      wrapper.classList.add('header-accessibility');
-      wrapper.appendChild(accessibilityIcon.closest('a')?.cloneNode(true) || accessibilityIcon.cloneNode(true));
-      toolItem.appendChild(wrapper);
-      accessibilityIcon.closest('a')?.remove() || accessibilityIcon.remove(); // Remove from fragment
-    }
-
-    const searchIcon = toolsDivInFragment.querySelector('[class*="icon-search"]');
-    if (searchIcon) {
-      const wrapper = document.createElement('div');
-      wrapper.classList.add('header-search');
-      wrapper.appendChild(searchIcon.closest('a')?.cloneNode(true) || searchIcon.cloneNode(true));
-      toolItem.appendChild(wrapper);
-      searchIcon.closest('a')?.remove() || searchIcon.remove(); // Remove from fragment
-    }
-
-    const profileIcon = toolsDivInFragment.querySelector('[class*="icon-profile"]');
-    if (profileIcon) {
-      const wrapper = document.createElement('div');
-      wrapper.classList.add('header-profile');
-      wrapper.appendChild(profileIcon.closest('a')?.cloneNode(true) || profileIcon.cloneNode(true));
-      toolItem.appendChild(wrapper);
-      profileIcon.closest('a')?.remove() || profileIcon.remove(); // Remove from fragment
-    }
-
-    if (toolItem.children.length > 0) {
-      headerTools.appendChild(toolItem);
-    }
-    toolsDivInFragment.remove(); // Remove the entire tool section from clonedNavContent
+  if (originalNavigation) {
+    headerNav.append(originalNavigation);
+    headerNav.setAttribute('aria-expanded', 'false'); // Initial state for mobile menu
   }
 
-  // --- 3. Extract Main Navigation (Mega Menu) ---
-  // Match blueprint items to remaining content in clonedNavContent.
-  NAV_BLUEPRINT.forEach((item) => {
-    // Find the L0 link for the current blueprint item within clonedNavContent
-    // Normalize hrefs for robust matching.
-    const targetHref = normalizeHref(item.l1Href);
-    let l0Link = Array.from(clonedNavContent.querySelectorAll('a'))
-      .find(a => normalizeHref(a.href) === targetHref);
-
-    if (l0Link) {
-      const li = document.createElement('li');
-      li.classList.add('header-nav-item', 'header-nav-item--level-0');
-      li.appendChild(l0Link.cloneNode(true)); // Append a clone of the L0 link
-      l0Link.remove(); // Remove the original link from clonedNavContent
-
-      if (item.menuHtml) {
-        li.classList.add('has-dropdown');
-        const dropdownWrapper = document.createElement('div');
-        dropdownWrapper.classList.add('header-dropdown-wrapper');
-
-        // Parse the menuHtml string into a DOM structure
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = item.menuHtml;
-        Array.from(tempDiv.children).forEach(child => dropdownWrapper.appendChild(child));
-
-        // Look for any additional rich content like image+text divs that were siblings to the UL in the original fragment
-        // Note: this part is speculative as the blueprint focuses on menuHtml and original raw HTML uses 'cmp-' classes not allowed in fragment.
-        // We'll look for generic DIVs that are not just containing links directly within the section that contained this L0 item
-        const parentSection = l0Link.closest('div'); // The section that originally contained the L0 link
-        if (parentSection) {
-          Array.from(parentSection.children).forEach(child => {
-            if (child.tagName === 'DIV' && !child.querySelector('ul') && !child.querySelector('a')) {
-                // Append other potential rich content divs from the section
-                dropdownWrapper.appendChild(child.cloneNode(true));
-                child.remove();
-            }
-          });
-        }
-
-        li.appendChild(dropdownWrapper);
-      }
-      mainNavUl.appendChild(li);
-    } else if (item.l1Label) { // If blueprint item exists but no link found in fragment, create a placeholder
-        const li = document.createElement('li');
-        li.classList.add('header-nav-item', 'header-nav-item--level-0', 'missing-link');
-        const a = document.createElement('a');
-        a.href = item.l1Href;
-        a.textContent = item.l1Label;
-        li.appendChild(a);
-        if (item.menuHtml) {
-            // Still add dropdown even if main link was missing
-            li.classList.add('has-dropdown');
-            const dropdownWrapper = document.createElement('div');
-            dropdownWrapper.classList.add('header-dropdown-wrapper');
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = item.menuHtml;
-            Array.from(tempDiv.children).forEach(child => dropdownWrapper.appendChild(child));
-            li.appendChild(dropdownWrapper);
-        }
-        mainNavUl.appendChild(li);
-    }
-  });
-
-  // --- 4. Extract Mobile-Specific Policy and Social Links ---
-  const mobileBottomNav = document.createElement('div');
-  mobileBottomNav.classList.add('header-mobile-bottom-nav');
-
-  // Search for remaining ULs (likely policy links) and social media links
-  const policyUl = clonedNavContent.querySelector('ul');
-  if (policyUl) {
-    mobileBottomNav.appendChild(policyUl.cloneNode(true));
-    policyUl.remove();
-  }
-
-  const socialLinksContainer = document.createElement('div');
-  socialLinksContainer.classList.add('header-social-media');
-  Array.from(clonedNavContent.querySelectorAll('a[class*="icon-"]')).forEach(link => {
-    socialLinksContainer.appendChild(link.cloneNode(true));
-    link.remove();
-  });
-  if (socialLinksContainer.children.length > 0) {
-    mobileBottomNav.appendChild(socialLinksContainer);
-  }
-
-  // Assemble headerNav
-  if (mainNavUl.children.length > 0) {
-    headerNav.appendChild(mainNavUl);
-  }
-  if (mobileBottomNav.children.length > 0) {
-    headerNav.appendChild(mobileBottomNav);
-  }
-
-  // --- 5. Add Hamburger Button ---
-  const hamburger = document.createElement('button');
-  hamburger.classList.add('header-hamburger');
-  hamburger.setAttribute('aria-label', 'Open navigation');
-  hamburger.setAttribute('aria-expanded', 'false');
-  hamburger.innerHTML = '<span></span><span></span><span></span>';
-
-  hamburger.addEventListener('click', () => {
-    const isExpanded = hamburger.getAttribute('aria-expanded') === 'true';
-    hamburger.setAttribute('aria-expanded', !isExpanded);
-    headerNav.classList.toggle('is-open', !isExpanded);
-    document.body.classList.toggle('nav-open', !isExpanded); // Lock body scroll
-
-    // Close all dropdowns when hamburger is toggled
-    headerNav.querySelectorAll('.has-dropdown.is-open').forEach((dropdown) => {
-      dropdown.classList.remove('is-open');
-      dropdown.querySelector('a[aria-expanded="true"]')?.setAttribute('aria-expanded', 'false');
+  // Move nav icons to header-tools
+  if (originalNavIcons) {
+    Array.from(originalNavIcons.children).forEach((child) => {
+      headerTools.append(child);
     });
-  });
+    originalNavIcons.remove(); // Remove the original container once children are moved
+  }
 
-  // --- 6. Accessibility and Interaction Management ---
-  // Close dropdowns on escape key
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      const openDropdowns = headerNav.querySelectorAll('.has-dropdown.is-open');
-      openDropdowns.forEach((dropdown) => {
-        dropdown.classList.remove('is-open');
-        dropdown.querySelector('a[aria-expanded="true"]')?.setAttribute('aria-expanded', 'false');
-      });
-      // Close mobile nav if open
-      if (hamburger.getAttribute('aria-expanded') === 'true') {
-        hamburger.setAttribute('aria-expanded', 'false');
-        headerNav.classList.remove('is-open');
-        document.body.classList.remove('nav-open');
-      }
-    }
-  });
+  // Move search component to header-tools
+  if (originalSearchComponent) {
+    headerTools.append(originalSearchComponent);
+  }
 
-  // Close dropdowns on outside click
-  document.addEventListener('click', (e) => {
-    // Desktop logic: close L0 dropdowns if click is outside
-    if (window.matchMedia('(min-width: 900px)').matches) {
-      const openL0Dropdowns = mainNavUl.querySelectorAll('li.has-dropdown.is-open');
-      openL0Dropdowns.forEach((li) => {
-        if (!li.contains(e.target) && e.target !== hamburger) {
-          li.classList.remove('is-open');
-          li.querySelector('a')?.setAttribute('aria-expanded', 'false');
-        }
-      });
-    } else { // Mobile logic: close mobile nav if click is outside nav area or hamburger
-      if (hamburger.getAttribute('aria-expanded') === 'true' && !headerNav.contains(e.target) && e.target !== hamburger && !e.target.closest('.header-hamburger')) {
-        hamburger.setAttribute('aria-expanded', 'false');
-        headerNav.classList.remove('is-open');
-        document.body.classList.remove('nav-open');
-      }
-    }
-  });
+  // Add additional classes for styling if needed (based on AEM original CSS)
+  block.classList.add('cmp-header');
 
-  // --- 7. Assemble and Append Elements ---
-  headerWrapper.appendChild(headerBrand);
-  headerWrapper.appendChild(hamburger);
-  headerWrapper.appendChild(headerNav);
-  headerWrapper.appendChild(headerTools);
+  // Set up all interactive elements
+  setupGlobalInteractions(block);
 
-  block.appendChild(headerWrapper);
-
-  // --- 8. Setup Dynamic Dropdown Interactions (mobile/desktop) ---
-  const mediaQuery = window.matchMedia('(min-width: 900px)');
-  const handleMediaChange = (e) => {
-    // Clear any open states or inline styles when switching modes
-    headerNav.classList.remove('is-open');
-    document.body.classList.remove('nav-open');
-    hamburger.setAttribute('aria-expanded', 'false');
-    headerNav.querySelectorAll('.has-dropdown').forEach((li) => {
-      li.classList.remove('is-open');
-      li.querySelector('a')?.setAttribute('aria-expanded', 'false');
-    });
-
-    setupDropdowns(mainNavUl, !e.matches); // true for mobile, false for desktop
-  };
-
-  // Initial setup
-  handleMediaChange(mediaQuery);
-  // Listen for changes
-  mediaQuery.addEventListener('change', handleMediaChange);
-
-  // --- 9. Move Instrumentation ---
   moveInstrumentation(navContent, block);
 }
