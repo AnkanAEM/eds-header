@@ -1,636 +1,505 @@
 import { getMetadata } from '../../scripts/aem.js';
 import { loadFragment } from '../fragment/fragment.js';
 
-// Media query match that indicates mobile/tablet width
-const isDesktop = window.matchMedia('(min-width: 992px)');
+// media query match that indicates mobile/tablet width
+const isDesktop = window.matchMedia('(min-width: 1200px)'); // Adjusted to 1200px based on original HTML's media queries
 
-function closeAllDropdowns(container, exceptDropdown = null) {
-  container.querySelectorAll('.header__navbar--item.has-dropdown').forEach((item) => {
-    if (item !== exceptDropdown) {
-      item.classList.remove('active');
-      const dropdown = item.querySelector('.header__navbar--dropdown');
-      if (dropdown) {
-        dropdown.classList.remove('active');
-      }
+function closeOnEscape(e) {
+  if (e.code === 'Escape') {
+    const headerWrapper = document.querySelector('.corp-header-wrapper');
+    const mobileMenu = headerWrapper.querySelector('.menu');
+    const desktopPanels = headerWrapper.querySelectorAll('.desktop-panel');
+    const navHamburger = headerWrapper.querySelector('.nav-hamburger button');
+    const contactToggleBox = headerWrapper.querySelector('.contact-toggle-box');
+    const contactIcons = headerWrapper.querySelector('.user__contact__icons');
+
+    if (mobileMenu && !mobileMenu.classList.contains('hidden')) {
+      mobileMenu.classList.add('hidden');
+      navHamburger.setAttribute('aria-expanded', 'false');
+      document.body.style.overflowY = '';
     }
-  });
+
+    desktopPanels.forEach((panel) => {
+      if (!panel.classList.contains('hidden')) {
+        panel.classList.add('hidden');
+        panel.classList.remove('opacity-1');
+        panel.classList.remove('visibility-visible');
+      }
+    });
+
+    if (contactToggleBox && !contactToggleBox.classList.contains('hidden')) {
+      contactToggleBox.classList.add('hidden');
+    }
+    if (contactIcons && !contactIcons.classList.contains('hidden')) {
+      contactIcons.classList.add('hidden');
+    }
+
+    if (navHamburger) navHamburger.focus();
+  }
 }
 
-function closeAllAccordions(container, exceptAccordion = null) {
-  container.querySelectorAll('.header__accordion--item').forEach((item) => {
-    if (item !== exceptAccordion) {
-      item.querySelector('.header__accordion--button').classList.add('collapsed');
-      item.querySelector('.header__accordion--arrow').classList.add('collapsed');
-      item.querySelector('.header__accordion--collapse').classList.remove('show');
-    }
+function closeAllDesktopPanels(headerWrapper) {
+  headerWrapper.querySelectorAll('.desktop-panel').forEach((panel) => {
+    panel.classList.add('hidden');
+    panel.classList.remove('opacity-1');
+    panel.classList.remove('visibility-visible');
+  });
+  headerWrapper.querySelectorAll('.navbar .links .link-title').forEach((linkTitle) => {
+    linkTitle.classList.remove('active');
   });
 }
 
 function toggleMobileMenu(headerWrapper, forceExpanded = null) {
-  const hamburgerMenu = headerWrapper.querySelector('.header__hamburger--menu');
-  const overlay = headerWrapper.querySelector('.header__overlay');
-  const hamburgerButton = headerWrapper.querySelector('.header__hamburger--button');
-
-  const expanded = forceExpanded !== null ? forceExpanded : !hamburgerMenu.classList.contains('active');
+  const mobileMenu = headerWrapper.querySelector('.menu');
+  const navHamburgerButton = headerWrapper.querySelector('.nav-hamburger button');
+  const expanded = forceExpanded !== null ? forceExpanded : mobileMenu.classList.contains('hidden');
 
   if (expanded) {
-    hamburgerMenu.classList.add('active');
-    overlay.classList.add('active');
-    hamburgerButton.querySelector('.header__hamburger--open').style.opacity = '0';
-    hamburgerButton.querySelector('.header__hamburger--close').style.opacity = '1';
+    mobileMenu.classList.remove('hidden');
+    navHamburgerButton.setAttribute('aria-expanded', 'true');
     document.body.style.overflowY = 'hidden';
   } else {
-    hamburgerMenu.classList.remove('active');
-    overlay.classList.remove('active');
-    hamburgerButton.querySelector('.header__hamburger--open').style.opacity = '1';
-    hamburgerButton.querySelector('.header__hamburger--close').style.opacity = '0';
+    mobileMenu.classList.add('hidden');
+    navHamburgerButton.setAttribute('aria-expanded', 'false');
     document.body.style.overflowY = '';
-    closeAllAccordions(hamburgerMenu);
   }
 }
 
+/**
+ * loads and decorates the header, mainly the nav
+ * @param {Element} block The header block element
+ */
 export default async function decorate(block) {
+  // load nav as fragment
   const navMeta = getMetadata('nav');
   const navPath = navMeta ? new URL(navMeta, window.location).pathname : '/nav';
-  const fragment = await loadFragment(navPath);
+  const fragment = await loadFragment(navPath); // Removed .plain.html as loadFragment handles it
 
+  // decorate nav DOM
   block.textContent = '';
 
   const headerWrapper = document.createElement('div');
-  headerWrapper.classList.add('header__wrapper');
+  headerWrapper.classList.add('corp-header-wrapper', 'header-scroll', 'header-scroll-threshold', 'corp-header-block', 'header-wrapper', 'sticky', 'show');
+  block.append(headerWrapper);
 
-  const header = document.createElement('header');
-  header.classList.add('header', 'header--container', 'position-fixed', 'top-0', 'w-100');
+  const corpHeaderBlock = document.createElement('div');
+  corpHeaderBlock.classList.add('corp-header', 'block');
+  corpHeaderBlock.setAttribute('data-block-name', 'corp-header');
+  corpHeaderBlock.setAttribute('data-block-status', 'loaded');
+  headerWrapper.append(corpHeaderBlock);
 
-  const overlay = document.createElement('div');
-  overlay.classList.add('header__overlay', 'd-none', 'position-fixed', 'top-0', 'w-100', 'h-100');
-  header.append(overlay);
+  const mainDiv = document.createElement('div');
+  corpHeaderBlock.append(mainDiv);
 
-  const mobileMenuContainer = document.createElement('div');
-  mobileMenuContainer.classList.add('position-absolute', 'w-100');
+  const navbar = document.createElement('div');
+  navbar.classList.add('navbar', 'navbar-arena', 'g-container');
+  mainDiv.append(navbar);
 
-  const hamburgerMenu = document.createElement('nav');
-  hamburgerMenu.classList.add('position-fixed', 'top-0', 'end-0', 'd-flex', 'flex-column', 'gap-6', 'header__hamburger--menu');
+  // Hamburger for mobile
+  const navHamburger = document.createElement('div');
+  navHamburger.classList.add('nav-hamburger');
+  const hamburgerButton = document.createElement('button');
+  hamburgerButton.setAttribute('type', 'button');
+  hamburgerButton.setAttribute('aria-controls', 'nav');
+  hamburgerButton.setAttribute('aria-label', 'Open navigation');
+  hamburgerButton.setAttribute('aria-expanded', 'false');
+  const hamburgerIcon = document.createElement('span');
+  hamburgerIcon.classList.add('nav-hamburger-icon');
+  hamburgerButton.append(hamburgerIcon);
+  navHamburger.append(hamburgerButton);
+  navbar.append(navHamburger);
 
-  const hamburgerHead = document.createElement('div');
-  hamburgerHead.classList.add('align-self-end', 'd-flex', 'justify-content-between', 'w-100', 'd-md-none', 'header__hamburger--head');
-  const hamburgerHeadTitle = document.createElement('div');
-  hamburgerHeadTitle.classList.add('header__hamburger--head-title');
-  // Dynamically derive text from fragment if available, otherwise default or leave empty
-  // Assuming 'Notifications' is a static element not part of the nav fragment's dynamic sections
-  hamburgerHeadTitle.textContent = 'Notifications'; 
-  const closeIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  closeIcon.classList.add('arrow', 'header__hamburger--close-icon');
-  closeIcon.setAttribute('aria-hidden', 'true');
-  closeIcon.setAttribute('role', 'icon');
-  const useClose = document.createElementNS('http://www.w3.org/2000/svg', 'use');
-  useClose.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', '/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#close');
-  closeIcon.append(useClose);
-  hamburgerHead.append(hamburgerHeadTitle, closeIcon);
-  hamburgerMenu.append(hamburgerHead);
+  // Logo Wrapper (Brand)
+  const logoWrapper = document.createElement('div');
+  logoWrapper.classList.add('logo-wrapper');
+  const logoBlock = document.createElement('div');
+  logoBlock.classList.add('logo', 'block');
+  logoBlock.setAttribute('data-block-name', 'logo');
+  logoBlock.setAttribute('data-block-status', 'loaded');
+  logoWrapper.append(logoBlock);
 
-  // Mobile Notification Menu (from original HTML structure, not fragment)
-  const mobileNotificationDiv = document.createElement('div');
-  mobileNotificationDiv.classList.add('d-md-none', 'flex-column', 'z-2', 'header__notification--mobile');
-  // Populate mobileNotificationDiv with content similar to the original HTML if needed,
-  // but for this exercise, we'll assume it's static or handled separately from nav fragment.
-  // For now, it remains empty as per the strict rule of replicating structure, not data for non-nav items.
-  hamburgerMenu.append(mobileNotificationDiv);
+  const navBrand = fragment.querySelector('.nav-brand');
+  if (navBrand) {
+    const brandLink = navBrand.querySelector('a');
+    if (brandLink) {
+      const spanArena = document.createElement('span');
+      spanArena.classList.add('arena');
+      const logoPicture = document.createElement('a');
+      logoPicture.classList.add('logo__picture');
+      logoPicture.href = brandLink.href;
+      logoPicture.setAttribute('data-logo-name', brandLink.textContent.trim());
 
-  const mobileMenuWrapper = document.createElement('div');
-  mobileMenuWrapper.classList.add('d-flex', 'flex-column', 'justify-content-between', 'mobile__menu--wrapper');
-  const accordionDiv = document.createElement('div');
-  accordionDiv.classList.add('accordion', 'header__accordion');
+      const picture = brandLink.querySelector('picture');
+      if (picture) {
+        logoPicture.append(picture.cloneNode(true));
+      } else {
+        const img = brandLink.querySelector('img');
+        if (img) logoPicture.append(img.cloneNode(true));
+      }
+      spanArena.append(logoPicture);
+      logoBlock.append(spanArena);
+    }
+  }
+  navbar.append(logoWrapper);
 
-  const navContent = document.createElement('div');
-  while (fragment.firstElementChild) navContent.append(fragment.firstElementChild);
+  // Navigation Links (Sections)
+  const linksDiv = document.createElement('div');
+  linksDiv.classList.add('links');
+  navbar.append(linksDiv);
 
-  const classes = ['brand', 'sections', 'tools'];
-  classes.forEach((c, i) => {
-    const section = navContent.children[i];
-    if (section) section.classList.add(`nav-${c}`);
-  });
+  const navSections = fragment.querySelector('.nav-sections');
+  const mobileMenu = document.createElement('div');
+  mobileMenu.classList.add('menu', 'hidden', 'menu-arena');
+  mobileMenu.id = 'menu';
+  mainDiv.append(mobileMenu);
 
-  const navSections = navContent.querySelector('.nav-sections');
+  const menuHeader = document.createElement('div');
+  menuHeader.classList.add('menu-header');
+  menuHeader.innerHTML = `
+    <div class="back-arrow"></div>
+    <span class="menu-title">Menu</span>
+    <span class="close-icon"></span>
+  `;
+  mobileMenu.append(menuHeader);
+
+  const menuList = document.createElement('ul');
+  menuList.classList.add('menu-list');
+  mobileMenu.append(menuList);
+
   if (navSections) {
-    Array.from(navSections.children).forEach((section) => {
-      // Desktop Navigation
-      const navItem = document.createElement('li');
-      navItem.classList.add('nav-item', 'header__navbar--item', 'text-center');
-      const divFlex = document.createElement('div');
-      divFlex.classList.add('d-flex');
-      const navLink = document.createElement('a');
-      navLink.classList.add('nav-link', 'header__navbar--link');
-      navLink.href = section.querySelector('a')?.href || '#';
-      navLink.textContent = section.querySelector('a')?.textContent || '';
-      const underlineSpan = document.createElement('span');
-      underlineSpan.classList.add('header__navbar--item-underline');
-      navLink.append(underlineSpan);
-      divFlex.append(navLink);
-      navItem.append(divFlex);
+    navSections.querySelectorAll(':scope > div').forEach((section, i) => {
+      const linkTitleDiv = document.createElement('div');
+      linkTitleDiv.classList.add('link-title');
+      const span = document.createElement('span');
+      linkTitleDiv.append(span);
 
-      const subMenu = section.querySelector('ul');
-      if (subMenu) {
-        navItem.classList.add('has-dropdown');
-        const dropdownUl = document.createElement('ul');
-        dropdownUl.classList.add('bg-white', 'nav__dropdown', 'header__navbar--dropdown', 'position-fixed', 'section_container--primary', 'pt-12', 'pb-8', 'start-0', 'w-100', 'border-0', 'rounded-0', 'published__height');
-        dropdownUl.setAttribute('aria-labelledby', `navbarDropdownMenuLink${Array.from(navSections.children).indexOf(section)}`);
-        dropdownUl.style.gridTemplateColumns = 'repeat(3, minmax(0px, 1fr))';
-        dropdownUl.style.gap = '20px';
+      const sectionL1Link = section.querySelector('a');
+      if (sectionL1Link) {
+        const link = document.createElement('a');
+        link.href = sectionL1Link.href;
+        link.textContent = sectionL1Link.textContent;
+        link.title = sectionL1Link.textContent.toLowerCase().replace(/\s/g, '-');
+        link.classList.add('button');
+        span.append(link);
+      } else {
+        span.textContent = section.firstElementChild.textContent;
+      }
+      linksDiv.append(linkTitleDiv);
 
-        Array.from(subMenu.children).forEach((subMenuItem) => {
-          const dropdownItem = document.createElement('li');
-          dropdownItem.classList.add('dropdown-item', 'header__navbar--dropdown-column');
-          dropdownItem.innerHTML = subMenuItem.innerHTML; // Replicate inner HTML for complex submenus
-          dropdownUl.append(dropdownItem);
-        });
-        navItem.append(dropdownUl);
+      const sectionName = section.firstElementChild.textContent.toLowerCase().replace(/\s/g, '-');
+      const hasChildren = section.querySelector('ul');
 
-        navLink.addEventListener('mouseenter', () => {
-          if (isDesktop.matches) {
-            closeAllDropdowns(header.querySelector('.header__navbar--list'), navItem);
-            navItem.classList.add('active');
-            dropdownUl.classList.add('active');
+      // Desktop Panel
+      if (hasChildren) {
+        const desktopPanel = document.createElement('div');
+        desktopPanel.classList.add('desktop-panel', 'panel', sectionName, 'hidden');
+        mainDiv.append(desktopPanel);
+        const desktopLinkGrid = document.createElement('div');
+        desktopLinkGrid.classList.add('link-grid', 'block');
+        desktopPanel.append(desktopLinkGrid);
+        const desktopLinkContainerSection = document.createElement('div');
+        desktopLinkContainerSection.classList.add('link-container-section');
+        desktopLinkGrid.append(desktopLinkContainerSection);
+
+        const desktopLinkGridColumn = document.createElement('div');
+        desktopLinkGridColumn.classList.add('link-grid-column', 'link-column-vertical'); // Default to vertical
+        desktopLinkContainerSection.append(desktopLinkGridColumn);
+
+        const desktopLinksContainer = document.createElement('ul');
+        desktopLinksContainer.classList.add('content', 'links-container', 'accordian-content');
+        desktopLinkGridColumn.append(desktopLinksContainer);
+
+        // Mobile Menu Item
+        const mobileMenuItem = document.createElement('li');
+        mobileMenuItem.id = `menu-item-${i}`;
+        mobileMenuItem.classList.add('nav-link', sectionName);
+        if (hasChildren) mobileMenuItem.classList.add('accordion');
+        const mobileMenuTitleSpan = document.createElement('span');
+        mobileMenuTitleSpan.classList.add('menu-title');
+        if (sectionL1Link) {
+          const mobileLink = document.createElement('a');
+          mobileLink.href = sectionL1Link.href;
+          mobileLink.textContent = sectionL1Link.textContent;
+          mobileLink.title = sectionL1Link.textContent.toLowerCase().replace(/\s/g, '-');
+          mobileLink.classList.add('button');
+          mobileMenuTitleSpan.append(mobileLink);
+        } else {
+          mobileMenuTitleSpan.textContent = section.firstElementChild.textContent;
+        }
+        mobileMenuItem.append(mobileMenuTitleSpan);
+        menuList.append(mobileMenuItem);
+
+        const mobilePanel = document.createElement('div');
+        mobilePanel.classList.add('panel');
+        const mobileLinkGrid = desktopLinkGrid.cloneNode(true); // Clone desktop structure for mobile
+        mobilePanel.append(mobileLinkGrid);
+        menuList.append(mobilePanel);
+
+        // Populate desktop and mobile sub-menus
+        section.querySelectorAll('ul > li').forEach((li) => {
+          const l2Link = li.querySelector('a');
+          if (l2Link) {
+            const desktopLi = document.createElement('li');
+            const desktopA = document.createElement('a');
+            desktopA.href = l2Link.href;
+            desktopA.textContent = l2Link.textContent;
+            if (l2Link.target) desktopA.target = l2Link.target;
+            if (l2Link.rel) desktopA.rel = l2Link.rel;
+            desktopLi.append(desktopA);
+            desktopLinksContainer.append(desktopLi);
+
+            const mobileLi = desktopLi.cloneNode(true);
+            mobileLinkGrid.querySelector('.links-container').append(mobileLi);
           }
         });
-        navItem.addEventListener('mouseleave', () => {
-          if (isDesktop.matches) {
-            navItem.classList.remove('active');
-            dropdownUl.classList.remove('active');
+
+        // Event listeners for desktop dropdowns
+        linkTitleDiv.addEventListener('mouseenter', () => {
+          closeAllDesktopPanels(mainDiv);
+          linkTitleDiv.classList.add('active');
+          desktopPanel.classList.remove('hidden');
+          desktopPanel.classList.add('opacity-1', 'visibility-visible');
+        });
+        desktopPanel.addEventListener('mouseleave', () => {
+          linkTitleDiv.classList.remove('active');
+          desktopPanel.classList.add('hidden');
+          desktopPanel.classList.remove('opacity-1', 'visibility-visible');
+        });
+
+        // Event listeners for mobile accordions
+        mobileMenuItem.addEventListener('click', () => {
+          if (!isDesktop.matches) {
+            mobileMenuItem.classList.toggle('active');
+            if (mobilePanel.style.maxHeight) {
+              mobilePanel.style.maxHeight = null;
+            } else {
+              mobilePanel.style.maxHeight = `${mobilePanel.scrollHeight}px`;
+            }
           }
         });
+      } else {
+        // No children, just a direct link
+        const mobileMenuItem = document.createElement('li');
+        mobileMenuItem.id = `menu-item-${i}`;
+        mobileMenuItem.classList.add('nav-link', sectionName);
+        const mobileMenuTitleSpan = document.createElement('span');
+        mobileMenuTitleSpan.classList.add('menu-title');
+        mobileMenuTitleSpan.append(sectionL1Link.cloneNode(true));
+        mobileMenuItem.append(mobileMenuTitleSpan);
+        menuList.append(mobileMenuItem);
       }
-      header.querySelector('.header__navbar--list')?.append(navItem);
-
-      // Mobile Accordion (Always create for mobile, hide with CSS on desktop)
-      const mobileSection = document.createElement('section');
-      mobileSection.classList.add('accordion-item', 'd-md-none', 'header__accordion--item');
-      const h2 = document.createElement('h2');
-      h2.classList.add('accordion-header', 'header__accordion--heading');
-      h2.id = `panel-heading-${Array.from(navSections.children).indexOf(section) + 1}`;
-
-      const mobileNavLink = document.createElement('a');
-      mobileNavLink.classList.add('accordion-button', 'd-flex', 'justify-content-between', 'align-items-center', 'w-100', 'header__accordion--button', 'navigation_link');
-      mobileNavLink.href = navLink.href;
-      mobileNavLink.textContent = navLink.textContent;
-
-      const arrowSpan = document.createElement('span');
-      arrowSpan.classList.add('header__accordion--button', 'collapsed', 'header_arrow_icon');
-      arrowSpan.setAttribute('data-bs-toggle', 'collapse');
-      arrowSpan.setAttribute('data-bs-target', `#panel-collapse-${Array.from(navSections.children).indexOf(section) + 1}-norm-nav`);
-      const arrowSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-      arrowSvg.classList.add('arrow', 'header__accordion--arrow');
-      arrowSvg.setAttribute('aria-hidden', 'true');
-      arrowSvg.setAttribute('role', 'icon');
-      arrowSvg.setAttribute('aria-expanded', 'false');
-      arrowSvg.setAttribute('aria-controls', `panel-collapse-${Array.from(navSections.children).indexOf(section) + 1}-norm-nav`);
-      const useArrow = document.createElementNS('http://www.w3.org/2000/svg', 'use');
-      useArrow.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', '/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#drop-up-caret');
-      arrowSvg.append(useArrow);
-      arrowSpan.append(arrowSvg);
-
-      h2.append(mobileNavLink);
-      if (subMenu) {
-        h2.append(arrowSpan);
-      }
-      mobileSection.append(h2);
-
-      if (subMenu) {
-        const mobileCollapseDiv = document.createElement('div');
-        mobileCollapseDiv.id = `panel-collapse-${Array.from(navSections.children).indexOf(section) + 1}-norm-nav`;
-        mobileCollapseDiv.classList.add('accordion-collapse', 'collapse', 'header__accordion--collapse');
-        mobileCollapseDiv.setAttribute('aria-labelledby', `panel-heading-${Array.from(navSections.children).indexOf(section) + 1}-norm-nav`);
-        mobileCollapseDiv.setAttribute('data-label', navLink.textContent);
-        const mobileAccordionBody = document.createElement('div');
-        mobileAccordionBody.classList.add('accordion-body', 'header__accordion--body');
-
-        Array.from(subMenu.children).forEach((subMenuItem) => {
-          const dropdownItem = document.createElement('div');
-          dropdownItem.classList.add('dropdown-item', 'header__accordion--dropdown-item');
-          dropdownItem.setAttribute('data-coloumn-count', '1,2,3');
-          dropdownItem.innerHTML = subMenuItem.innerHTML; // Replicate inner HTML for complex submenus
-          mobileAccordionBody.append(dropdownItem);
-        });
-        mobileCollapseDiv.append(mobileAccordionBody);
-        mobileSection.append(mobileCollapseDiv);
-
-        arrowSpan.addEventListener('click', () => {
-          const isCollapsed = arrowSpan.classList.contains('collapsed');
-          closeAllAccordions(accordionDiv, mobileSection);
-          if (isCollapsed) {
-            arrowSpan.classList.remove('collapsed');
-            arrowSvg.classList.remove('collapsed');
-            mobileCollapseDiv.classList.add('show');
-            arrowSvg.setAttribute('aria-expanded', 'true');
-          } else {
-            arrowSpan.classList.add('collapsed');
-            arrowSvg.classList.add('collapsed');
-            mobileCollapseDiv.classList.remove('show');
-            arrowSvg.setAttribute('aria-expanded', 'false');
-          }
-        });
-      }
-      accordionDiv.append(mobileSection);
     });
   }
 
-  mobileMenuWrapper.append(accordionDiv);
+  // Right section (Tools)
+  const rightDiv = document.createElement('div');
+  rightDiv.classList.add('right');
+  rightDiv.id = 'nav-right';
+  navbar.append(rightDiv);
 
-  // Social Media Links (from original HTML, static for now)
-  const socialDiv = document.createElement('div');
-  socialDiv.classList.add('header__accordion--app', 'bg-white');
-  socialDiv.style.marginTop = '10051.1px'; // Keep original inline style if critical
-  socialDiv.innerHTML = `
-    <div class="flex-column gap-3 header__socials">
-        <h4 class="hamburger__socials--text header__socials--text">Follow Us</h4>
-        <ul class="d-flex justify-content-between header__socials--list">
-            <li class="header__socials--item">
-                <a href="https://m.facebook.com/CanaraHSBCLifeInsurance" target="_blank" class="header__socials--link" rel="noopener noreferrer" icon="facebook">
-                    <div class="header__socials--icon">
-                         <svg aria-hidden="true" role="icon" class="text-blue-400">
-                                <use xlink:href="/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#facebook"></use>
-                            </svg>
-                    </div>
-                <span class="cmp-link__screen-reader-only">opens in a new tab</span></a>
-            </li>
-            <li class="header__socials--item">
-                <a href="https://www.youtube.com/c/CanaraHSBCLifeInsurance" target="_blank" class="header__socials--link" rel="noopener noreferrer" icon="youtube">
-                    <div class="header__socials--icon">
-                         <svg aria-hidden="true" role="icon" class="text-blue-400">
-                                <use xlink:href="/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#youtube"></use>
-                            </svg>
-                    </div>
-                <span class="cmp-link__screen-reader-only">opens in a new tab</span></a>
-            </li>
-            <li class="header__socials--item">
-                <a href="https://www.instagram.com/canarahsbcobc/" target="_blank" class="header__socials--link" rel="noopener noreferrer" icon="instagram">
-                    <div class="header__socials--icon">
-                         <svg aria-hidden="true" role="icon" class="text-blue-400">
-                                <use xlink:href="/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#instagram"></use>
-                            </svg>
-                    </div>
-                <span class="cmp-link__screen-reader-only">opens in a new tab</span></a>
-            </li>
-            <li class="header__socials--item">
-                <a href="https://x.com/CanaraHSBCLI" target="_blank" class="header__socials--link" rel="noopener noreferrer" icon="xLogo">
-                    <div class="header__socials--icon">
-                         <svg aria-hidden="true" role="icon" class="text-blue-400">
-                                <use xlink:href="/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#xLogo"></use>
-                            </svg>
-                    </div>
-                <span class="cmp-link__screen-reader-only">opens in a new tab</span></a>
-            </li>
-            <li class="header__socials--item">
-                <a href="https://in.linkedin.com/company/canara-hsbc-life-insurance-company" target="_blank" class="header__socials--link" rel="noopener noreferrer" icon="linkedin">
-                    <div class="header__socials--icon">
-                         <svg aria-hidden="true" role="icon" class="text-blue-400">
-                                <use xlink:href="/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#linkedin"></use>
-                            </svg>
-                    </div>
-                <span class="cmp-link__screen-reader-only">opens in a new tab</span></a>
-            </li>
-        </ul>
-    </div>
-    <div class="w-100 header__accordion--divider my-4 bg-black-200"></div>
-    <div class="flex-column gap-3 header__app">
-        <h4 class="header__app--text">Download the Canara HSBC Mobile App</h4>
-        <ul class="d-flex justify-content-between header__app--list">
-            <li class="header__app--item">
-                <a href="https://play.google.com/store/apps/details?id=com.choiceapp.genius&amp;hl=en_IN&amp;pli=1" target="_blank" class="header__app--link">
-                    <svg aria-hidden="true" role="icon" class="header__app--icon" alt="google play store">
-                        <use xlink:href="/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#get-it-on-google-play"></use>
-                    </svg>
-                <span class="cmp-link__screen-reader-only">opens in a new tab</span></a>
-            </li>
-            <li class="header__app--item">
-                <a href="https://apps.apple.com/in/app/canara-hsbc-life/id1637840399" target="_blank" class="header__app--link">
-                    <svg aria-hidden="true" role="icon" class="header__app--icon" alt="apple play store">
-                        <use xlink:href="/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#app-store-download"></use>
-                    </svg>
-                <span class="cmp-link__screen-reader-only">opens in a new tab</span></a>
-            </li>
-        </ul>
-    </div>
-  `;
-  mobileMenuWrapper.append(socialDiv);
+  const navTools = fragment.querySelector('.nav-tools');
+  if (navTools) {
+    navTools.querySelectorAll(':scope > div').forEach((toolSection) => {
+      if (toolSection.classList.contains('contact-wrapper')) {
+        const contactWrapper = document.createElement('div');
+        contactWrapper.classList.add('contact-wrapper');
+        const contactBlock = document.createElement('div');
+        contactBlock.classList.add('contact', 'block');
+        contactBlock.setAttribute('data-block-name', 'contact');
+        contactBlock.setAttribute('data-block-status', 'loaded');
+        contactWrapper.append(contactBlock);
 
-  hamburgerMenu.append(mobileMenuWrapper);
-  mobileMenuContainer.append(hamburgerMenu);
-  header.append(mobileMenuContainer);
+        const contactWrpArena = document.createElement('div');
+        contactWrpArena.classList.add('contact_wrp_arena', 'user__contact', 'header');
+        contactBlock.append(contactWrpArena);
 
-  // Main Navigation
-  const mainNav = document.createElement('nav');
-  mainNav.classList.add('position-relative', 'top-0', 'header__navbar', 'w-100');
+        const contactTitle = document.createElement('h4');
+        contactTitle.classList.add('user__contact-title');
+        contactTitle.textContent = toolSection.querySelector('h4')?.textContent || 'Contact Us'; // Dynamically get "Contact Us"
+        contactWrpArena.append(contactTitle);
 
-  const navbarDiv = document.createElement('div');
-  navbarDiv.classList.add('navbar', 'navbar-expand-md', 'd-flex', 'section_container--primary', 'py-3', 'justify-content-between', 'align-items-center', 'w-100', 'bg-white');
+        const contactIconPhone = document.createElement('span');
+        contactIconPhone.classList.add('user__contact-title', 'icon-phone');
+        contactIconPhone.setAttribute('aria-label', contactTitle.textContent); // Use dynamic label
+        contactWrpArena.append(contactIconPhone);
 
-  const brandLink = document.createElement('a');
-  brandLink.classList.add('navbar-brand', 'p-0', 'header__logo', 'position-relative');
-  brandLink.href = '/';
-  const brandImg = document.createElement('img');
-  brandImg.classList.add('w-100', 'h-100', 'header__logo--image', 'position-absolute', 'z-2');
-  brandImg.src = '/content/dam/chli/homepage/image/canara-hsbc-life-insurance-logo.svg';
-  brandImg.alt = 'Canara HSBC Life Insurance';
-  brandImg.loading = 'lazy';
-  brandLink.append(brandImg);
-  navbarDiv.append(brandLink);
+        const contactIconsDiv = document.createElement('div');
+        contactIconsDiv.classList.add('user__contact__icons', 'hidden');
+        contactWrpArena.append(contactIconsDiv);
 
-  const navbarCollapse = document.createElement('div');
-  navbarCollapse.classList.add('collapse', 'navbar-collapse', 'justify-content-center', 'header__navbar--collapse');
-  navbarCollapse.id = 'navbarNavDropdown';
-  const navbarList = document.createElement('ul');
-  navbarList.classList.add('navbar-nav', 'gap-10', 'header__navbar--list');
-  navbarCollapse.append(navbarList);
-  navbarDiv.append(navbarCollapse);
+        const contactToggleBox = document.createElement('div');
+        contactToggleBox.classList.add('hidden', 'contact-toggle-box');
+        contactWrpArena.append(contactToggleBox);
 
-  const navigationButtons = document.createElement('div');
-  navigationButtons.classList.add('navigation__buttons', 'd-flex', 'align-items-center', 'gap-5', 'header__buttons');
+        const callContainer = document.createElement('div');
+        callContainer.classList.add('user__contact__icon-call_container');
+        contactToggleBox.append(callContainer);
 
-  const searchDiv = document.createElement('div');
-  searchDiv.classList.add('bg-transparent', 'header__search', 'cursor-pointer');
-  const searchSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  searchSvg.classList.add('header__search--svg-find');
-  searchSvg.setAttribute('aria-hidden', 'true');
-  searchSvg.setAttribute('role', 'icon');
-  const useSearch = document.createElementNS('http://www.w3.org/2000/svg', 'use');
-  useSearch.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', '/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#search');
-  searchSvg.append(useSearch);
-  searchDiv.append(searchSvg);
+        // Populate contact details
+        toolSection.querySelectorAll('a').forEach((link) => {
+          const iconLink = document.createElement('a');
+          iconLink.href = link.href;
+          if (link.target) iconLink.target = link.target;
+          if (link.rel) iconLink.rel = link.rel;
 
-  // Search overlay (from original HTML, static for now)
-  const globalSearchWrapper = document.createElement('section');
-  globalSearchWrapper.classList.add('position-absolute', 'global__search--wrapper', 'vw-100', 'bg-white', 'start-0', 'end-0', 'section_container--primary');
-  globalSearchWrapper.innerHTML = `
-    <div class="d-flex flex-column global__search--container">
-        <svg class="close-search text-black-500" role="icon">
-            <title>close search</title>
-            <use xlink:href="/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#close"></use>
-        </svg>
-        <form class="global__search--form mt-2" autocomplete="off" data-search-path="/content/chli/" data-redirection-path="/content/chli/in/en/search-result-page" data-result-count="5" data-view-result="View Results" data-no-result="No Result Found">
-            <div class="global__search__input--wrapper position-relative">
-            <input class="global__search--input text-capitalize" name="searchText" type="search" placeholder="Search">
-            <svg class="search-icon text-blue-400" role="img">
-                <title>Search</title>
-                <use xlink:href="/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#search"></use>
-            </svg>
-            <svg class="arrow-icon search__submit text-blue-400 cursor-pointer" role="img">
-                <title>Search CTA</title>
-                <use xlink:href="/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#arrow-right"></use>
-            </svg>
-            <small class="global__search--info font-10 float-end text-black-500">Hit to enter </small>
-            <div class="global__search--result--wrapper position-relative">
-            <ul class="w-100 global__search__result--list bg-white d-none position-static"></ul>
-            <div class="text-blue-400 font-16 text-center global__search__viewall mb-8 w-100 start-0 end-0 d-none">
-                <a title="View Results" class="global__search__viewall--link">View Results</a>
-           </div>
-        </div>
-            </div>
-        </form>
-        <div class="global__search--popular">
-            <div class="chli_title d-flex flex-column global__search__popular--title mb-2">
-                <h2 class="heading-2 text-start text-black-500">Popular Searches</h2>
-                <span class="primary-bar"></span>
-            </div>
-            <div class="global__search__popular--cards">
-                <ul class="global__search__popular--items d-flex pl-0 flex-wrap gap-4">
-                    <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">Term Insurance</li>
-                    <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">Life Insurance Plans</li>
-                    <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">Savings &amp; Investment Plan</li>
-                    <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">Child Insurance Plan</li>
-                    <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">BMI Calculator</li>
-                    <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">Income Tax Calculator</li>
-                    <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">What is Investment</li>
-                    <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">Retirement Calculator</li>
-                    <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">Sukanya Samriddhi Yojana</li>
-                    <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">What is Insurance</li>
-                    <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">Features of Life Insurance</li>
-                    <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">What is Pension</li>
-                    <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">Section 194</li>
-                    <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">Retirement Plans</li>
-                    <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">Critical illness Insurance</li>
-                    <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">Benefits of Term Insurance</li>
-                    <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">ULIP Plan</li>
-                </ul>
-            </div>
-        </div>
-  `;
-  searchDiv.append(globalSearchWrapper);
-  navigationButtons.append(searchDiv);
+          const spanSrOnly = document.createElement('span');
+          spanSrOnly.classList.add('sr-only');
+          spanSrOnly.textContent = link.textContent.trim();
+          iconLink.append(spanSrOnly);
 
-  searchDiv.addEventListener('click', () => {
-    globalSearchWrapper.classList.toggle('global__search--wrapper--active');
-    overlay.classList.toggle('active');
-    headerWrapper.classList.toggle('search--active');
-    if (globalSearchWrapper.classList.contains('global__search--wrapper--active')) {
-      document.body.style.overflowY = 'hidden';
-    } else {
-      document.body.style.overflowY = '';
-    }
-  });
+          const img = link.querySelector('img');
+          if (img) iconLink.append(img.cloneNode(true));
 
-  globalSearchWrapper.querySelector('.close-search').addEventListener('click', (e) => {
-    e.stopPropagation();
-    globalSearchWrapper.classList.remove('global__search--wrapper--active');
-    overlay.classList.remove('active');
-    headerWrapper.classList.remove('search--active');
-    document.body.style.overflowY = '';
-  });
+          if (link.href.startsWith('tel:')) {
+            iconLink.classList.add('user__contact--icon', 'phone');
+            iconLink.addEventListener('click', (e) => {
+              e.preventDefault();
+              contactToggleBox.classList.toggle('hidden');
+              contactIconsDiv.classList.add('hidden'); // Close other icons if open
+            });
+            const telLink = document.createElement('a');
+            telLink.href = link.href;
+            telLink.classList.add('primary-telephone');
+            telLink.textContent = link.textContent;
+            callContainer.append(telLink);
+          } else if (link.href.startsWith('https://wa.me/')) {
+            iconLink.classList.add('user__contact--icon', 'whatsapp');
+          } else if (link.href.startsWith('mailto:')) {
+            iconLink.classList.add('user__contact--icon', 'email');
+          }
+          contactIconsDiv.append(iconLink);
+        });
 
-  const notificationDiv = document.createElement('div');
-  notificationDiv.classList.add('d-flex', 'flex-column', 'align-items-end', 'gap-2', 'position-relative', 'header__notification--trigger');
-  const notificationSpan = document.createElement('span');
-  notificationSpan.classList.add('header__notification--trigger-text', 'text-center', 'position-absolute');
-  notificationSpan.setAttribute('data-notification-text', 'true');
-  notificationSpan.setAttribute('data-text-color', 'rgb(255,255,255)');
-  notificationSpan.setAttribute('data-background-color', '#Db0011');
-  notificationSpan.style.color = 'rgb(255, 255, 255)';
-  notificationSpan.style.backgroundColor = 'rgb(219, 0, 17)';
-  notificationSpan.textContent = '1';
-  const bellSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  bellSvg.classList.add('text-blue-400', 'header__notification--trigger-svg');
-  bellSvg.setAttribute('aria-hidden', 'true');
-  bellSvg.setAttribute('role', 'icon');
-  const useBell = document.createElementNS('http://www.w3.org/2000/svg', 'use');
-  useBell.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', '/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#bell-icon');
-  bellSvg.append(useBell);
-  notificationDiv.append(notificationSpan, bellSvg);
+        // Add the 'hidden' div content from the original HTML
+        const hiddenDivs = toolSection.querySelectorAll('.contact_wrp_arena > div.hidden');
+        hiddenDivs.forEach((div) => {
+          if (div.textContent.trim() !== '') {
+            const newDiv = document.createElement('div');
+            newDiv.classList.add('hidden');
+            newDiv.textContent = div.textContent;
+            contactIconsDiv.append(newDiv);
+          }
+        });
 
-  // Notification panel (from original HTML, static for now)
-  const notificationPanel = document.createElement('div');
-  notificationPanel.classList.add('p-3', 'flex-column', 'position-absolute', 'z-2', 'header__notification--panel');
-  notificationPanel.innerHTML = `
-    <section class="header__notification--item header__notification--item-background" data-notification-bgcolor="#7FDBFF" style="background-color: rgb(127, 219, 255);">
-        <a href="https://buyonlineinsurance.canarahsbclife.com/promise4WealthPlan/?source=website" class="d-flex flex-column header__notification--item">
-            <div class="d-flex gap-5 header__notification--item-content">
-                <div class="header__notification--icon">
-                    <img src="/content/dam/chli/homepage/image/p4w-desktop-notification.webp" alt="Promise4wealth" loading="lazy">
-                </div>
-                <div class="d-flex flex-column gap-3 header__notification--content">
-                    <h4 class="text-black-500 header__notification--title">
-                        New Fund Launched with Promise4Wealth
-                    </h4>
-                    <div class="text-black-400 header__notification--description rte-text">
-                        <div><p>BSE 500 Enhanced Value 50 Fund. Past 5-yr benchmark returns* of index - 31.69%</p>
-</div>
-                    </div>
-                </div>
-            </div>
-        </a>
-    </section>
-    <section class="header__notification--item header__notification--item-background">
-        <a href="https://customer.canarahsbclife.com/PremiumPayment" class="d-flex flex-column header__notification--item">
-            <div class="d-flex gap-5 header__notification--item-content">
-                <div class="header__notification--icon">
-                    <img src="/content/dam/chli/homepage/image/pay-premium-desktop-notification.webp" alt="Reinstate Your Lapsed Policy - Canara HSBC Life Insurance" loading="lazy">
-                </div>
-                <div class="d-flex flex-column gap-3 header__notification--content">
-                    <h4 class="text-black-500 header__notification--title">
-                        Reinstate Your Lapsed Policy
-                    </h4>
-                    <div class="text-black-400 header__notification--description rte-text">
-                        <div><p>Pay premium now &amp; continue enjoying the benefits.</p>
-</div>
-                    </div>
-                </div>
-            </div>
-        </a>
-    </section>
-    <section class="header__notification--item header__notification--item-background">
-        <a href="https://customer.canarahsbclife.com/login" class="d-flex flex-column header__notification--item">
-            <div class="d-flex gap-5 header__notification--item-content">
-                <div class="header__notification--icon">
-                    <img src="/content/dam/chli/images/home-page/notification-images/kyc-desktop-notification.webp" alt="Notification 2" loading="lazy">
-                </div>
-                <div class="d-flex flex-column gap-3 header__notification--content">
-                    <h4 class="text-black-500 header__notification--title">
-                        Mandatory KYC Update as per PML Rules 2005
-                    </h4>
-                    <div class="text-black-400 header__notification--description rte-text">
-                        <div><p>Update your KYC records within 30 days of any changes</p>
-</div>
-                    </div>
-                </div>
-            </div>
-        </a>
-    </section>
-    <section class="header__notification--item header__notification--item-background">
-        <a href="/content/dam/chli/pdfs/claim-support-ahmedabad-plane-crash.pdf" class="d-flex flex-column header__notification--item">
-            <div class="d-flex gap-5 header__notification--item-content">
-                <div class="header__notification--icon">
-                    <img src="/content/dam/chli/images/notification/expedited-claim-desktop-icon.webp" alt="Fast Claim Process for Ahemdabad Plane Crash - Canara HSBC Life Insurance" loading="lazy">
-                </div>
-                <div class="d-flex flex-column gap-3 header__notification--content">
-                    <h4 class="text-black-500 header__notification--title">
-                        We Stand with Families Affected by the Ahemdabad Plane Crash
-                    </h4>
-                    <div class="text-black-400 header__notification--description rte-text">
-                        <div><p>We're here to support with a quicker, simpler claim process.</p>
-</div>
-                    </div>
-                </div>
-            </div>
-        </a>
-    </section>
-  `;
-  notificationDiv.append(notificationPanel);
-  navigationButtons.append(notificationDiv);
+        // Event listener for contact title to toggle icons
+        contactTitle.addEventListener('click', () => {
+          contactIconsDiv.classList.toggle('hidden');
+          contactToggleBox.classList.add('hidden'); // Close call box if open
+        });
+        contactIconPhone.addEventListener('click', () => {
+          contactIconsDiv.classList.toggle('hidden');
+          contactToggleBox.classList.add('hidden'); // Close call box if open
+        });
 
-  notificationDiv.addEventListener('click', () => {
-    notificationPanel.classList.toggle('active');
-    overlay.classList.toggle('active');
-    if (notificationPanel.classList.contains('active')) {
-      document.body.style.overflowY = 'hidden';
-    } else {
-      document.body.style.overflowY = '';
-    }
-  });
+        rightDiv.append(contactWrapper);
+      } else if (toolSection.textContent.trim().toLowerCase() === 'en') {
+        const languageDiv = document.createElement('div');
+        languageDiv.classList.add('language');
+        languageDiv.textContent = toolSection.textContent.trim(); // Dynamically get "EN"
+        rightDiv.append(languageDiv);
+      } else if (toolSection.classList.contains('sign-in-wrapper')) {
+        const signInWrapper = document.createElement('div');
+        signInWrapper.classList.add('sign-in-wrapper', 'hidden'); // Initially hidden
+        const signInBlock = document.createElement('div');
+        signInBlock.classList.add('sign-in', 'block');
+        signInBlock.setAttribute('data-block-name', 'sign-in');
+        signInBlock.setAttribute('data-block-status', 'loaded');
+        signInWrapper.append(signInBlock);
 
-  overlay.addEventListener('click', () => {
-    if (notificationPanel.classList.contains('active')) {
-      notificationPanel.classList.remove('active');
-    }
-    if (globalSearchWrapper.classList.contains('global__search--wrapper--active')) {
-      globalSearchWrapper.classList.remove('global__search--wrapper--active');
-      headerWrapper.classList.remove('search--active');
-    }
-    if (hamburgerMenu.classList.contains('active')) {
-      toggleMobileMenu(headerWrapper, false);
-    }
-    overlay.classList.remove('active');
-    document.body.style.overflowY = '';
-  });
+        const userDropdown = document.createElement('div');
+        userDropdown.classList.add('user__dropdown');
+        signInBlock.append(userDropdown);
 
-  const loginLink = document.createElement('a');
-  loginLink.classList.add('d-flex', 'align-items-center', 'gap-2', 'text-blue-400', 'header__login');
-  loginLink.href = 'https://customer.canarahsbclife.com/login';
-  loginLink.target = '_blank';
-  const userSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  userSvg.setAttribute('aria-hidden', 'true');
-  userSvg.setAttribute('role', 'icon');
-  const useUser = document.createElementNS('http://www.w3.org/2000/svg', 'use');
-  useUser.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', '/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#user-icon');
-  userSvg.append(useUser);
-  const loginText = document.createElement('span');
-  loginText.classList.add('logntext', 'd-none', 'd-md-block', 'header__login--text', 'text-nowrap');
-  loginText.textContent = 'Login';
-  const srOnlyLogin = document.createElement('span');
-  srOnlyLogin.classList.add('cmp-link__screen-reader-only');
-  srOnlyLogin.textContent = 'opens in a new tab';
-  loginLink.append(userSvg, loginText, srOnlyLogin);
-  navigationButtons.append(loginLink);
+        const userAccount = document.createElement('div');
+        userAccount.classList.add('user__account');
+        userDropdown.append(userAccount);
 
-  const hamburgerButton = document.createElement('button');
-  hamburgerButton.classList.add('position-relative', 'text-blue-400', 'header__hamburger--button');
-  const openHamburgerSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  openHamburgerSvg.classList.add('header__hamburger--open');
-  openHamburgerSvg.setAttribute('aria-hidden', 'true');
-  openHamburgerSvg.setAttribute('role', 'icon');
-  const useOpenHamburger = document.createElementNS('http://www.w3.org/2000/svg', 'use');
-  useOpenHamburger.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', '/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#hamburger-icon');
-  openHamburgerSvg.append(useOpenHamburger);
-  const closeHamburgerSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  closeHamburgerSvg.classList.add('position-absolute', 'start-0', 'bottom-0', 'header__hamburger--close');
-  closeHamburgerSvg.setAttribute('aria-hidden', 'true');
-  closeHamburgerSvg.setAttribute('role', 'icon');
-  const useCloseHamburger = document.createElementNS('http://www.w3.org/2000/svg', 'use');
-  useCloseHamburger.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', '/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#close');
-  closeHamburgerSvg.append(useCloseHamburger);
-  hamburgerButton.append(openHamburgerSvg, closeHamburgerSvg);
-  navigationButtons.append(hamburgerButton);
+        toolSection.querySelectorAll('a, button').forEach((item) => {
+          if (item.tagName === 'A') {
+            const accountLink = document.createElement('a');
+            accountLink.href = item.href;
+            accountLink.classList.add('user__account--link', item.textContent.trim().toLowerCase().replace(/\s/g, '-'));
+            if (item.target) accountLink.target = item.target;
 
-  hamburgerButton.addEventListener('click', () => toggleMobileMenu(headerWrapper));
-  closeIcon.addEventListener('click', () => toggleMobileMenu(headerWrapper, false));
+            const spanIcon = document.createElement('span');
+            spanIcon.classList.add('user__account__list-icon');
+            const img = item.querySelector('img');
+            if (img) spanIcon.append(img.cloneNode(true));
+            accountLink.append(spanIcon);
+            accountLink.append(item.textContent.trim());
+            userAccount.append(accountLink);
+          } else if (item.tagName === 'BUTTON') {
+            const signInBtnDiv = document.createElement('div');
+            signInBtnDiv.classList.add('user__account--link', 'sign-in-btn');
+            const spanIcon = document.createElement('span');
+            spanIcon.classList.add('user__account__list-icon');
+            const img = item.querySelector('img');
+            if (img) spanIcon.append(img.cloneNode(true));
+            signInBtnDiv.append(spanIcon);
 
-  navbarDiv.append(navigationButtons);
-  mainNav.append(navbarDiv);
-  header.append(mainNav);
-  headerWrapper.append(header);
-  block.append(headerWrapper);
+            const signInButton = document.createElement('button');
+            signInButton.setAttribute('type', 'button');
+            if (item.dataset.signOutText) signInButton.setAttribute('data-sign-out-text', item.dataset.signOutText);
+            signInButton.textContent = item.textContent;
+            signInBtnDiv.append(signInButton);
+            userAccount.append(signInBtnDiv);
+          }
+        });
+        rightDiv.append(signInWrapper);
 
-  // Initial state for desktop
-  if (isDesktop.matches) {
-    hamburgerMenu.classList.remove('active');
-    overlay.classList.remove('active');
-    hamburgerButton.querySelector('.header__hamburger--open').style.opacity = '1';
-    hamburgerButton.querySelector('.header__hamburger--close').style.opacity = '0';
-    document.body.style.overflowY = '';
-  } else {
-    // Hide desktop navigation items on mobile
-    navbarCollapse.classList.remove('show');
+        // Placeholder for user image (if needed from original HTML)
+        const userImgDiv = document.createElement('div');
+        userImgDiv.id = 'user-img';
+        // rightDiv.append(userImgDiv); // Uncomment if user-img is needed and styled via CSS
+      }
+    });
   }
 
-  isDesktop.addEventListener('change', () => {
-    if (isDesktop.matches) {
-      hamburgerMenu.classList.remove('active');
-      overlay.classList.remove('active');
-      hamburgerButton.querySelector('.header__hamburger--open').style.opacity = '1';
-      hamburgerButton.querySelector('.header__hamburger--close').style.opacity = '0';
-      document.body.style.overflowY = '';
-      navbarCollapse.classList.add('show');
-    } else {
-      navbarCollapse.classList.remove('show');
-      closeAllDropdowns(navbarList);
+  // Car Filter Menu (if present in original HTML, though not in fragment)
+  const carFilterMenu = document.createElement('div');
+  carFilterMenu.classList.add('car-filter-menu', 'hidden', 'car-filter-arena');
+  carFilterMenu.id = 'carFilterMenu';
+  mainDiv.append(carFilterMenu);
+
+  const carPanelHeader = document.createElement('div');
+  carPanelHeader.classList.add('car-panel-header');
+  carPanelHeader.innerHTML = `
+    <div></div>
+    <span class="car-text">Cars</span>
+    <span class="car-filter-close"><img src="/icons/close.svg" alt="close"></span>
+  `;
+  carFilterMenu.append(carPanelHeader);
+
+  // Event listeners
+  hamburgerButton.addEventListener('click', () => toggleMobileMenu(mainDiv));
+  menuHeader.querySelector('.close-icon').addEventListener('click', () => toggleMobileMenu(mainDiv, false));
+  menuHeader.querySelector('.back-arrow').addEventListener('click', () => {
+    // Implement back button logic for nested mobile menus if needed
+    // For now, it just closes the menu
+    toggleMobileMenu(mainDiv, false);
+  });
+  carPanelHeader.querySelector('.car-filter-close').addEventListener('click', () => carFilterMenu.classList.add('hidden'));
+
+  window.addEventListener('keydown', closeOnEscape);
+
+  // Close desktop panels when clicking outside
+  document.addEventListener('click', (e) => {
+    if (isDesktop.matches && !navbar.contains(e.target) && !e.target.closest('.desktop-panel')) {
+      closeAllDesktopPanels(mainDiv);
     }
   });
+
+  // Handle desktop vs mobile menu display on resize
+  const onMediaQueryChange = (e) => {
+    if (e.matches) { // Desktop
+      toggleMobileMenu(mainDiv, false); // Ensure mobile menu is closed
+      document.body.style.overflowY = '';
+    } else { // Mobile
+      closeAllDesktopPanels(mainDiv); // Ensure desktop panels are closed
+      // Do not force mobile menu open here, let hamburger button handle it
+    }
+  };
+  isDesktop.addEventListener('change', onMediaQueryChange);
+  // Initial check
+  onMediaQueryChange(isDesktop);
 }
