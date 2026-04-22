@@ -1,43 +1,58 @@
-import { createOptimizedPicture } from '../../scripts/aem.js';
-import { moveInstrumentation } from '../../scripts/scripts.js';
+import { getMetadata } from '../../scripts/aem.js';
+import { loadFragment } from '../fragment/fragment.js';
 
-// media query match that indicates mobile/tablet width
+// Media query match that indicates mobile/tablet width
 const isDesktop = window.matchMedia('(min-width: 992px)');
 
-function createSVG(id, className = '') {
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.classList.add(className);
-  const use = document.createElementNS('http://www.w3.org/1999/xlink', 'xlink:href', `/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#${id}`);
-  svg.appendChild(use);
-  return svg;
-}
-
-function setupAccordionToggle(button, targetId) {
-  button.addEventListener('click', () => {
-    const target = document.getElementById(targetId);
-    if (target) {
-      const isExpanded = button.getAttribute('aria-expanded') === 'true';
-      button.setAttribute('aria-expanded', !isExpanded);
-      button.classList.toggle('collapsed', isExpanded);
-      target.classList.toggle('collapse', !isExpanded);
-      target.classList.toggle('show', isExpanded);
+function closeAllDropdowns(container, exceptDropdown = null) {
+  container.querySelectorAll('.header__navbar--item.has-dropdown').forEach((item) => {
+    if (item !== exceptDropdown) {
+      item.classList.remove('active');
+      const dropdown = item.querySelector('.header__navbar--dropdown');
+      if (dropdown) {
+        dropdown.classList.remove('active');
+      }
     }
   });
 }
 
-function setupMenuToggle(trigger, target, overlay, backdrop) {
-  trigger.addEventListener('click', () => {
-    const isMenuOpen = target.classList.contains('show');
-    target.classList.toggle('show', !isMenuOpen);
-    overlay.classList.toggle('d-none', isMenuOpen);
-    backdrop.classList.toggle('d-none', isMenuOpen);
-    document.body.style.overflowY = isMenuOpen ? '' : 'hidden';
+function closeAllAccordions(container, exceptAccordion = null) {
+  container.querySelectorAll('.header__accordion--item').forEach((item) => {
+    if (item !== exceptAccordion) {
+      item.querySelector('.header__accordion--button').classList.add('collapsed');
+      item.querySelector('.header__accordion--arrow').classList.add('collapsed');
+      item.querySelector('.header__accordion--collapse').classList.remove('show');
+    }
   });
 }
 
+function toggleMobileMenu(headerWrapper, forceExpanded = null) {
+  const hamburgerMenu = headerWrapper.querySelector('.header__hamburger--menu');
+  const overlay = headerWrapper.querySelector('.header__overlay');
+  const hamburgerButton = headerWrapper.querySelector('.header__hamburger--button');
+
+  const expanded = forceExpanded !== null ? forceExpanded : !hamburgerMenu.classList.contains('active');
+
+  if (expanded) {
+    hamburgerMenu.classList.add('active');
+    overlay.classList.add('active');
+    hamburgerButton.querySelector('.header__hamburger--open').style.opacity = '0';
+    hamburgerButton.querySelector('.header__hamburger--close').style.opacity = '1';
+    document.body.style.overflowY = 'hidden';
+  } else {
+    hamburgerMenu.classList.remove('active');
+    overlay.classList.remove('active');
+    hamburgerButton.querySelector('.header__hamburger--open').style.opacity = '1';
+    hamburgerButton.querySelector('.header__hamburger--close').style.opacity = '0';
+    document.body.style.overflowY = '';
+    closeAllAccordions(hamburgerMenu);
+  }
+}
+
 export default async function decorate(block) {
-  const navData = await fetch('/nav.json').then((resp) => resp.json());
-  const navSections = navData.sections;
+  const navMeta = getMetadata('nav');
+  const navPath = navMeta ? new URL(navMeta, window.location).pathname : '/nav';
+  const fragment = await loadFragment(navPath);
 
   block.textContent = '';
 
@@ -47,313 +62,261 @@ export default async function decorate(block) {
   const header = document.createElement('header');
   header.classList.add('header', 'header--container', 'position-fixed', 'top-0', 'w-100');
 
-  const headerOverlay = document.createElement('div');
-  headerOverlay.classList.add('header__overlay', 'd-none', 'position-fixed', 'top-0', 'w-100', 'h-100');
-  header.append(headerOverlay);
+  const overlay = document.createElement('div');
+  overlay.classList.add('header__overlay', 'd-none', 'position-fixed', 'top-0', 'w-100', 'h-100');
+  header.append(overlay);
 
-  const positionAbsoluteDiv = document.createElement('div');
-  positionAbsoluteDiv.classList.add('position-absolute', 'w-100');
+  const mobileMenuContainer = document.createElement('div');
+  mobileMenuContainer.classList.add('position-absolute', 'w-100');
 
-  // Hamburger Menu (Mobile)
-  const hamburgerMenuNav = document.createElement('nav');
-  hamburgerMenuNav.classList.add('position-fixed', 'top-0', 'end-0', 'd-flex', 'flex-column', 'gap-6', 'header__hamburger--menu');
+  const hamburgerMenu = document.createElement('nav');
+  hamburgerMenu.classList.add('position-fixed', 'top-0', 'end-0', 'd-flex', 'flex-column', 'gap-6', 'header__hamburger--menu');
 
   const hamburgerHead = document.createElement('div');
   hamburgerHead.classList.add('align-self-end', 'd-flex', 'justify-content-between', 'w-100', 'd-md-none', 'header__hamburger--head');
   const hamburgerHeadTitle = document.createElement('div');
   hamburgerHeadTitle.classList.add('header__hamburger--head-title');
-  hamburgerHeadTitle.textContent = 'Notifications';
-  const hamburgerCloseIcon = createSVG('close', 'arrow header__hamburger--close-icon');
-  hamburgerHead.append(hamburgerHeadTitle, hamburgerCloseIcon);
-  hamburgerMenuNav.append(hamburgerHead);
+  // Dynamically derive text from fragment if available, otherwise default or leave empty
+  // Assuming 'Notifications' is a static element not part of the nav fragment's dynamic sections
+  hamburgerHeadTitle.textContent = 'Notifications'; 
+  const closeIcon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  closeIcon.classList.add('arrow', 'header__hamburger--close-icon');
+  closeIcon.setAttribute('aria-hidden', 'true');
+  closeIcon.setAttribute('role', 'icon');
+  const useClose = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+  useClose.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', '/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#close');
+  closeIcon.append(useClose);
+  hamburgerHead.append(hamburgerHeadTitle, closeIcon);
+  hamburgerMenu.append(hamburgerHead);
 
-  // Notification Mobile Menu
-  const notificationMobileMenu = document.createElement('div');
-  notificationMobileMenu.classList.add('d-md-none', 'flex-column', 'z-2', 'header__notification--mobile');
-  // Populate with notification items from block children if they exist
-  const mobileNotificationRows = [...block.children].filter(
-    (row) => row.querySelector('.header__notification--item'),
-  );
-  mobileNotificationRows.forEach((row) => {
-    const section = document.createElement('section');
-    moveInstrumentation(row, section);
-    section.classList.add('d-flex', 'flex-column', 'header__notification--item', 'header__notification--item-background');
-    const bgColor = row.querySelector('[data-notification-bgcolor]');
-    if (bgColor) {
-      section.setAttribute('data-notification-bgcolor', bgColor.dataset.notificationBgcolor);
-      section.style.backgroundColor = bgColor.dataset.notificationBgcolor;
-    }
+  // Mobile Notification Menu (from original HTML structure, not fragment)
+  const mobileNotificationDiv = document.createElement('div');
+  mobileNotificationDiv.classList.add('d-md-none', 'flex-column', 'z-2', 'header__notification--mobile');
+  // Populate mobileNotificationDiv with content similar to the original HTML if needed,
+  // but for this exercise, we'll assume it's static or handled separately from nav fragment.
+  // For now, it remains empty as per the strict rule of replicating structure, not data for non-nav items.
+  hamburgerMenu.append(mobileNotificationDiv);
 
-    const link = row.querySelector('a');
-    if (link) {
-      const newLink = document.createElement('a');
-      newLink.href = link.href;
-      newLink.classList.add('d-flex', 'flex-column', 'header__notification--item');
-
-      const content = document.createElement('div');
-      content.classList.add('d-flex', 'p-2', 'gap-5', 'header__notification--item-content');
-
-      const iconDiv = document.createElement('div');
-      iconDiv.classList.add('header__notification--icon');
-      const img = link.querySelector('img');
-      if (img) {
-        const optimizedPic = createOptimizedPicture(img.src, img.alt, false, [{ width: '750' }]);
-        moveInstrumentation(img, optimizedPic.querySelector('img'));
-        iconDiv.append(optimizedPic);
-      }
-      content.append(iconDiv);
-
-      const textContentDiv = document.createElement('div');
-      textContentDiv.classList.add('d-flex', 'flex-column', 'justify-content-center', 'gap-3', 'header__notification--content');
-      const title = link.querySelector('h4');
-      if (title) {
-        const newTitle = document.createElement('h4');
-        newTitle.classList.add('text-black-500', 'header__notification--content-title');
-        newTitle.textContent = title.textContent;
-        textContentDiv.append(newTitle);
-      }
-      const description = link.querySelector('.rte-text');
-      if (description) {
-        const newDescription = document.createElement('div');
-        newDescription.classList.add('text-black-400', 'header__notification--content-description', 'rte-text');
-        newDescription.innerHTML = description.innerHTML;
-        textContentDiv.append(newDescription);
-      }
-      content.append(textContentDiv);
-      newLink.append(content);
-      section.append(newLink);
-    }
-    notificationMobileMenu.append(section);
-  });
-  hamburgerMenuNav.append(notificationMobileMenu);
-
-  // Accordion Menu Items
   const mobileMenuWrapper = document.createElement('div');
   mobileMenuWrapper.classList.add('d-flex', 'flex-column', 'justify-content-between', 'mobile__menu--wrapper');
-  const accordion = document.createElement('div');
-  accordion.classList.add('accordion', 'header__accordion');
+  const accordionDiv = document.createElement('div');
+  accordionDiv.classList.add('accordion', 'header__accordion');
 
-  navSections.forEach((sectionData, index) => {
-    const accordionItem = document.createElement('section');
-    accordionItem.classList.add('accordion-item', 'header__accordion--item');
-    if (index < 5) {
-      accordionItem.classList.add('d-md-none');
-    }
+  const navContent = document.createElement('div');
+  while (fragment.firstElementChild) navContent.append(fragment.firstElementChild);
 
-    const heading = document.createElement('h2');
-    heading.classList.add('accordion-header', 'header__accordion--heading');
-    heading.id = `panel-heading-${index + 1}`;
+  const classes = ['brand', 'sections', 'tools'];
+  classes.forEach((c, i) => {
+    const section = navContent.children[i];
+    if (section) section.classList.add(`nav-${c}`);
+  });
 
-    const mainLink = document.createElement('a');
-    mainLink.classList.add('accordion-button', 'd-flex', 'justify-content-between', 'align-items-center', 'w-100', 'header__accordion--button', 'navigation_link');
-    mainLink.href = sectionData.l1Href;
-    mainLink.textContent = sectionData.l1Label;
+  const navSections = navContent.querySelector('.nav-sections');
+  if (navSections) {
+    Array.from(navSections.children).forEach((section) => {
+      // Desktop Navigation
+      const navItem = document.createElement('li');
+      navItem.classList.add('nav-item', 'header__navbar--item', 'text-center');
+      const divFlex = document.createElement('div');
+      divFlex.classList.add('d-flex');
+      const navLink = document.createElement('a');
+      navLink.classList.add('nav-link', 'header__navbar--link');
+      navLink.href = section.querySelector('a')?.href || '#';
+      navLink.textContent = section.querySelector('a')?.textContent || '';
+      const underlineSpan = document.createElement('span');
+      underlineSpan.classList.add('header__navbar--item-underline');
+      navLink.append(underlineSpan);
+      divFlex.append(navLink);
+      navItem.append(divFlex);
 
-    const arrowSpan = document.createElement('span');
-    arrowSpan.classList.add('header__accordion--button', 'collapsed', 'header_arrow_icon');
-    arrowSpan.setAttribute('aria-expanded', 'false');
-    arrowSpan.setAttribute('aria-controls', `panel-collapse-${index + 1}-norm-nav`);
-    const arrowSVG = createSVG('drop-up-caret', 'arrow header__accordion--arrow');
-    arrowSVG.setAttribute('aria-expanded', 'false');
-    arrowSVG.setAttribute('aria-controls', `panel-collapse-${index + 1}-norm-nav`);
-    arrowSpan.append(arrowSVG);
+      const subMenu = section.querySelector('ul');
+      if (subMenu) {
+        navItem.classList.add('has-dropdown');
+        const dropdownUl = document.createElement('ul');
+        dropdownUl.classList.add('bg-white', 'nav__dropdown', 'header__navbar--dropdown', 'position-fixed', 'section_container--primary', 'pt-12', 'pb-8', 'start-0', 'w-100', 'border-0', 'rounded-0', 'published__height');
+        dropdownUl.setAttribute('aria-labelledby', `navbarDropdownMenuLink${Array.from(navSections.children).indexOf(section)}`);
+        dropdownUl.style.gridTemplateColumns = 'repeat(3, minmax(0px, 1fr))';
+        dropdownUl.style.gap = '20px';
 
-    if (sectionData.l1Href === '#') {
-      const button = document.createElement('button');
-      button.classList.add(...mainLink.classList);
-      button.type = 'button';
-      button.innerHTML = `<div class="d-flex w-100">${sectionData.l1Label}<div class="navigation__badge--text"></div></div>`;
-      heading.append(button, arrowSpan);
-      setupAccordionToggle(button, `panel-collapse-${index + 1}`);
-    } else {
-      heading.append(mainLink, arrowSpan);
-      setupAccordionToggle(arrowSpan, `panel-collapse-${index + 1}-norm-nav`);
-    }
+        Array.from(subMenu.children).forEach((subMenuItem) => {
+          const dropdownItem = document.createElement('li');
+          dropdownItem.classList.add('dropdown-item', 'header__navbar--dropdown-column');
+          dropdownItem.innerHTML = subMenuItem.innerHTML; // Replicate inner HTML for complex submenus
+          dropdownUl.append(dropdownItem);
+        });
+        navItem.append(dropdownUl);
 
-    accordionItem.append(heading);
-
-    const collapseDiv = document.createElement('div');
-    collapseDiv.id = `panel-collapse-${index + 1}${sectionData.l1Href === '#' ? '' : '-norm-nav'}`;
-    collapseDiv.classList.add('accordion-collapse', 'collapse', 'header__accordion--collapse');
-    collapseDiv.setAttribute('aria-labelledby', `panel-heading-${index + 1}${sectionData.l1Href === '#' ? '' : '-norm-nav'}`);
-    collapseDiv.setAttribute('data-label', sectionData.l1Label);
-
-    const accordionBody = document.createElement('div');
-    accordionBody.classList.add('accordion-body', 'header__accordion--body');
-
-    if (sectionData.children && sectionData.children.length > 0) {
-      sectionData.children.forEach((childData) => {
-        const dropdownItem = document.createElement('div');
-        dropdownItem.classList.add('dropdown-item', 'header__accordion--dropdown-item');
-
-        const sublinksNavigator = document.createElement('div');
-        sublinksNavigator.classList.add('sublinksNavigator');
-        const sublinksNav = document.createElement('div');
-        sublinksNav.classList.add('sublinks__naviagator');
-
-        const sublink = document.createElement('div');
-        sublink.classList.add('sublinks__navigator--link', 'p-5', 'd-flex', 'gap-2', 'gap-md-5');
-
-        if (childData.icon) {
-          const iconDiv = document.createElement('div');
-          iconDiv.classList.add('sublinks__navigator--icon');
-          iconDiv.append(createSVG(childData.icon, ''));
-          sublink.append(iconDiv);
-        }
-
-        const sublinkContent = document.createElement('div');
-        sublinkContent.classList.add('sublinks__navigator--content', 'd-flex', 'flex-column', 'gap-3');
-        const sublinkTitle = document.createElement('a');
-        sublinkTitle.href = childData.href;
-        sublinkTitle.classList.add('sublinks__navigator--content--title', 'text-black-500');
-        sublinkTitle.textContent = childData.label;
-        if (childData.target === '_blank') {
-          sublinkTitle.target = '_blank';
-          const srOnlySpan = document.createElement('span');
-          srOnlySpan.classList.add('cmp-link__screen-reader-only');
-          srOnlySpan.textContent = 'opens in a new tab';
-          sublinkTitle.append(srOnlySpan);
-        }
-        sublinkContent.append(sublinkTitle);
-
-        if (childData.description || (childData.children && childData.children.length > 0)) {
-          const descriptionWrapper = document.createElement('div');
-          descriptionWrapper.classList.add('d-flex');
-          const descriptionText = document.createElement('div');
-          descriptionText.classList.add('sublinks__navigator--content--description', 'text-black-400', 'rte-text');
-          if (childData.description) {
-            descriptionText.innerHTML = `<div><p>${childData.description}</p></div>`;
-          } else if (childData.children && childData.children.length > 0) {
-            const nestedLinksDiv = document.createElement('div');
-            nestedLinksDiv.classList.add('d-flex', 'flex-column', 'gap-3');
-            childData.children.forEach((nestedChild) => {
-              const nestedLink = document.createElement('a');
-              nestedLink.classList.add('d-flex');
-              nestedLink.href = nestedChild.href;
-              if (nestedChild.target === '_blank') {
-                nestedLink.target = '_blank';
-                const srOnlySpan = document.createElement('span');
-                srOnlySpan.classList.add('cmp-link__screen-reader-only');
-                srOnlySpan.textContent = 'opens in a new tab';
-                nestedLink.append(srOnlySpan);
-              }
-              const nestedP = document.createElement('p');
-              nestedP.classList.add('sublinks__navigator--content--description', 'text-black-400');
-              nestedP.textContent = nestedChild.label;
-              nestedLink.prepend(nestedP);
-              if (nestedChild.badge) {
-                const badgeDiv = document.createElement('div');
-                badgeDiv.classList.add('navigation__badge', 'text-black-500');
-                badgeDiv.textContent = nestedChild.badge;
-                nestedLink.append(badgeDiv);
-              }
-              nestedLinksDiv.append(nestedLink);
-            });
-            descriptionText.append(nestedLinksDiv);
+        navLink.addEventListener('mouseenter', () => {
+          if (isDesktop.matches) {
+            closeAllDropdowns(header.querySelector('.header__navbar--list'), navItem);
+            navItem.classList.add('active');
+            dropdownUl.classList.add('active');
           }
-          descriptionWrapper.append(descriptionText);
-          sublinkContent.append(descriptionWrapper);
-        }
-        sublink.append(sublinkContent);
-        sublinksNav.append(sublink);
-        sublinksNavigator.append(sublinksNav);
-        dropdownItem.append(sublinksNavigator);
-        accordionBody.append(dropdownItem);
-      });
-    }
+        });
+        navItem.addEventListener('mouseleave', () => {
+          if (isDesktop.matches) {
+            navItem.classList.remove('active');
+            dropdownUl.classList.remove('active');
+          }
+        });
+      }
+      header.querySelector('.header__navbar--list')?.append(navItem);
 
-    collapseDiv.append(accordionBody);
-    accordionItem.append(collapseDiv);
-    accordion.append(accordionItem);
-  });
+      // Mobile Accordion (Always create for mobile, hide with CSS on desktop)
+      const mobileSection = document.createElement('section');
+      mobileSection.classList.add('accordion-item', 'd-md-none', 'header__accordion--item');
+      const h2 = document.createElement('h2');
+      h2.classList.add('accordion-header', 'header__accordion--heading');
+      h2.id = `panel-heading-${Array.from(navSections.children).indexOf(section) + 1}`;
 
-  mobileMenuWrapper.append(accordion);
+      const mobileNavLink = document.createElement('a');
+      mobileNavLink.classList.add('accordion-button', 'd-flex', 'justify-content-between', 'align-items-center', 'w-100', 'header__accordion--button', 'navigation_link');
+      mobileNavLink.href = navLink.href;
+      mobileNavLink.textContent = navLink.textContent;
 
-  // Social Media Links
-  const socialAppDiv = document.createElement('div');
-  socialAppDiv.classList.add('header__accordion--app', 'bg-white');
+      const arrowSpan = document.createElement('span');
+      arrowSpan.classList.add('header__accordion--button', 'collapsed', 'header_arrow_icon');
+      arrowSpan.setAttribute('data-bs-toggle', 'collapse');
+      arrowSpan.setAttribute('data-bs-target', `#panel-collapse-${Array.from(navSections.children).indexOf(section) + 1}-norm-nav`);
+      const arrowSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      arrowSvg.classList.add('arrow', 'header__accordion--arrow');
+      arrowSvg.setAttribute('aria-hidden', 'true');
+      arrowSvg.setAttribute('role', 'icon');
+      arrowSvg.setAttribute('aria-expanded', 'false');
+      arrowSvg.setAttribute('aria-controls', `panel-collapse-${Array.from(navSections.children).indexOf(section) + 1}-norm-nav`);
+      const useArrow = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+      useArrow.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', '/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#drop-up-caret');
+      arrowSvg.append(useArrow);
+      arrowSpan.append(arrowSvg);
 
-  const socialsDiv = document.createElement('div');
-  socialsDiv.classList.add('flex-column', 'gap-3', 'header__socials');
-  const socialsTitle = document.createElement('h4');
-  socialsTitle.classList.add('hamburger__socials--text', 'header__socials--text');
-  socialsTitle.textContent = 'Follow Us';
-  const socialsList = document.createElement('ul');
-  socialsList.classList.add('d-flex', 'justify-content-between', 'header__socials--list');
+      h2.append(mobileNavLink);
+      if (subMenu) {
+        h2.append(arrowSpan);
+      }
+      mobileSection.append(h2);
 
-  const socialLinks = [
-    { href: 'https://m.facebook.com/CanaraHSBCLifeInsurance', icon: 'facebook' },
-    { href: 'https://www.youtube.com/c/CanaraHSBCLifeInsurance', icon: 'youtube' },
-    { href: 'https://www.instagram.com/canarahsbcobc/', icon: 'instagram' },
-    { href: 'https://x.com/CanaraHSBCLI', icon: 'xLogo' },
-    { href: 'https://in.linkedin.com/company/canara-hsbc-life-insurance-insurance-company', icon: 'linkedin' },
-  ];
+      if (subMenu) {
+        const mobileCollapseDiv = document.createElement('div');
+        mobileCollapseDiv.id = `panel-collapse-${Array.from(navSections.children).indexOf(section) + 1}-norm-nav`;
+        mobileCollapseDiv.classList.add('accordion-collapse', 'collapse', 'header__accordion--collapse');
+        mobileCollapseDiv.setAttribute('aria-labelledby', `panel-heading-${Array.from(navSections.children).indexOf(section) + 1}-norm-nav`);
+        mobileCollapseDiv.setAttribute('data-label', navLink.textContent);
+        const mobileAccordionBody = document.createElement('div');
+        mobileAccordionBody.classList.add('accordion-body', 'header__accordion--body');
 
-  socialLinks.forEach((social) => {
-    const li = document.createElement('li');
-    li.classList.add('header__socials--item');
-    const a = document.createElement('a');
-    a.href = social.href;
-    a.target = '_blank';
-    a.classList.add('header__socials--link');
-    a.setAttribute('rel', 'noopener noreferrer');
-    a.setAttribute('icon', social.icon);
-    const iconDiv = document.createElement('div');
-    iconDiv.classList.add('header__socials--icon');
-    iconDiv.append(createSVG(social.icon, 'text-blue-400'));
-    a.append(iconDiv);
-    const srOnlySpan = document.createElement('span');
-    srOnlySpan.classList.add('cmp-link__screen-reader-only');
-    srOnlySpan.textContent = 'opens in a new tab';
-    a.append(srOnlySpan);
-    li.append(a);
-    socialsList.append(li);
-  });
+        Array.from(subMenu.children).forEach((subMenuItem) => {
+          const dropdownItem = document.createElement('div');
+          dropdownItem.classList.add('dropdown-item', 'header__accordion--dropdown-item');
+          dropdownItem.setAttribute('data-coloumn-count', '1,2,3');
+          dropdownItem.innerHTML = subMenuItem.innerHTML; // Replicate inner HTML for complex submenus
+          mobileAccordionBody.append(dropdownItem);
+        });
+        mobileCollapseDiv.append(mobileAccordionBody);
+        mobileSection.append(mobileCollapseDiv);
 
-  socialsDiv.append(socialsTitle, socialsList);
-  socialAppDiv.append(socialsDiv);
+        arrowSpan.addEventListener('click', () => {
+          const isCollapsed = arrowSpan.classList.contains('collapsed');
+          closeAllAccordions(accordionDiv, mobileSection);
+          if (isCollapsed) {
+            arrowSpan.classList.remove('collapsed');
+            arrowSvg.classList.remove('collapsed');
+            mobileCollapseDiv.classList.add('show');
+            arrowSvg.setAttribute('aria-expanded', 'true');
+          } else {
+            arrowSpan.classList.add('collapsed');
+            arrowSvg.classList.add('collapsed');
+            mobileCollapseDiv.classList.remove('show');
+            arrowSvg.setAttribute('aria-expanded', 'false');
+          }
+        });
+      }
+      accordionDiv.append(mobileSection);
+    });
+  }
 
-  const divider = document.createElement('div');
-  divider.classList.add('w-100', 'header__accordion--divider', 'my-4', 'bg-black-200');
-  socialAppDiv.append(divider);
+  mobileMenuWrapper.append(accordionDiv);
 
-  // Mobile App Links
-  const appDiv = document.createElement('div');
-  appDiv.classList.add('flex-column', 'gap-3', 'header__app');
-  const appTitle = document.createElement('h4');
-  appTitle.classList.add('header__app--text');
-  appTitle.textContent = 'Download the Canara HSBC Mobile App';
-  const appList = document.createElement('ul');
-  appList.classList.add('d-flex', 'justify-content-between', 'header__app--list');
+  // Social Media Links (from original HTML, static for now)
+  const socialDiv = document.createElement('div');
+  socialDiv.classList.add('header__accordion--app', 'bg-white');
+  socialDiv.style.marginTop = '10051.1px'; // Keep original inline style if critical
+  socialDiv.innerHTML = `
+    <div class="flex-column gap-3 header__socials">
+        <h4 class="hamburger__socials--text header__socials--text">Follow Us</h4>
+        <ul class="d-flex justify-content-between header__socials--list">
+            <li class="header__socials--item">
+                <a href="https://m.facebook.com/CanaraHSBCLifeInsurance" target="_blank" class="header__socials--link" rel="noopener noreferrer" icon="facebook">
+                    <div class="header__socials--icon">
+                         <svg aria-hidden="true" role="icon" class="text-blue-400">
+                                <use xlink:href="/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#facebook"></use>
+                            </svg>
+                    </div>
+                <span class="cmp-link__screen-reader-only">opens in a new tab</span></a>
+            </li>
+            <li class="header__socials--item">
+                <a href="https://www.youtube.com/c/CanaraHSBCLifeInsurance" target="_blank" class="header__socials--link" rel="noopener noreferrer" icon="youtube">
+                    <div class="header__socials--icon">
+                         <svg aria-hidden="true" role="icon" class="text-blue-400">
+                                <use xlink:href="/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#youtube"></use>
+                            </svg>
+                    </div>
+                <span class="cmp-link__screen-reader-only">opens in a new tab</span></a>
+            </li>
+            <li class="header__socials--item">
+                <a href="https://www.instagram.com/canarahsbcobc/" target="_blank" class="header__socials--link" rel="noopener noreferrer" icon="instagram">
+                    <div class="header__socials--icon">
+                         <svg aria-hidden="true" role="icon" class="text-blue-400">
+                                <use xlink:href="/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#instagram"></use>
+                            </svg>
+                    </div>
+                <span class="cmp-link__screen-reader-only">opens in a new tab</span></a>
+            </li>
+            <li class="header__socials--item">
+                <a href="https://x.com/CanaraHSBCLI" target="_blank" class="header__socials--link" rel="noopener noreferrer" icon="xLogo">
+                    <div class="header__socials--icon">
+                         <svg aria-hidden="true" role="icon" class="text-blue-400">
+                                <use xlink:href="/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#xLogo"></use>
+                            </svg>
+                    </div>
+                <span class="cmp-link__screen-reader-only">opens in a new tab</span></a>
+            </li>
+            <li class="header__socials--item">
+                <a href="https://in.linkedin.com/company/canara-hsbc-life-insurance-company" target="_blank" class="header__socials--link" rel="noopener noreferrer" icon="linkedin">
+                    <div class="header__socials--icon">
+                         <svg aria-hidden="true" role="icon" class="text-blue-400">
+                                <use xlink:href="/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#linkedin"></use>
+                            </svg>
+                    </div>
+                <span class="cmp-link__screen-reader-only">opens in a new tab</span></a>
+            </li>
+        </ul>
+    </div>
+    <div class="w-100 header__accordion--divider my-4 bg-black-200"></div>
+    <div class="flex-column gap-3 header__app">
+        <h4 class="header__app--text">Download the Canara HSBC Mobile App</h4>
+        <ul class="d-flex justify-content-between header__app--list">
+            <li class="header__app--item">
+                <a href="https://play.google.com/store/apps/details?id=com.choiceapp.genius&amp;hl=en_IN&amp;pli=1" target="_blank" class="header__app--link">
+                    <svg aria-hidden="true" role="icon" class="header__app--icon" alt="google play store">
+                        <use xlink:href="/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#get-it-on-google-play"></use>
+                    </svg>
+                <span class="cmp-link__screen-reader-only">opens in a new tab</span></a>
+            </li>
+            <li class="header__app--item">
+                <a href="https://apps.apple.com/in/app/canara-hsbc-life/id1637840399" target="_blank" class="header__app--link">
+                    <svg aria-hidden="true" role="icon" class="header__app--icon" alt="apple play store">
+                        <use xlink:href="/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#app-store-download"></use>
+                    </svg>
+                <span class="cmp-link__screen-reader-only">opens in a new tab</span></a>
+            </li>
+        </ul>
+    </div>
+  `;
+  mobileMenuWrapper.append(socialDiv);
 
-  const appLinks = [
-    { href: 'https://play.google.com/store/apps/details?id=com.choiceapp.genius&hl=en_IN&pli=1', icon: 'get-it-on-google-play', alt: 'google play store' },
-    { href: 'https://apps.apple.com/in/app/canara-hsbc-life/id1637840399', icon: 'app-store-download', alt: 'apple play store' },
-  ];
-
-  appLinks.forEach((appLink) => {
-    const li = document.createElement('li');
-    li.classList.add('header__app--item');
-    const a = document.createElement('a');
-    a.href = appLink.href;
-    a.target = '_blank';
-    a.classList.add('header__app--link');
-    const svg = createSVG(appLink.icon, 'header__app--icon');
-    svg.setAttribute('alt', appLink.alt);
-    a.append(svg);
-    const srOnlySpan = document.createElement('span');
-    srOnlySpan.classList.add('cmp-link__screen-reader-only');
-    srOnlySpan.textContent = 'opens in a new tab';
-    a.append(srOnlySpan);
-    li.append(a);
-    appList.append(li);
-  });
-
-  appDiv.append(appTitle, appList);
-  socialAppDiv.append(appDiv);
-  mobileMenuWrapper.append(socialAppDiv);
-  hamburgerMenuNav.append(mobileMenuWrapper);
-  positionAbsoluteDiv.append(hamburgerMenuNav);
+  hamburgerMenu.append(mobileMenuWrapper);
+  mobileMenuContainer.append(hamburgerMenu);
+  header.append(mobileMenuContainer);
 
   // Main Navigation
   const mainNav = document.createElement('nav');
@@ -362,372 +325,312 @@ export default async function decorate(block) {
   const navbarDiv = document.createElement('div');
   navbarDiv.classList.add('navbar', 'navbar-expand-md', 'd-flex', 'section_container--primary', 'py-3', 'justify-content-between', 'align-items-center', 'w-100', 'bg-white');
 
-  const navbarBrand = document.createElement('a');
-  navbarBrand.classList.add('navbar-brand', 'p-0', 'header__logo', 'position-relative');
-  navbarBrand.href = '/';
-  const logoImg = document.createElement('img');
-  logoImg.classList.add('w-100', 'h-100', 'header__logo--image', 'position-absolute', 'z-2');
-  logoImg.src = '/content/dam/chli/homepage/image/canara-hsbc-life-insurance-logo.svg';
-  logoImg.alt = 'Canara HSBC Life Insurance';
-  logoImg.loading = 'lazy';
-  navbarBrand.append(logoImg);
-  navbarDiv.append(navbarBrand);
+  const brandLink = document.createElement('a');
+  brandLink.classList.add('navbar-brand', 'p-0', 'header__logo', 'position-relative');
+  brandLink.href = '/';
+  const brandImg = document.createElement('img');
+  brandImg.classList.add('w-100', 'h-100', 'header__logo--image', 'position-absolute', 'z-2');
+  brandImg.src = '/content/dam/chli/homepage/image/canara-hsbc-life-insurance-logo.svg';
+  brandImg.alt = 'Canara HSBC Life Insurance';
+  brandImg.loading = 'lazy';
+  brandLink.append(brandImg);
+  navbarDiv.append(brandLink);
 
   const navbarCollapse = document.createElement('div');
   navbarCollapse.classList.add('collapse', 'navbar-collapse', 'justify-content-center', 'header__navbar--collapse');
   navbarCollapse.id = 'navbarNavDropdown';
-
   const navbarList = document.createElement('ul');
   navbarList.classList.add('navbar-nav', 'gap-10', 'header__navbar--list');
-
-  navSections.forEach((sectionData, index) => {
-    const navItem = document.createElement('li');
-    navItem.classList.add('nav-item', 'header__navbar--item', 'text-center');
-
-    const linkDiv = document.createElement('div');
-    linkDiv.classList.add('d-flex');
-    const navLink = document.createElement('a');
-    navLink.classList.add('nav-link', 'header__navbar--link');
-    navLink.href = sectionData.l1Href;
-    navLink.id = `navbarDropdownMenuLink${index}`;
-    navLink.setAttribute('role', 'button');
-    navLink.setAttribute('aria-expanded', 'false');
-    navLink.textContent = sectionData.l1Label;
-    const underlineSpan = document.createElement('span');
-    underlineSpan.classList.add('header__navbar--item-underline');
-    navLink.append(underlineSpan);
-    linkDiv.append(navLink);
-    navItem.append(linkDiv);
-
-    if (sectionData.children && sectionData.children.length > 0) {
-      const dropdownUl = document.createElement('ul');
-      dropdownUl.classList.add('bg-white', 'nav__dropdown', 'header__navbar--dropdown', 'position-fixed', 'section_container--primary', 'pt-12', 'pb-8', 'start-0', 'w-100', 'border-0', 'rounded-0', 'published__height');
-      dropdownUl.setAttribute('aria-labelledby', `navbarDropdownMenuLink${index}`);
-      dropdownUl.setAttribute('data-column-count', '3'); // Assuming 3 columns as per original HTML
-      dropdownUl.style.gridTemplateColumns = 'repeat(3, minmax(0px, 1fr))';
-      dropdownUl.style.gap = '20px';
-
-      sectionData.children.forEach((childData) => {
-        const dropdownItem = document.createElement('li');
-        dropdownItem.classList.add('dropdown-item', 'header__navbar--dropdown-column');
-
-        const sublinksNavigator = document.createElement('div');
-        sublinksNavigator.classList.add('sublinksNavigator');
-        const sublinksNav = document.createElement('div');
-        sublinksNav.classList.add('sublinks__naviagator');
-
-        const sublink = document.createElement('div');
-        sublink.classList.add('sublinks__navigator--link', 'p-5', 'd-flex', 'gap-2', 'gap-md-5');
-
-        if (childData.icon) {
-          const iconDiv = document.createElement('div');
-          iconDiv.classList.add('sublinks__navigator--icon');
-          iconDiv.append(createSVG(childData.icon, ''));
-          sublink.append(iconDiv);
-        }
-
-        const sublinkContent = document.createElement('div');
-        sublinkContent.classList.add('d-flex', 'flex-column', 'gap-3', 'sublinks__navigator--content');
-        const sublinkTitle = document.createElement('a');
-        sublinkTitle.href = childData.href;
-        sublinkTitle.classList.add('sublinks__navigator--content--title', 'text-black-500');
-        sublinkTitle.textContent = childData.label;
-        if (childData.target === '_blank') {
-          sublinkTitle.target = '_blank';
-          const srOnlySpan = document.createElement('span');
-          srOnlySpan.classList.add('cmp-link__screen-reader-only');
-          srOnlySpan.textContent = 'opens in a new tab';
-          sublinkTitle.append(srOnlySpan);
-        }
-        sublinkContent.append(sublinkTitle);
-
-        if (childData.description || (childData.children && childData.children.length > 0)) {
-          const descriptionWrapper = document.createElement('div');
-          descriptionWrapper.classList.add('d-flex');
-          const descriptionText = document.createElement('div');
-          descriptionText.classList.add('sublinks__navigator--content--description', 'text-black-400', 'rte-text');
-          if (childData.description) {
-            descriptionText.innerHTML = `<div><p>${childData.description}</p></div>`;
-          } else if (childData.children && childData.children.length > 0) {
-            const nestedLinksDiv = document.createElement('div');
-            nestedLinksDiv.classList.add('d-flex', 'flex-column', 'gap-3');
-            childData.children.forEach((nestedChild) => {
-              const nestedLink = document.createElement('a');
-              nestedLink.classList.add('d-flex');
-              nestedLink.href = nestedChild.href;
-              if (nestedChild.target === '_blank') {
-                nestedLink.target = '_blank';
-                const srOnlySpan = document.createElement('span');
-                srOnlySpan.classList.add('cmp-link__screen-reader-only');
-                srOnlySpan.textContent = 'opens in a new tab';
-                nestedLink.append(srOnlySpan);
-              }
-              const nestedP = document.createElement('p');
-              nestedP.classList.add('sublinks__navigator--content--description', 'text-black-400');
-              nestedP.textContent = nestedChild.label;
-              nestedLink.prepend(nestedP);
-              if (nestedChild.badge) {
-                const badgeDiv = document.createElement('div');
-                badgeDiv.classList.add('navigation__badge', 'text-black-500');
-                badgeDiv.textContent = nestedChild.badge;
-                nestedLink.append(badgeDiv);
-              }
-              nestedLinksDiv.append(nestedLink);
-            });
-            descriptionText.append(nestedLinksDiv);
-          }
-          descriptionWrapper.append(descriptionText);
-          sublinkContent.append(descriptionWrapper);
-        }
-        sublink.append(sublinkContent);
-        sublinksNav.append(sublink);
-        sublinksNavigator.append(sublinksNav);
-        dropdownItem.append(sublinksNavigator);
-        dropdownUl.append(dropdownItem);
-      });
-      navItem.append(dropdownUl);
-
-      navLink.addEventListener('mouseenter', () => {
-        dropdownUl.classList.add('show');
-        dropdownUl.style.transform = 'scaleY(1)';
-        dropdownUl.style.opacity = '1';
-        dropdownUl.querySelectorAll('.header__navbar--dropdown-column').forEach((col, i) => {
-          col.style.transition = `opacity 0.2s ease-in-out ${i * 0.05}s`;
-          col.style.opacity = '1';
-        });
-      });
-
-      navItem.addEventListener('mouseleave', () => {
-        dropdownUl.classList.remove('show');
-        dropdownUl.style.transform = 'scaleY(0)';
-        dropdownUl.style.opacity = '0';
-        dropdownUl.querySelectorAll('.header__navbar--dropdown-column').forEach((col) => {
-          col.style.opacity = '0';
-        });
-      });
-    }
-    navbarList.append(navItem);
-  });
-
   navbarCollapse.append(navbarList);
   navbarDiv.append(navbarCollapse);
 
-  const navButtons = document.createElement('div');
-  navButtons.classList.add('navigation__buttons', 'd-flex', 'align-items-center', 'gap-5', 'header__buttons');
+  const navigationButtons = document.createElement('div');
+  navigationButtons.classList.add('navigation__buttons', 'd-flex', 'align-items-center', 'gap-5', 'header__buttons');
 
-  // Search
   const searchDiv = document.createElement('div');
   searchDiv.classList.add('bg-transparent', 'header__search', 'cursor-pointer');
-  searchDiv.append(createSVG('search', 'header__search--svg-find'));
+  const searchSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  searchSvg.classList.add('header__search--svg-find');
+  searchSvg.setAttribute('aria-hidden', 'true');
+  searchSvg.setAttribute('role', 'icon');
+  const useSearch = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+  useSearch.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', '/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#search');
+  searchSvg.append(useSearch);
+  searchDiv.append(searchSvg);
 
+  // Search overlay (from original HTML, static for now)
   const globalSearchWrapper = document.createElement('section');
   globalSearchWrapper.classList.add('position-absolute', 'global__search--wrapper', 'vw-100', 'bg-white', 'start-0', 'end-0', 'section_container--primary');
   globalSearchWrapper.innerHTML = `
     <div class="d-flex flex-column global__search--container">
-      <svg class="close-search text-black-500" role="icon"><title>close search</title><use xlink:href="/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#close"></use></svg>
-      <form class="global__search--form mt-2" autocomplete="off" data-search-path="/content/chli/" data-redirection-path="/content/chli/in/en/search-result-page" data-result-count="5" data-view-result="View Results" data-no-result="No Result Found">
-        <div class="global__search__input--wrapper position-relative">
-          <input class="global__search--input text-capitalize" name="searchText" type="search" placeholder="Search">
-          <svg class="search-icon text-blue-400" role="img"><title>Search</title><use xlink:href="/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#search"></use></svg>
-          <svg class="arrow-icon search__submit text-blue-400 cursor-pointer" role="img"><title>Search CTA</title><use xlink:href="/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#arrow-right"></use></svg>
-          <small class="global__search--info font-10 float-end text-black-500">Hit to enter </small>
-          <div class="global__search--result--wrapper position-relative">
+        <svg class="close-search text-black-500" role="icon">
+            <title>close search</title>
+            <use xlink:href="/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#close"></use>
+        </svg>
+        <form class="global__search--form mt-2" autocomplete="off" data-search-path="/content/chli/" data-redirection-path="/content/chli/in/en/search-result-page" data-result-count="5" data-view-result="View Results" data-no-result="No Result Found">
+            <div class="global__search__input--wrapper position-relative">
+            <input class="global__search--input text-capitalize" name="searchText" type="search" placeholder="Search">
+            <svg class="search-icon text-blue-400" role="img">
+                <title>Search</title>
+                <use xlink:href="/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#search"></use>
+            </svg>
+            <svg class="arrow-icon search__submit text-blue-400 cursor-pointer" role="img">
+                <title>Search CTA</title>
+                <use xlink:href="/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#arrow-right"></use>
+            </svg>
+            <small class="global__search--info font-10 float-end text-black-500">Hit to enter </small>
+            <div class="global__search--result--wrapper position-relative">
             <ul class="w-100 global__search__result--list bg-white d-none position-static"></ul>
             <div class="text-blue-400 font-16 text-center global__search__viewall mb-8 w-100 start-0 end-0 d-none">
-              <a title="View Results" class="global__search__viewall--link">View Results</a>
+                <a title="View Results" class="global__search__viewall--link">View Results</a>
+           </div>
+        </div>
             </div>
-          </div>
+        </form>
+        <div class="global__search--popular">
+            <div class="chli_title d-flex flex-column global__search__popular--title mb-2">
+                <h2 class="heading-2 text-start text-black-500">Popular Searches</h2>
+                <span class="primary-bar"></span>
+            </div>
+            <div class="global__search__popular--cards">
+                <ul class="global__search__popular--items d-flex pl-0 flex-wrap gap-4">
+                    <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">Term Insurance</li>
+                    <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">Life Insurance Plans</li>
+                    <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">Savings &amp; Investment Plan</li>
+                    <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">Child Insurance Plan</li>
+                    <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">BMI Calculator</li>
+                    <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">Income Tax Calculator</li>
+                    <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">What is Investment</li>
+                    <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">Retirement Calculator</li>
+                    <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">Sukanya Samriddhi Yojana</li>
+                    <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">What is Insurance</li>
+                    <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">Features of Life Insurance</li>
+                    <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">What is Pension</li>
+                    <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">Section 194</li>
+                    <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">Retirement Plans</li>
+                    <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">Critical illness Insurance</li>
+                    <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">Benefits of Term Insurance</li>
+                    <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">ULIP Plan</li>
+                </ul>
+            </div>
         </div>
-      </form>
-      <div class="global__search--popular">
-        <div class="chli_title d-flex flex-column global__search__popular--title mb-2">
-          <h2 class="heading-2 text-start text-black-500">Popular Searches</h2>
-          <span class="primary-bar"></span>
-        </div>
-        <div class="global__search__popular--cards">
-          <ul class="global__search__popular--items d-flex pl-0 flex-wrap gap-4">
-            <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">Term Insurance</li>
-            <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">Life Insurance Plans</li>
-            <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">Savings &amp; Investment Plan</li>
-            <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">Child Insurance Plan</li>
-            <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">BMI Calculator</li>
-            <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">Income Tax Calculator</li>
-            <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">What is Investment</li>
-            <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">Retirement Calculator</li>
-            <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">Sukanya Samriddhi Yojana</li>
-            <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">What is Insurance</li>
-            <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">Features of Life Insurance</li>
-            <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">What is Pension</li>
-            <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">Section 194</li>
-            <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">Retirement Plans</li>
-            <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">Critical illness Insurance</li>
-            <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">Benefits of Term Insurance</li>
-            <li class="global__search__popular--item border-1 border border-black-200 font-16 text-black-500">ULIP Plan</li>
-          </ul>
-        </div>
-      </div>
-    </div>
   `;
   searchDiv.append(globalSearchWrapper);
-  navButtons.append(searchDiv);
+  navigationButtons.append(searchDiv);
 
-  searchDiv.addEventListener('click', (e) => {
-    e.stopPropagation();
+  searchDiv.addEventListener('click', () => {
     globalSearchWrapper.classList.toggle('global__search--wrapper--active');
+    overlay.classList.toggle('active');
     headerWrapper.classList.toggle('search--active');
-    headerOverlay.classList.toggle('d-none');
-    document.body.style.overflowY = globalSearchWrapper.classList.contains('global__search--wrapper--active') ? 'hidden' : '';
+    if (globalSearchWrapper.classList.contains('global__search--wrapper--active')) {
+      document.body.style.overflowY = 'hidden';
+    } else {
+      document.body.style.overflowY = '';
+    }
   });
-  globalSearchWrapper.querySelector('.close-search').addEventListener('click', () => {
+
+  globalSearchWrapper.querySelector('.close-search').addEventListener('click', (e) => {
+    e.stopPropagation();
     globalSearchWrapper.classList.remove('global__search--wrapper--active');
+    overlay.classList.remove('active');
     headerWrapper.classList.remove('search--active');
-    headerOverlay.classList.add('d-none');
     document.body.style.overflowY = '';
   });
 
-  // Notification Trigger
-  const notificationTriggerDiv = document.createElement('div');
-  notificationTriggerDiv.classList.add('d-flex', 'flex-column', 'align-items-end', 'gap-2', 'position-relative', 'header__notification--trigger');
-  const notificationTriggerText = document.createElement('span');
-  notificationTriggerText.classList.add('header__notification--trigger-text', 'text-center', 'position-absolute');
-  notificationTriggerText.setAttribute('data-notification-text', 'true');
-  notificationTriggerText.setAttribute('data-text-color', 'rgb(255,255,255)');
-  notificationTriggerText.setAttribute('data-background-color', '#Db0011');
-  notificationTriggerText.style.color = 'rgb(255, 255, 255)';
-  notificationTriggerText.style.backgroundColor = 'rgb(219, 0, 17)';
-  notificationTriggerText.textContent = '1';
-  notificationTriggerDiv.append(notificationTriggerText, createSVG('bell-icon', 'text-blue-400 header__notification--trigger-svg'));
+  const notificationDiv = document.createElement('div');
+  notificationDiv.classList.add('d-flex', 'flex-column', 'align-items-end', 'gap-2', 'position-relative', 'header__notification--trigger');
+  const notificationSpan = document.createElement('span');
+  notificationSpan.classList.add('header__notification--trigger-text', 'text-center', 'position-absolute');
+  notificationSpan.setAttribute('data-notification-text', 'true');
+  notificationSpan.setAttribute('data-text-color', 'rgb(255,255,255)');
+  notificationSpan.setAttribute('data-background-color', '#Db0011');
+  notificationSpan.style.color = 'rgb(255, 255, 255)';
+  notificationSpan.style.backgroundColor = 'rgb(219, 0, 17)';
+  notificationSpan.textContent = '1';
+  const bellSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  bellSvg.classList.add('text-blue-400', 'header__notification--trigger-svg');
+  bellSvg.setAttribute('aria-hidden', 'true');
+  bellSvg.setAttribute('role', 'icon');
+  const useBell = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+  useBell.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', '/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#bell-icon');
+  bellSvg.append(useBell);
+  notificationDiv.append(notificationSpan, bellSvg);
 
+  // Notification panel (from original HTML, static for now)
   const notificationPanel = document.createElement('div');
   notificationPanel.classList.add('p-3', 'flex-column', 'position-absolute', 'z-2', 'header__notification--panel');
-  // Populate with notification items from block children if they exist
-  const desktopNotificationRows = [...block.children].filter(
-    (row) => row.querySelector('.header__notification--item'),
-  );
-  desktopNotificationRows.forEach((row) => {
-    const section = document.createElement('section');
-    moveInstrumentation(row, section);
-    section.classList.add('header__notification--item', 'header__notification--item-background');
-    const bgColor = row.querySelector('[data-notification-bgcolor]');
-    if (bgColor) {
-      section.setAttribute('data-notification-bgcolor', bgColor.dataset.notificationBgcolor);
-      section.style.backgroundColor = bgColor.dataset.notificationBgcolor;
-    }
+  notificationPanel.innerHTML = `
+    <section class="header__notification--item header__notification--item-background" data-notification-bgcolor="#7FDBFF" style="background-color: rgb(127, 219, 255);">
+        <a href="https://buyonlineinsurance.canarahsbclife.com/promise4WealthPlan/?source=website" class="d-flex flex-column header__notification--item">
+            <div class="d-flex gap-5 header__notification--item-content">
+                <div class="header__notification--icon">
+                    <img src="/content/dam/chli/homepage/image/p4w-desktop-notification.webp" alt="Promise4wealth" loading="lazy">
+                </div>
+                <div class="d-flex flex-column gap-3 header__notification--content">
+                    <h4 class="text-black-500 header__notification--title">
+                        New Fund Launched with Promise4Wealth
+                    </h4>
+                    <div class="text-black-400 header__notification--description rte-text">
+                        <div><p>BSE 500 Enhanced Value 50 Fund. Past 5-yr benchmark returns* of index - 31.69%</p>
+</div>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </section>
+    <section class="header__notification--item header__notification--item-background">
+        <a href="https://customer.canarahsbclife.com/PremiumPayment" class="d-flex flex-column header__notification--item">
+            <div class="d-flex gap-5 header__notification--item-content">
+                <div class="header__notification--icon">
+                    <img src="/content/dam/chli/homepage/image/pay-premium-desktop-notification.webp" alt="Reinstate Your Lapsed Policy - Canara HSBC Life Insurance" loading="lazy">
+                </div>
+                <div class="d-flex flex-column gap-3 header__notification--content">
+                    <h4 class="text-black-500 header__notification--title">
+                        Reinstate Your Lapsed Policy
+                    </h4>
+                    <div class="text-black-400 header__notification--description rte-text">
+                        <div><p>Pay premium now &amp; continue enjoying the benefits.</p>
+</div>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </section>
+    <section class="header__notification--item header__notification--item-background">
+        <a href="https://customer.canarahsbclife.com/login" class="d-flex flex-column header__notification--item">
+            <div class="d-flex gap-5 header__notification--item-content">
+                <div class="header__notification--icon">
+                    <img src="/content/dam/chli/images/home-page/notification-images/kyc-desktop-notification.webp" alt="Notification 2" loading="lazy">
+                </div>
+                <div class="d-flex flex-column gap-3 header__notification--content">
+                    <h4 class="text-black-500 header__notification--title">
+                        Mandatory KYC Update as per PML Rules 2005
+                    </h4>
+                    <div class="text-black-400 header__notification--description rte-text">
+                        <div><p>Update your KYC records within 30 days of any changes</p>
+</div>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </section>
+    <section class="header__notification--item header__notification--item-background">
+        <a href="/content/dam/chli/pdfs/claim-support-ahmedabad-plane-crash.pdf" class="d-flex flex-column header__notification--item">
+            <div class="d-flex gap-5 header__notification--item-content">
+                <div class="header__notification--icon">
+                    <img src="/content/dam/chli/images/notification/expedited-claim-desktop-icon.webp" alt="Fast Claim Process for Ahemdabad Plane Crash - Canara HSBC Life Insurance" loading="lazy">
+                </div>
+                <div class="d-flex flex-column gap-3 header__notification--content">
+                    <h4 class="text-black-500 header__notification--title">
+                        We Stand with Families Affected by the Ahemdabad Plane Crash
+                    </h4>
+                    <div class="text-black-400 header__notification--description rte-text">
+                        <div><p>We're here to support with a quicker, simpler claim process.</p>
+</div>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </section>
+  `;
+  notificationDiv.append(notificationPanel);
+  navigationButtons.append(notificationDiv);
 
-    const link = row.querySelector('a');
-    if (link) {
-      const newLink = document.createElement('a');
-      newLink.href = link.href;
-      newLink.classList.add('d-flex', 'flex-column', 'header__notification--item');
-
-      const content = document.createElement('div');
-      content.classList.add('d-flex', 'gap-5', 'header__notification--item-content');
-
-      const iconDiv = document.createElement('div');
-      iconDiv.classList.add('header__notification--icon');
-      const img = link.querySelector('img');
-      if (img) {
-        const optimizedPic = createOptimizedPicture(img.src, img.alt, false, [{ width: '750' }]);
-        moveInstrumentation(img, optimizedPic.querySelector('img'));
-        iconDiv.append(optimizedPic);
-      }
-      content.append(iconDiv);
-
-      const textContentDiv = document.createElement('div');
-      textContentDiv.classList.add('d-flex', 'flex-column', 'gap-3', 'header__notification--content');
-      const title = link.querySelector('h4');
-      if (title) {
-        const newTitle = document.createElement('h4');
-        newTitle.classList.add('text-black-500', 'header__notification--title');
-        newTitle.textContent = title.textContent;
-        textContentDiv.append(newTitle);
-      }
-      const description = link.querySelector('.rte-text');
-      if (description) {
-        const newDescription = document.createElement('div');
-        newDescription.classList.add('text-black-400', 'header__notification--description', 'rte-text');
-        newDescription.innerHTML = description.innerHTML;
-        textContentDiv.append(newDescription);
-      }
-      content.append(textContentDiv);
-      newLink.append(content);
-      section.append(newLink);
-    }
-    notificationPanel.append(section);
-  });
-
-  notificationTriggerDiv.append(notificationPanel);
-  navButtons.append(notificationTriggerDiv);
-
-  notificationTriggerDiv.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (!isDesktop.matches) {
-      notificationMobileMenu.classList.toggle('active');
+  notificationDiv.addEventListener('click', () => {
+    notificationPanel.classList.toggle('active');
+    overlay.classList.toggle('active');
+    if (notificationPanel.classList.contains('active')) {
+      document.body.style.overflowY = 'hidden';
     } else {
-      notificationPanel.classList.toggle('show');
-      notificationPanel.style.transform = notificationPanel.classList.contains('show') ? 'scaleY(1)' : 'scaleY(0)';
-      notificationPanel.style.opacity = notificationPanel.classList.contains('show') ? '1' : '0';
+      document.body.style.overflowY = '';
     }
   });
 
-  // Login
+  overlay.addEventListener('click', () => {
+    if (notificationPanel.classList.contains('active')) {
+      notificationPanel.classList.remove('active');
+    }
+    if (globalSearchWrapper.classList.contains('global__search--wrapper--active')) {
+      globalSearchWrapper.classList.remove('global__search--wrapper--active');
+      headerWrapper.classList.remove('search--active');
+    }
+    if (hamburgerMenu.classList.contains('active')) {
+      toggleMobileMenu(headerWrapper, false);
+    }
+    overlay.classList.remove('active');
+    document.body.style.overflowY = '';
+  });
+
   const loginLink = document.createElement('a');
   loginLink.classList.add('d-flex', 'align-items-center', 'gap-2', 'text-blue-400', 'header__login');
   loginLink.href = 'https://customer.canarahsbclife.com/login';
   loginLink.target = '_blank';
-  loginLink.append(createSVG('user-icon', ''));
-  const loginTextSpan = document.createElement('span');
-  loginTextSpan.classList.add('logntext', 'd-none', 'd-md-block', 'header__login--text', 'text-nowrap');
-  loginTextSpan.textContent = 'Login';
-  loginLink.append(loginTextSpan);
-  const srOnlySpan = document.createElement('span');
-  srOnlySpan.classList.add('cmp-link__screen-reader-only');
-  srOnlySpan.textContent = 'opens in a new tab';
-  loginLink.append(srOnlySpan);
-  navButtons.append(loginLink);
+  const userSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  userSvg.setAttribute('aria-hidden', 'true');
+  userSvg.setAttribute('role', 'icon');
+  const useUser = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+  useUser.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', '/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#user-icon');
+  userSvg.append(useUser);
+  const loginText = document.createElement('span');
+  loginText.classList.add('logntext', 'd-none', 'd-md-block', 'header__login--text', 'text-nowrap');
+  loginText.textContent = 'Login';
+  const srOnlyLogin = document.createElement('span');
+  srOnlyLogin.classList.add('cmp-link__screen-reader-only');
+  srOnlyLogin.textContent = 'opens in a new tab';
+  loginLink.append(userSvg, loginText, srOnlyLogin);
+  navigationButtons.append(loginLink);
 
-  // Hamburger Button
   const hamburgerButton = document.createElement('button');
   hamburgerButton.classList.add('position-relative', 'text-blue-400', 'header__hamburger--button');
-  hamburgerButton.append(createSVG('hamburger-icon', 'header__hamburger--open'));
-  hamburgerButton.append(createSVG('close', 'position-absolute start-0 bottom-0 header__hamburger--close'));
-  navButtons.append(hamburgerButton);
+  const openHamburgerSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  openHamburgerSvg.classList.add('header__hamburger--open');
+  openHamburgerSvg.setAttribute('aria-hidden', 'true');
+  openHamburgerSvg.setAttribute('role', 'icon');
+  const useOpenHamburger = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+  useOpenHamburger.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', '/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#hamburger-icon');
+  openHamburgerSvg.append(useOpenHamburger);
+  const closeHamburgerSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  closeHamburgerSvg.classList.add('position-absolute', 'start-0', 'bottom-0', 'header__hamburger--close');
+  closeHamburgerSvg.setAttribute('aria-hidden', 'true');
+  closeHamburgerSvg.setAttribute('role', 'icon');
+  const useCloseHamburger = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+  useCloseHamburger.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', '/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#close');
+  closeHamburgerSvg.append(useCloseHamburger);
+  hamburgerButton.append(openHamburgerSvg, closeHamburgerSvg);
+  navigationButtons.append(hamburgerButton);
 
-  navbarDiv.append(navButtons);
+  hamburgerButton.addEventListener('click', () => toggleMobileMenu(headerWrapper));
+  closeIcon.addEventListener('click', () => toggleMobileMenu(headerWrapper, false));
+
+  navbarDiv.append(navigationButtons);
   mainNav.append(navbarDiv);
-  positionAbsoluteDiv.append(mainNav);
-  header.append(positionAbsoluteDiv);
+  header.append(mainNav);
   headerWrapper.append(header);
-
-  const headerBackdrop = document.createElement('div');
-  headerBackdrop.classList.add('header__backdrop', 'd-none', 'position-relative', 'position-fixed');
-  headerWrapper.append(headerBackdrop);
-
   block.append(headerWrapper);
 
-  // Event Listeners for mobile hamburger menu
-  setupMenuToggle(hamburgerButton, hamburgerMenuNav, headerOverlay, headerBackdrop);
-  hamburgerCloseIcon.addEventListener('click', () => {
-    hamburgerMenuNav.classList.remove('show');
-    headerOverlay.classList.add('d-none');
-    headerBackdrop.classList.add('d-none');
+  // Initial state for desktop
+  if (isDesktop.matches) {
+    hamburgerMenu.classList.remove('active');
+    overlay.classList.remove('active');
+    hamburgerButton.querySelector('.header__hamburger--open').style.opacity = '1';
+    hamburgerButton.querySelector('.header__hamburger--close').style.opacity = '0';
     document.body.style.overflowY = '';
-  });
+  } else {
+    // Hide desktop navigation items on mobile
+    navbarCollapse.classList.remove('show');
+  }
 
-  // Close hamburger menu when clicking outside on mobile
-  headerOverlay.addEventListener('click', () => {
-    hamburgerMenuNav.classList.remove('show');
-    headerOverlay.classList.add('d-none');
-    headerBackdrop.classList.add('d-none');
-    document.body.style.overflowY = '';
-  });
-
-  // Close notification panel when clicking outside on desktop
-  document.addEventListener('click', (e) => {
-    if (isDesktop.matches && !notificationTriggerDiv.contains(e.target) && notificationPanel.classList.contains('show')) {
-      notificationPanel.classList.remove('show');
-      notificationPanel.style.transform = 'scaleY(0)';
-      notificationPanel.style.opacity = '0';
+  isDesktop.addEventListener('change', () => {
+    if (isDesktop.matches) {
+      hamburgerMenu.classList.remove('active');
+      overlay.classList.remove('active');
+      hamburgerButton.querySelector('.header__hamburger--open').style.opacity = '1';
+      hamburgerButton.querySelector('.header__hamburger--close').style.opacity = '0';
+      document.body.style.overflowY = '';
+      navbarCollapse.classList.add('show');
+    } else {
+      navbarCollapse.classList.remove('show');
+      closeAllDropdowns(navbarList);
     }
   });
 }

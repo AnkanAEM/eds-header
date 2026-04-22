@@ -1298,6 +1298,8 @@ video { aspect-ratio:16/9 }
 
 @media(min-width:768px){.scroll-widget{bottom:1.875rem}}
 
+.header__wrapper .header__backdrop { background-color:#323232;height:calc(100vh - 72px);margin:0 auto;max-width:90pc;opacity:.5;width:100vw;z-index:98 }
+
 @media(min-width:1400px){.main-logo-container{border-inline:1px solid #d0d0d0}}
 
 @media(max-width:767.98px){.main-logo-container{height:4rem;padding:1pc 20px}}
@@ -7269,6 +7271,8 @@ video { aspect-ratio:16/9 }
 @media(max-width:767.98px){.header .navigation__badge{font-size:.625rem;font-weight:400;line-height:9.45px}}
 
 @media(min-width:768px){.scroll-widget{bottom:1.875rem}}
+
+.header__wrapper .header__backdrop { background-color:#323232;height:calc(100vh - 72px);margin:0 auto;max-width:90pc;opacity:.5;width:100vw;z-index:98 }
 
 @media(min-width:1400px){.main-logo-container{border-inline:1px solid #d0d0d0}}
 
