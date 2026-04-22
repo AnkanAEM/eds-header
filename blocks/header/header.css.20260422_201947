@@ -1,0 +1,11 @@
+
+/* Boilerplate Header Styles */
+header {
+  height: auto;
+}
+
+#nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
