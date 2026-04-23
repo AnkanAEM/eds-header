@@ -2,593 +2,548 @@ import { getMetadata } from '../../scripts/aem.js';
 import { loadFragment } from '../fragment/fragment.js';
 
 // media query match that indicates mobile/tablet width
-const isDesktop = window.matchMedia('(min-width: 1200px)');
+const isDesktop = window.matchMedia('(min-width: 992px)');
 
 function closeOnEscape(e) {
   if (e.code === 'Escape') {
-    const nav = document.getElementById('nav');
-    const navSections = nav.querySelector('.links');
-    if (!navSections) return;
+    const header = document.querySelector('.header');
+    const hamburgerMenu = header.querySelector('.header__hamburger--menu');
+    const searchWrapper = header.querySelector('.global__search--wrapper');
+    const notificationPanel = header.querySelector('.header__notification--panel');
 
-    const navSectionExpanded = navSections.querySelector('[aria-expanded="true"]');
-    if (navSectionExpanded && isDesktop.matches) {
-      // eslint-disable-next-line no-use-before-define
-      toggleAllNavSections(navSections);
-      navSectionExpanded.focus();
-    } else if (!isDesktop.matches) {
-      // eslint-disable-next-line no-use-before-define
-      toggleMenu(nav, navSections);
-      nav.querySelector('.nav-hamburger button').focus();
+    if (hamburgerMenu.classList.contains('header__hamburger--menu-active')) {
+      hamburgerMenu.classList.remove('header__hamburger--menu-active');
+      document.body.classList.remove('no-scroll');
+      header.querySelector('.header__overlay').classList.add('d-none');
+      header.querySelector('.header__hamburger--open').style.opacity = '1';
+      header.querySelector('.header__hamburger--close').style.opacity = '0';
+    }
+
+    if (searchWrapper && searchWrapper.classList.contains('global__search--wrapper--active')) {
+      searchWrapper.classList.remove('global__search--wrapper--active');
+      document.body.classList.remove('no-scroll');
+      header.querySelector('.header__overlay').classList.add('d-none');
+    }
+
+    if (notificationPanel && notificationPanel.classList.contains('active')) {
+      notificationPanel.classList.remove('active');
+      document.body.classList.remove('no-scroll');
+      header.querySelector('.header__overlay').classList.add('d-none');
     }
   }
 }
 
-function closeOnFocusLost(e) {
-  const nav = e.currentTarget;
-  if (!nav.contains(e.relatedTarget)) {
-    const navSections = nav.querySelector('.links');
-    if (!navSections) return;
+function toggleMobileMenu() {
+  const header = document.querySelector('.header');
+  const hamburgerMenu = header.querySelector('.header__hamburger--menu');
+  const overlay = header.querySelector('.header__overlay');
+  const hamburgerOpenIcon = header.querySelector('.header__hamburger--open');
+  const hamburgerCloseIcon = header.querySelector('.header__hamburger--close');
 
-    const navSectionExpanded = navSections.querySelector('[aria-expanded="true"]');
-    if (navSectionExpanded && isDesktop.matches) {
-      // eslint-disable-next-line no-use-before-define
-      toggleAllNavSections(navSections, false);
-    } else if (!isDesktop.matches) {
-      // eslint-disable-next-line no-use-before-define
-      toggleMenu(nav, navSections, false);
-    }
-  }
-}
+  hamburgerMenu.classList.toggle('header__hamburger--menu-active');
+  overlay.classList.toggle('d-none');
+  document.body.classList.toggle('no-scroll');
 
-function openOnKeydown(e) {
-  const focused = document.activeElement;
-  const isNavDrop = focused.classList.contains('link-title');
-  if (isNavDrop && (e.code === 'Enter' || e.code === 'Space')) {
-    const dropExpanded = focused.getAttribute('aria-expanded') === 'true';
-    // eslint-disable-next-line no-use-before-define
-    toggleAllNavSections(focused.closest('.links'));
-    focused.setAttribute('aria-expanded', dropExpanded ? 'false' : 'true');
-  }
-}
-
-function focusNavSection() {
-  document.activeElement.addEventListener('keydown', openOnKeydown);
-}
-
-/**
- * Toggles all nav sections
- * @param {Element} sections The container element
- * @param {Boolean} expanded Whether the element should be expanded or collapsed
- */
-function toggleAllNavSections(sections, expanded = false) {
-  if (!sections) return;
-  sections.querySelectorAll('.link-title').forEach((section) => {
-    section.setAttribute('aria-expanded', expanded);
-    const panel = section.nextElementSibling;
-    if (panel && panel.classList.contains('desktop-panel')) {
-      panel.classList.toggle('hidden', !expanded);
-      panel.style.opacity = expanded ? '1' : '0';
-      panel.style.visibility = expanded ? 'visible' : 'hidden';
-    }
-  });
-}
-
-/**
- * Toggles the entire nav
- * @param {Element} nav The container element
- * @param {Element} navSections The nav sections within the container element
- * @param {*} forceExpanded Optional param to force nav expand behavior when not null
- */
-function toggleMenu(nav, navSections, forceExpanded = null) {
-  const expanded = forceExpanded !== null ? !forceExpanded : nav.getAttribute('aria-expanded') === 'true';
-  const button = nav.querySelector('.nav-hamburger button');
-  const mobileMenu = document.getElementById('menu');
-
-  document.body.style.overflowY = (expanded || isDesktop.matches) ? '' : 'hidden';
-  nav.setAttribute('aria-expanded', expanded ? 'false' : 'true');
-  button.setAttribute('aria-label', expanded ? 'Open navigation' : 'Close navigation');
-
-  if (!isDesktop.matches) {
-    mobileMenu.classList.toggle('hidden', expanded);
-    if (!expanded) {
-      // If expanding mobile menu, ensure desktop panels are hidden
-      toggleAllNavSections(navSections, false);
-    }
-  } else {
-    mobileMenu.classList.add('hidden'); // Always hide mobile menu on desktop
-  }
-
-  // enable nav dropdown keyboard accessibility
-  if (navSections) {
-    const navDrops = navSections.querySelectorAll('.link-title');
-    if (isDesktop.matches) {
-      navDrops.forEach((drop) => {
-        if (!drop.hasAttribute('tabindex')) {
-          drop.setAttribute('tabindex', 0);
-          drop.addEventListener('focus', focusNavSection);
-        }
-      });
-    } else {
-      navDrops.forEach((drop) => {
-        drop.removeAttribute('tabindex');
-        drop.removeEventListener('focus', focusNavSection);
-      });
-    }
-  }
-
-  // enable menu collapse on escape keypress
-  if (!expanded || isDesktop.matches) {
-    // collapse menu on escape press
+  if (hamburgerMenu.classList.contains('header__hamburger--menu-active')) {
+    if (hamburgerOpenIcon) hamburgerOpenIcon.style.opacity = '0';
+    if (hamburgerCloseIcon) hamburgerCloseIcon.style.opacity = '1';
     window.addEventListener('keydown', closeOnEscape);
-    // collapse menu on focus lost
-    nav.addEventListener('focusout', closeOnFocusLost);
   } else {
+    if (hamburgerOpenIcon) hamburgerOpenIcon.style.opacity = '1';
+    if (hamburgerCloseIcon) hamburgerCloseIcon.style.opacity = '0';
     window.removeEventListener('keydown', closeOnEscape);
-    nav.removeEventListener('focusout', closeOnFocusLost);
   }
 }
 
-function createLinkGrid(ulElement) {
-  const linkGrid = document.createElement('div');
-  linkGrid.classList.add('link-grid', 'block');
-  const linkContainerSection = document.createElement('div');
-  linkContainerSection.classList.add('link-container-section');
-  const linkGridColumn = document.createElement('div');
-  linkGridColumn.classList.add('link-grid-column', 'link-column-vertical');
+function toggleSearch() {
+  const header = document.querySelector('.header');
+  const searchWrapper = header.querySelector('.global__search--wrapper');
+  const overlay = header.querySelector('.header__overlay');
 
-  const linksContainer = document.createElement('ul');
-  linksContainer.classList.add('content', 'links-container', 'accordian-content');
+  if (searchWrapper) {
+    searchWrapper.classList.toggle('global__search--wrapper--active');
+    overlay.classList.toggle('d-none');
+    document.body.classList.toggle('no-scroll');
 
-  Array.from(ulElement.children).forEach((li) => {
-    const newLi = document.createElement('li');
-    const anchor = li.querySelector('a');
-    if (anchor) {
-      const newAnchor = document.createElement('a');
-      newAnchor.href = anchor.href;
-      newAnchor.textContent = anchor.textContent;
-      if (anchor.target) newAnchor.target = anchor.target;
-      if (anchor.rel) newAnchor.rel = anchor.rel;
-      newLi.append(newAnchor);
-
-      const paragraph = li.querySelector('p');
-      if (paragraph) {
-        const newP = document.createElement('p');
-        newP.textContent = paragraph.textContent;
-        newLi.append(newP);
-      }
+    if (searchWrapper.classList.contains('global__search--wrapper--active')) {
+      window.addEventListener('keydown', closeOnEscape);
+    } else {
+      window.removeEventListener('keydown', closeOnEscape);
     }
-    linksContainer.append(newLi);
-  });
+  }
+}
 
-  linkGridColumn.append(linksContainer);
-  linkContainerSection.append(linkGridColumn);
-  linkGrid.append(linkContainerSection);
-  return linkGrid;
+function toggleNotificationPanel() {
+  const header = document.querySelector('.header');
+  const notificationPanel = header.querySelector('.header__notification--panel');
+  const overlay = header.querySelector('.header__overlay');
+
+  if (notificationPanel) {
+    notificationPanel.classList.toggle('active');
+    overlay.classList.toggle('d-none');
+    document.body.classList.toggle('no-scroll');
+
+    if (notificationPanel.classList.contains('active')) {
+      window.addEventListener('keydown', closeOnEscape);
+    } else {
+      window.removeEventListener('keydown', closeOnEscape);
+    }
+  }
 }
 
 /**
- * loads and decorates the header, mainly the nav
- * @param {Element} block The header block element
+ * Recursively builds menu items and their children.
+ * This function is not used in the provided `decorate` function,
+ * but is kept for potential future use if a different menu structure is desired.
+ * @param {HTMLElement} parentElement The parent DOM element to append to.
+ * @param {Array} childrenData Array of child menu items.
+ * @param {string} levelClassBase Base class for the current menu level.
  */
+// function buildMenuItems(parentElement, childrenData, levelClassBase) {
+//   if (!childrenData || childrenData.length === 0) return;
+
+//   const ul = document.createElement('ul');
+//   ul.classList.add(`${levelClassBase}--list`);
+
+//   childrenData.forEach((itemData) => {
+//     const li = document.createElement('li');
+//     li.classList.add(`${levelClassBase}--item`);
+
+//     const link = document.createElement('a');
+//     link.href = itemData.href;
+//     link.textContent = itemData.label;
+//     link.classList.add(`${levelClassBase}--link`);
+
+//     if (itemData.children && itemData.children.length > 0) {
+//       li.classList.add('has-children');
+//       const dropdownToggle = document.createElement('span');
+//       dropdownToggle.classList.add('header__accordion--button', 'collapsed', 'header_arrow_icon');
+//       dropdownToggle.innerHTML = `<svg class="arrow header__accordion--arrow" aria-hidden="true" role="icon" aria-expanded="false">
+//                                     <use xlink:href="/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#drop-up-caret"></use>
+//                                   </svg>`;
+//       link.classList.add('navigation_link');
+//       link.setAttribute('type', 'button');
+//       link.setAttribute('aria-expanded', 'false');
+//       dropdownToggle.addEventListener('click', (e) => {
+//         e.preventDefault();
+//         const expanded = link.getAttribute('aria-expanded') === 'true';
+//         link.setAttribute('aria-expanded', !expanded);
+//         dropdownToggle.querySelector('.header__accordion--arrow').setAttribute('aria-expanded', !expanded);
+//         li.querySelector('.accordion-collapse').classList.toggle('collapse');
+//         dropdownToggle.classList.toggle('collapsed');
+//       });
+
+//       const accordionCollapse = document.createElement('div');
+//       accordionCollapse.classList.add('accordion-collapse', 'collapse', 'header__accordion--collapse');
+//       const accordionBody = document.createElement('div');
+//       accordionBody.classList.add('accordion-body', 'header__accordion--body');
+
+//       buildMenuItems(accordionBody, itemData.children, `${levelClassBase}-dropdown`);
+//       accordionCollapse.append(accordionBody);
+//       li.append(link, dropdownToggle, accordionCollapse);
+//     } else {
+//       li.append(link);
+//     }
+//     ul.append(li);
+//   });
+//   parentElement.append(ul);
+// }
+
+
 export default async function decorate(block) {
-  // load nav as fragment
   const navMeta = getMetadata('nav');
   const navPath = navMeta ? new URL(navMeta, window.location).pathname : '/nav';
-  const fragment = await loadFragment(navPath + '.plain.html');
+  const fragment = await loadFragment(navPath);
 
-  // decorate nav DOM
   block.textContent = '';
   const headerWrapper = document.createElement('div');
-  headerWrapper.classList.add('corp-header', 'block');
-  headerWrapper.setAttribute('data-block-name', 'corp-header');
+  headerWrapper.classList.add('header__wrapper');
 
-  const navbar = document.createElement('div');
-  navbar.classList.add('navbar', 'navbar-arena', 'g-container');
+  const header = document.createElement('header');
+  header.classList.add('header', 'header--container', 'position-fixed', 'top-0', 'w-100');
 
-  // Hamburger for mobile
-  const hamburger = document.createElement('div');
-  hamburger.classList.add('nav-hamburger');
-  hamburger.innerHTML = '<button type="button" aria-controls="nav" aria-label="Open navigation" aria-expanded="false"><span class="nav-hamburger-icon"></span></button>';
-  navbar.append(hamburger);
+  const overlay = document.createElement('div');
+  overlay.classList.add('header__overlay', 'd-none', 'position-fixed', 'top-0', 'w-100', 'h-100');
 
-  // Logo Wrapper (Brand)
-  const logoWrapper = document.createElement('div');
-  logoWrapper.classList.add('logo-wrapper');
-  const logoBlock = document.createElement('div');
-  logoBlock.classList.add('logo', 'block');
-  logoBlock.setAttribute('data-block-name', 'logo');
-  const logoSpan = document.createElement('span');
-  logoSpan.classList.add('arena');
+  const positionAbsolute = document.createElement('div');
+  positionAbsolute.classList.add('position-absolute', 'w-100');
 
-  const brandSection = fragment.children[0];
-  let brandLinkElement = null;
-  if (brandSection) {
-    brandLinkElement = brandSection.querySelector('a');
-  }
+  // Mobile Hamburger Menu
+  const hamburgerMenu = document.createElement('nav');
+  hamburgerMenu.classList.add('position-fixed', 'top-0', 'end-0', 'd-flex', 'flex-column', 'gap-6', 'header__hamburger--menu');
 
-  if (brandLinkElement) {
-    const logoPicture = document.createElement('a');
-    logoPicture.classList.add('logo__picture');
-    logoPicture.href = brandLinkElement.href;
-    logoPicture.setAttribute('data-logo-name', brandLinkElement.textContent.trim());
+  const hamburgerHead = document.createElement('div');
+  hamburgerHead.classList.add('align-self-end', 'd-flex', 'justify-content-between', 'w-100', 'd-md-none', 'header__hamburger--head');
+  const hamburgerHeadTitle = document.createElement('div');
+  hamburgerHeadTitle.classList.add('header__hamburger--head-title');
+  // Dynamically set title from fragment if available, otherwise default
+  const mobileNotificationTitle = fragment.querySelector('.nav-tools .default-content-wrapper > div:nth-child(1) h4');
+  hamburgerHeadTitle.textContent = mobileNotificationTitle ? mobileNotificationTitle.textContent.trim() : 'Notifications';
 
-    const picture = brandLinkElement.querySelector('picture');
-    if (picture) {
-      logoPicture.append(picture.cloneNode(true));
-    } else {
-      // Fallback if no picture element, create an img
-      const img = document.createElement('img');
-      img.alt = brandLinkElement.textContent.trim() || 'Logo';
-      img.src = '/icons/logo.svg'; // Generic fallback
-      logoPicture.append(img);
-    }
-    logoSpan.append(logoPicture);
-  } else {
-    // Fallback if no brand link in fragment
-    const logoPicture = document.createElement('a');
-    logoPicture.classList.add('logo__picture');
-    logoPicture.href = '/';
-    logoPicture.setAttribute('data-logo-name', 'Brand');
-    const img = document.createElement('img');
-    img.alt = 'Brand Logo';
-    img.src = '/icons/logo.svg'; // Generic fallback
-    logoPicture.append(img);
-    logoSpan.append(logoPicture);
-  }
+  const closeIcon = document.createElement('svg');
+  closeIcon.classList.add('arrow', 'header__hamburger--close-icon');
+  closeIcon.setAttribute('aria-hidden', 'true');
+  closeIcon.setAttribute('role', 'icon');
+  closeIcon.innerHTML = '<use xlink:href="/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#close"></use>';
+  hamburgerHead.append(hamburgerHeadTitle, closeIcon);
+  hamburgerHead.addEventListener('click', toggleMobileMenu);
 
-  logoBlock.append(logoSpan);
-  logoWrapper.append(logoBlock);
-  navbar.append(logoWrapper);
-
-  // Links (Sections)
-  const linksDiv = document.createElement('div');
-  linksDiv.classList.add('links');
-
-  // Mobile Menu container
-  const mobileMenu = document.createElement('div');
-  mobileMenu.id = 'menu';
-  mobileMenu.classList.add('menu', 'hidden', 'menu-arena');
-
-  const mobileMenuHeader = document.createElement('div');
-  mobileMenuHeader.classList.add('menu-header');
-  mobileMenuHeader.innerHTML = '<div class="back-arrow"></div><span class="menu-title">Menu</span><span class="close-icon"></span>';
-  mobileMenu.append(mobileMenuHeader);
-
-  const mobileMenuList = document.createElement('ul');
-  mobileMenuList.classList.add('menu-list');
-  mobileMenu.append(mobileMenuList);
-
-  // Iterate over fragment sections (skipping the first which is brand)
-  Array.from(fragment.children).slice(1).forEach((section, i) => {
-    const linkTitle = document.createElement('div');
-    linkTitle.classList.add('link-title');
-    let l1Link = section.querySelector('p.button-container > a');
-    let l1LabelText = '';
-    let hasSubMenu = false;
-    let desktopPanelContent = null;
-
-    if (l1Link) {
-      const span = document.createElement('span');
-      span.append(l1Link.cloneNode(true));
-      linkTitle.append(span);
-      l1LabelText = l1Link.textContent.trim();
-    } else {
-      // If no button, try to find a direct text
-      const firstDiv = section.querySelector('div:first-child');
-      if (firstDiv && firstDiv.textContent.trim()) {
-        const span = document.createElement('span');
-        span.textContent = firstDiv.textContent.trim();
-        linkTitle.append(span);
-        l1LabelText = firstDiv.textContent.trim();
-      }
-    }
-
-    const ulElement = section.querySelector('ul');
-    if (ulElement) {
-      hasSubMenu = true;
-      const desktopPanel = document.createElement('div');
-      desktopPanel.classList.add('desktop-panel', 'panel');
-      desktopPanel.classList.add(l1LabelText.toLowerCase().replace(/\s/g, '-')); // Add class based on label
-      desktopPanel.classList.add('hidden'); // Initially hidden
-      desktopPanelContent = createLinkGrid(ulElement);
-      desktopPanel.append(desktopPanelContent);
-      linksDiv.append(desktopPanel); // Append desktop panel to linksDiv, but keep it hidden
-
-      // Add event listener for desktop dropdown
-      linkTitle.addEventListener('mouseover', () => {
-        if (isDesktop.matches) {
-          // Hide all other open desktop panels
-          linksDiv.querySelectorAll('.desktop-panel:not(.hidden)').forEach(panel => {
-            panel.classList.add('hidden');
-            panel.style.opacity = '0';
-            panel.style.visibility = 'hidden';
-            const prevLinkTitle = panel.previousElementSibling;
-            if (prevLinkTitle && prevLinkTitle.classList.contains('link-title')) {
-              prevLinkTitle.setAttribute('aria-expanded', 'false');
-            }
-          });
-          desktopPanel.classList.remove('hidden');
-          desktopPanel.style.opacity = '1';
-          desktopPanel.style.visibility = 'visible';
-          linkTitle.setAttribute('aria-expanded', 'true');
-        }
-      });
-
-      desktopPanel.addEventListener('mouseleave', () => {
-        if (isDesktop.matches) {
-          desktopPanel.classList.add('hidden');
-          desktopPanel.style.opacity = '0';
-          desktopPanel.style.visibility = 'hidden';
-          linkTitle.setAttribute('aria-expanded', 'false');
-        }
-      });
-    }
-
-    linksDiv.append(linkTitle);
-
-    // Mobile menu item
-    const mobileMenuItem = document.createElement('li');
-    mobileMenuItem.id = `menu-item-${i}`;
-    mobileMenuItem.classList.add('nav-link');
-    if (hasSubMenu) {
-      mobileMenuItem.classList.add('accordion');
-    }
-    mobileMenuItem.classList.add(l1LabelText.toLowerCase().replace(/\s/g, '-'));
-
-    const mobileMenuTitle = document.createElement('span');
-    mobileMenuTitle.classList.add('menu-title');
-    if (l1Link) {
-      mobileMenuTitle.append(l1Link.cloneNode(true));
-    } else {
-      mobileMenuTitle.textContent = l1LabelText;
-    }
-    mobileMenuItem.append(mobileMenuTitle);
-    mobileMenuList.append(mobileMenuItem);
-
-    if (hasSubMenu) {
-      const mobileSubPanel = document.createElement('div');
-      mobileSubPanel.classList.add('panel');
-      mobileSubPanel.append(desktopPanelContent.cloneNode(true)); // Re-use content
-      mobileMenuList.append(mobileSubPanel);
-
-      mobileMenuItem.addEventListener('click', () => {
-        if (!isDesktop.matches) {
-          mobileMenuItem.classList.toggle('active');
-          const panel = mobileMenuItem.nextElementSibling;
-          if (panel.style.maxHeight) {
-            panel.style.maxHeight = null;
-          } else {
-            panel.style.maxHeight = `${panel.scrollHeight}px`;
-          }
-        }
-      });
-    }
-  });
-
-  navbar.append(linksDiv);
-
-  // Right section (Tools)
-  const rightDiv = document.createElement('div');
-  rightDiv.classList.add('right');
-  rightDiv.id = 'nav-right';
-
-  const contactWrapper = document.createElement('div');
-  contactWrapper.classList.add('contact-wrapper');
-  const contactBlock = document.createElement('div');
-  contactBlock.classList.add('contact', 'block');
-  contactBlock.setAttribute('data-block-name', 'contact');
-  const contactWrpArena = document.createElement('div');
-  contactWrpArena.classList.add('contact_wrp_arena', 'user__contact', 'header');
-
-  // Extract contact details from fragment if available, otherwise use defaults
-  const contactSection = fragment.children[fragment.children.length - 3]; // Assuming contact is third from last
-  let contactTitle = 'Contact Us';
-  let phoneLink = '#';
-  let phoneText = '';
-  let whatsappLink = '#';
-  let emailLink = '#';
-  let phoneIconSrc = 'https://www.marutisuzuki.com/adobe/assets/urn:aaid:aem:5b948ce6-b05d-4b51-ad62-c8763b2489ef/as/phone-blue.svg';
-  let whatsappIconSrc = 'https://www.marutisuzuki.com/adobe/assets/urn:aaid:aem:8b7e1a58-e51b-4076-8d71-74415f808bb5/as/whatsapp-blue.svg';
-  let emailIconSrc = 'https://www.marutisuzuki.com/adobe/assets/urn:aaid:aem:486b1069-8798-47ae-ac0b-d557f2185041/as/mail-blue.svg';
-
-  if (contactSection) {
-    const h4 = contactSection.querySelector('h4');
-    if (h4) contactTitle = h4.textContent.trim();
-
-    const phoneAnchor = contactSection.querySelector('a[href^="tel:"]');
-    if (phoneAnchor) {
-      phoneLink = phoneAnchor.href;
-      phoneText = phoneAnchor.textContent.trim();
-    }
-
-    const whatsappAnchor = contactSection.querySelector('a[href*="wa.me"]');
-    if (whatsappAnchor) whatsappLink = whatsappAnchor.href;
-
-    const emailAnchor = contactSection.querySelector('a[href^="mailto:"]');
-    if (emailAnchor) emailLink = emailAnchor.href;
-
-    const phoneImg = contactSection.querySelector('a.phone img');
-    if (phoneImg) phoneIconSrc = phoneImg.src;
-
-    const whatsappImg = contactSection.querySelector('a.whatsapp img');
-    if (whatsappImg) whatsappIconSrc = whatsappImg.src;
-
-    const emailImg = contactSection.querySelector('a.email img');
-    if (emailImg) emailIconSrc = emailImg.src;
-  }
-
-  contactWrpArena.innerHTML = `
-    <h4 class="user__contact-title">${contactTitle}</h4>
-    <span class="user__contact-title icon-phone" aria-label="${contactTitle}"></span>
-    <div class="user__contact__icons hidden">
-      <a href="${phoneLink}" class="user__contact--icon phone" onclick="event.preventDefault(); this.closest('.contact').querySelector('.contact-toggle-box').classList.toggle('hidden')">
-        <span class="sr-only">phone</span>
-        <img src="${phoneIconSrc}" alt="phone" loading="lazy">
-      </a>
-      <div class="hidden">${phoneText}</div>
-      <div class="hidden"></div>
-      <a href="${whatsappLink}" target="_blank" class="user__contact--icon whatsapp" rel="noopener noreferrer">
-        <span class="sr-only">whatsapp</span>
-        <img src="${whatsappIconSrc}" alt="whatsapp" loading="lazy">
-      </a>
-      <a href="${emailLink}" class="user__contact--icon email">
-        <span class="sr-only">email</span>
-        <img src="${emailIconSrc}" alt="email" loading="lazy">
-      </a>
-    </div>
-    <div class="hidden contact-toggle-box">
-      <div class="user__contact__icon-call_container">
-        <a href="${phoneLink}" class="primary-telephone">${phoneText}</a>
-        <a href="" class="secondary-telephone"></a>
-      </div>
-    </div>
-  `;
-  contactBlock.append(contactWrpArena);
-  contactWrapper.append(contactBlock);
-  rightDiv.append(contactWrapper);
-
-  const languageDiv = document.createElement('div');
-  languageDiv.classList.add('language');
-  // Language text should ideally come from metadata or fragment
-  languageDiv.textContent = 'EN';
-  rightDiv.append(languageDiv);
-
-  const signInWrapper = document.createElement('div');
-  signInWrapper.classList.add('sign-in-wrapper', 'hidden');
-  const signInBlock = document.createElement('div');
-  signInBlock.classList.add('sign-in', 'block');
-  signInBlock.setAttribute('data-block-name', 'sign-in');
-  const userDropdown = document.createElement('div');
-  userDropdown.classList.add('user__dropdown');
-  const userAccount = document.createElement('div');
-  userAccount.classList.add('user__account');
-
-  // Extract sign-in links from fragment if available
-  const signInSection = fragment.children[fragment.children.length - 2]; // Assuming sign-in is second from last
-  let reachUsLink = '#';
-  let reachUsText = 'Reach Us';
-  let profileLink = '#';
-  let profileText = 'Profile';
-  let signInButtonText = 'Sign In';
-  let signOutButtonText = 'Sign Out';
-  let reachUsIconSrc = 'https://www.marutisuzuki.com/common/media_15a6c05afc5507562eb897b4d95a77989df181064.svg?width=750&format=svg&optimize=medium';
-  let profileIconSrc = 'https://www.marutisuzuki.com/common/media_13b57ab8376192c7cb827e1fed7ceef1bb8dcaf60.svg?width=750&format=svg&optimize=medium';
-  let signInIconSrc = 'https://www.marutisuzuki.com/adobe/assets/urn:aaid:aem:3c13f70a-cefc-4aeb-83f2-53cd72a175d1/as/world-blue.svg';
-
-  if (signInSection) {
-    const links = signInSection.querySelectorAll('a');
-    if (links[0]) {
-      reachUsLink = links[0].href;
-      reachUsText = links[0].textContent.trim();
-      const img = links[0].querySelector('img');
-      if (img) reachUsIconSrc = img.src;
-    }
-    if (links[1]) {
-      profileLink = links[1].href;
-      profileText = links[1].textContent.trim();
-      const img = links[1].querySelector('img');
-      if (img) profileIconSrc = img.src;
-    }
-    const signInButton = signInSection.querySelector('button');
-    if (signInButton) {
-      signInButtonText = signInButton.textContent.trim();
-      signOutButtonText = signInButton.dataset.signOutText || 'Sign Out';
-      const img = signInButton.closest('.user__account--link').querySelector('img');
-      if (img) signInIconSrc = img.src;
-    }
-  }
-
-  userAccount.innerHTML = `
-    <a href="${reachUsLink}" class="user__account--link reach us" target="_self">
-        <span class="user__account__list-icon">
-            <img src="${reachUsIconSrc}" loading="lazy" alt="${reachUsText}">
-        </span>
-        ${reachUsText}
-    </a>
-    <a href="${profileLink}" class="user__account--link profile" target="_self">
-        <span class="user__account__list-icon">
-            <img src="${profileIconSrc}" loading="lazy" alt="${profileText}">
-        </span>
-        ${profileText}
-    </a>
-    <div class="user__account--link sign-in-btn">
-        <span class="user__account__list-icon">
-            <img src="${signInIconSrc}" loading="lazy" alt="${signInButtonText}">
-        </span>
-        <button type="button" data-sign-out-text="${signOutButtonText}">${signInButtonText}</button>
-    </div>
-  `;
-  userDropdown.append(userAccount);
-  signInBlock.append(userDropdown);
-  signInWrapper.append(signInBlock);
-  rightDiv.append(signInWrapper);
-
-  navbar.append(rightDiv);
-  headerWrapper.append(navbar);
-
-  // Car Filter Menu (if needed, currently hidden in original)
-  const carFilterMenu = document.createElement('div');
-  carFilterMenu.id = 'carFilterMenu';
-  carFilterMenu.classList.add('car-filter-menu', 'hidden', 'car-filter-arena');
-
-  // Extract car filter menu content from fragment if available
-  const carFilterSection = fragment.children[fragment.children.length - 1]; // Assuming car filter is the last section
-  if (carFilterSection) {
-    const searchHeader = document.createElement('div');
-    searchHeader.classList.add('search-header', 'block');
-    const linkContainerSection = document.createElement('div');
-    linkContainerSection.classList.add('link-container-section');
-
-    Array.from(carFilterSection.children).forEach(child => {
-      if (child.tagName === 'DIV' && child.querySelector('ul')) {
-        const linkGridColumn = document.createElement('div');
-        linkGridColumn.classList.add('link-grid-column', 'link-column-vertical');
-        linkGridColumn.append(child.querySelector('ul').cloneNode(true));
-        linkContainerSection.append(linkGridColumn);
-      }
+  const notificationMobile = document.createElement('div');
+  notificationMobile.classList.add('d-md-none', 'flex-column', 'z-2', 'header__notification--mobile');
+  // Populate mobile notifications from fragment if available in a dedicated section
+  const fragmentMobileNotifications = fragment.querySelector('.nav-tools .default-content-wrapper > div:nth-child(1)');
+  if (fragmentMobileNotifications) {
+    const notificationItems = fragmentMobileNotifications.querySelectorAll('section.header__notification--item');
+    notificationItems.forEach((item) => {
+      notificationMobile.append(item.cloneNode(true));
     });
-    searchHeader.append(linkContainerSection);
-    carFilterMenu.append(searchHeader);
-  } else {
-    // Fallback if no car filter section in fragment
-    carFilterMenu.innerHTML = `
-      <div class="search-header block">
-        <div class="link-container-section">
-          <!-- Default content if fragment doesn't provide it -->
-          <div class="link-grid-column link-column-vertical">
-            <ul class="content links-container accordian-content">
-              <li><a href="#" target="_self">Default Link 1</a></li>
-              <li><a href="#" target="_self">Default Link 2</a></li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    `;
   }
 
-  carFilterMenu.innerHTML += `
-    <div class="car-panel-header">
-      <div></div>
-      <span class="car-text">Cars</span>
-      <span class="car-filter-close"><img src="/icons/close.svg" alt="close"></span>
-    </div>
-  `;
-  headerWrapper.append(carFilterMenu);
-  headerWrapper.append(mobileMenu);
+  const mobileMenuWrapper = document.createElement('div');
+  mobileMenuWrapper.classList.add('d-flex', 'flex-column', 'justify-content-between', 'mobile__menu--wrapper');
+  const accordion = document.createElement('div');
+  accordion.classList.add('accordion', 'header__accordion');
 
+  // Parse navigation sections from fragment
+  const navSections = fragment.querySelector('.nav-sections');
+  if (navSections) {
+    Array.from(navSections.children).forEach((section, i) => {
+      const defaultContentWrapper = section.querySelector('.default-content-wrapper');
+      if (!defaultContentWrapper) return;
+
+      const l1LinkElement = defaultContentWrapper.querySelector('p.button-container > a');
+      const l1Text = l1LinkElement ? l1LinkElement.textContent.trim() : `Section ${i + 1}`;
+      const l1Href = l1LinkElement ? l1LinkElement.href : '#';
+
+      const accordionItem = document.createElement('section');
+      accordionItem.classList.add('accordion-item', 'd-md-none', 'header__accordion--item');
+
+      const accordionHeader = document.createElement('h2');
+      accordionHeader.classList.add('accordion-header', 'header__accordion--heading');
+      accordionHeader.id = `panel-heading-${i + 1}`;
+
+      const accordionButtonLink = document.createElement('a');
+      accordionButtonLink.classList.add('accordion-button', 'd-flex', 'justify-content-between', 'align-items-center', 'w-100', 'header__accordion--button', 'navigation_link');
+      accordionButtonLink.setAttribute('type', 'button');
+      accordionButtonLink.href = l1Href;
+      accordionButtonLink.textContent = l1Text;
+
+      const accordionButtonToggle = document.createElement('span');
+      accordionButtonToggle.classList.add('header__accordion--button', 'collapsed', 'header_arrow_icon');
+      accordionButtonToggle.setAttribute('data-bs-toggle', 'collapse');
+      accordionButtonToggle.setAttribute('data-bs-target', `#panel-collapse-${i + 1}-norm-nav`);
+      accordionButtonToggle.innerHTML = `<svg class="arrow header__accordion--arrow" aria-hidden="true" role="icon" aria-expanded="false" aria-controls="panel-collapse-${i + 1}-norm-nav">
+                                          <use xlink:href="/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#drop-up-caret"></use>
+                                        </svg>`;
+
+      accordionHeader.append(accordionButtonLink, accordionButtonToggle);
+
+      const accordionCollapse = document.createElement('div');
+      accordionCollapse.id = `panel-collapse-${i + 1}-norm-nav`;
+      accordionCollapse.classList.add('accordion-collapse', 'collapse', 'header__accordion--collapse');
+      accordionCollapse.setAttribute('aria-labelledby', `panel-heading-${i + 1}-norm-nav`);
+      accordionCollapse.setAttribute('data-label', l1Text);
+
+      const accordionBody = document.createElement('div');
+      accordionBody.classList.add('accordion-body', 'header__accordion--body');
+
+      // Extract nested links (L2, L3, etc.)
+      const nestedLists = defaultContentWrapper.querySelectorAll('ul, .sublinksNavigator, .subLevelLinks, .seasonalbanner');
+      nestedLists.forEach((element) => {
+        const dropdownItem = document.createElement('div');
+        dropdownItem.classList.add('dropdown-item', 'header__accordion--dropdown-item');
+        dropdownItem.innerHTML = element.outerHTML;
+
+        // Further decorate nested links with appropriate classes
+        dropdownItem.querySelectorAll('a').forEach(link => {
+          link.classList.add('sublinks__navigator--content--title', 'text-black-500');
+        });
+
+        accordionBody.append(dropdownItem);
+      });
+
+      accordionCollapse.append(accordionBody);
+      accordionItem.append(accordionHeader, accordionCollapse);
+      accordion.append(accordionItem);
+
+      // Event listener for mobile accordion toggle
+      accordionButtonToggle.addEventListener('click', () => {
+        const isExpanded = accordionButtonToggle.querySelector('svg').getAttribute('aria-expanded') === 'true';
+        accordionButtonToggle.querySelector('svg').setAttribute('aria-expanded', !isExpanded);
+        accordionButtonToggle.classList.toggle('collapsed');
+        accordionCollapse.classList.toggle('collapse');
+      });
+    });
+  }
+
+  mobileMenuWrapper.append(accordion);
+
+  // Social Media Links (from fragment's tools section)
+  const socialSection = fragment.querySelector('.nav-tools .default-content-wrapper > div:nth-child(2)');
+  if (socialSection) {
+    const socialDiv = document.createElement('div');
+    socialDiv.classList.add('header__accordion--app', 'bg-white');
+    socialDiv.innerHTML = socialSection.innerHTML;
+    mobileMenuWrapper.append(socialDiv);
+  }
+
+  hamburgerMenu.append(hamburgerHead, notificationMobile, mobileMenuWrapper);
+  positionAbsolute.append(hamburgerMenu);
+
+  // Main Navigation
+  const mainNavbar = document.createElement('nav');
+  mainNavbar.classList.add('position-relative', 'top-0', 'header__navbar', 'w-100');
+
+  const navbarDiv = document.createElement('div');
+  navbarDiv.classList.add('navbar', 'navbar-expand-md', 'd-flex', 'section_container--primary', 'py-3', 'justify-content-between', 'align-items-center', 'w-100', 'bg-white');
+
+  // Brand Logo
+  const navBrand = fragment.querySelector('.nav-brand');
+  if (navBrand) {
+    const brandLink = navBrand.querySelector('a');
+    if (brandLink) {
+      brandLink.classList.add('navbar-brand', 'p-0', 'header__logo', 'position-relative');
+      const brandImg = brandLink.querySelector('img');
+      if (brandImg) {
+        brandImg.classList.add('w-100', 'h-100', 'header__logo--image', 'position-absolute', 'z-2');
+      }
+      navbarDiv.append(brandLink);
+    }
+  }
+
+  const navbarCollapse = document.createElement('div');
+  navbarCollapse.classList.add('collapse', 'navbar-collapse', 'justify-content-center', 'header__navbar--collapse');
+  navbarCollapse.id = 'navbarNavDropdown';
+
+  const navbarList = document.createElement('ul');
+  navbarList.classList.add('navbar-nav', 'gap-10', 'header__navbar--list');
+
+  // Desktop Navigation Sections
+  if (navSections) {
+    Array.from(navSections.children).forEach((section, i) => {
+      const defaultContentWrapper = section.querySelector('.default-content-wrapper');
+      if (!defaultContentWrapper) return;
+
+      const l1LinkElement = defaultContentWrapper.querySelector('p.button-container > a');
+      const l1Text = l1LinkElement ? l1LinkElement.textContent.trim() : `Section ${i + 1}`;
+      const l1Href = l1LinkElement ? l1LinkElement.href : '#';
+
+      const navItem = document.createElement('li');
+      navItem.classList.add('nav-item', 'header__navbar--item', 'text-center');
+
+      const dFlex = document.createElement('div');
+      dFlex.classList.add('d-flex');
+
+      const navLink = document.createElement('a');
+      navLink.classList.add('nav-link', 'header__navbar--link');
+      navLink.href = l1Href;
+      navLink.id = `navbarDropdownMenuLink${i}`;
+      navLink.setAttribute('role', 'button');
+      navLink.setAttribute('aria-expanded', 'false');
+      navLink.textContent = l1Text;
+
+      const underline = document.createElement('span');
+      underline.classList.add('header__navbar--item-underline');
+      dFlex.append(navLink, underline); // Append underline to dFlex
+      navItem.append(dFlex);
+
+      const nestedContent = defaultContentWrapper.querySelector('div.cmp-container'); // Look for the container holding nested lists
+      if (nestedContent) {
+        const dropdownMenu = document.createElement('ul');
+        dropdownMenu.classList.add('bg-white', 'nav__dropdown', 'header__navbar--dropdown', 'position-fixed', 'section_container--primary', 'pt-12', 'pb-8', 'start-0', 'w-100', 'border-0', 'rounded-0', 'published__height');
+        dropdownMenu.setAttribute('aria-labelledby', `navbarDropdownMenuLink${i}`);
+        dropdownMenu.setAttribute('data-column-count', '3');
+        dropdownMenu.style.cssText = 'grid-template-columns: repeat(3, minmax(0px, 1fr)); gap: 20px;';
+
+        // Iterate over direct children of the nested content div
+        Array.from(nestedContent.children).forEach((childElement) => {
+          const dropdownColumn = document.createElement('li');
+          dropdownColumn.classList.add('dropdown-item', 'header__navbar--dropdown-column');
+          dropdownColumn.innerHTML = childElement.outerHTML;
+
+          dropdownColumn.querySelectorAll('a').forEach(link => {
+            link.classList.add('sublinks__navigator--content--title', 'text-black-500');
+          });
+          dropdownMenu.append(dropdownColumn);
+        });
+        navItem.append(dropdownMenu);
+
+        // Add hover functionality for desktop dropdowns
+        navItem.addEventListener('mouseenter', () => {
+          if (isDesktop.matches) {
+            dropdownMenu.style.opacity = '1';
+            dropdownMenu.style.transform = 'scaleY(1)';
+            navLink.setAttribute('aria-expanded', 'true');
+          }
+        });
+        navItem.addEventListener('mouseleave', () => {
+          if (isDesktop.matches) {
+            dropdownMenu.style.opacity = '0';
+            dropdownMenu.style.transform = 'scaleY(0)';
+            navLink.setAttribute('aria-expanded', 'false');
+          }
+        });
+      }
+      navbarList.append(navItem);
+    });
+  }
+
+  navbarCollapse.append(navbarList);
+
+  // Navigation Buttons (Search, Notification, Login, Hamburger)
+  const navButtons = document.createElement('div');
+  navButtons.classList.add('navigation__buttons', 'd-flex', 'align-items-center', 'gap-5', 'header__buttons');
+
+  // Search Button
+  const searchBtn = document.createElement('div');
+  searchBtn.classList.add('bg-transparent', 'header__search', 'cursor-pointer');
+  searchBtn.innerHTML = `<svg class="header__search--svg-find" aria-hidden="true" role="icon">
+                            <use xlink:href="/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#search"></use>
+                          </svg>`;
+  searchBtn.addEventListener('click', toggleSearch);
+
+  // Search Overlay (from fragment's tools section)
+  const searchOverlaySection = fragment.querySelector('.nav-tools .default-content-wrapper > div:nth-child(3)');
+  if (searchOverlaySection) {
+    const searchOverlay = searchOverlaySection.cloneNode(true);
+    searchOverlay.classList.add('global__search--wrapper');
+    searchOverlay.classList.remove('d-none');
+    searchBtn.append(searchOverlay);
+
+    const closeSearchBtn = searchOverlay.querySelector('.close-search');
+    if (closeSearchBtn) {
+      closeSearchBtn.addEventListener('click', toggleSearch);
+    }
+  }
+
+  // Notification Button
+  const notificationTrigger = document.createElement('div');
+  notificationTrigger.classList.add('d-flex', 'flex-column', 'align-items-end', 'gap-2', 'position-relative', 'header__notification--trigger');
+  // Dynamically set notification count and styles
+  const notificationCountElement = fragment.querySelector('.nav-tools .default-content-wrapper > div:nth-child(4) span.header__notification--trigger-text');
+  const notificationCount = notificationCountElement ? notificationCountElement.textContent.trim() : '0';
+  const notificationTextColor = notificationCountElement ? notificationCountElement.dataset.textColor : 'rgb(255,255,255)';
+  const notificationBgColor = notificationCountElement ? notificationCountElement.dataset.backgroundColor : '#Db0011';
+
+  notificationTrigger.innerHTML = `<span class="header__notification--trigger-text text-center position-absolute" data-notification-text="true" data-text-color="${notificationTextColor}" data-background-color="${notificationBgColor}" style="color: ${notificationTextColor}; background-color: ${notificationBgColor};">${notificationCount}</span>
+                                   <svg aria-hidden="true" role="icon" class="text-blue-400 header__notification--trigger-svg">
+                                     <use xlink:href="/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#bell-icon"></use>
+                                   </svg>`;
+  notificationTrigger.addEventListener('click', toggleNotificationPanel);
+
+  // Notification Panel (from fragment's tools section)
+  const notificationPanelSection = fragment.querySelector('.nav-tools .default-content-wrapper > div:nth-child(4)');
+  if (notificationPanelSection) {
+    const notificationPanel = notificationPanelSection.cloneNode(true);
+    notificationPanel.classList.add('p-3', 'flex-column', 'position-absolute', 'z-2', 'header__notification--panel');
+    notificationTrigger.append(notificationPanel);
+  }
+
+  // Login Link
+  const loginLinkElement = fragment.querySelector('.nav-tools .default-content-wrapper > div:nth-child(5) a'); // Assuming login is the 5th item
+  const loginLink = document.createElement('a');
+  if (loginLinkElement) {
+    loginLink.href = loginLinkElement.href;
+    loginLink.target = loginLinkElement.target || '_self';
+    loginLink.classList.add('d-flex', 'align-items-center', 'gap-2', 'text-blue-400', 'header__login');
+    loginLink.innerHTML = `<svg aria-hidden="true" role="icon">
+                             <use xlink:href="/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#user-icon"></use>
+                           </svg>
+                           <span class="logntext d-none d-md-block header__login--text text-nowrap">${loginLinkElement.textContent.trim()}</span>
+                           ${loginLink.target === '_blank' ? '<span class="cmp-link__screen-reader-only">opens in a new tab</span>' : ''}`;
+  } else {
+    // Fallback if login link is not found in fragment
+    loginLink.href = 'https://customer.canarahsbclife.com/login';
+    loginLink.target = '_blank';
+    loginLink.classList.add('d-flex', 'align-items-center', 'gap-2', 'text-blue-400', 'header__login');
+    loginLink.innerHTML = `<svg aria-hidden="true" role="icon">
+                             <use xlink:href="/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#user-icon"></use>
+                           </svg>
+                           <span class="logntext d-none d-md-block header__login--text text-nowrap">Login</span>
+                           <span class="cmp-link__screen-reader-only">opens in a new tab</span>`;
+  }
+
+
+  // Hamburger Button (for mobile)
+  const hamburgerButton = document.createElement('button');
+  hamburgerButton.classList.add('position-relative', 'text-blue-400', 'header__hamburger--button');
+  hamburgerButton.innerHTML = `<svg class="header__hamburger--open" aria-hidden="true" role="icon">
+                                 <use xlink:href="/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#hamburger-icon"></use>
+                               </svg>
+                               <svg class="position-absolute start-0 bottom-0 header__hamburger--close" aria-hidden="true" role="icon">
+                                 <use xlink:href="/etc.clientlibs/chli/clientlibs/clientlib-site/resources/images/sprite/sprite.svg#close"></use>
+                               </svg>`;
+  hamburgerButton.addEventListener('click', toggleMobileMenu);
+
+  navButtons.append(searchBtn, notificationTrigger, loginLink, hamburgerButton);
+  navbarDiv.append(navbarCollapse, navButtons);
+  mainNavbar.append(navbarDiv);
+
+  header.append(overlay, positionAbsolute, mainNavbar);
+  headerWrapper.append(header);
+
+  // Append the constructed header to the block
   block.append(headerWrapper);
 
-  // Event listeners for mobile menu toggle
-  hamburger.addEventListener('click', () => toggleMenu(block, linksDiv));
-  mobileMenuHeader.querySelector('.close-icon').addEventListener('click', () => toggleMenu(block, linksDiv));
-  mobileMenuHeader.querySelector('.back-arrow').addEventListener('click', () => {
-    // Logic for back arrow in mobile menu
-    // For now, it closes the whole menu, but could be adapted for sub-menu navigation
-    toggleMenu(block, linksDiv);
+  // Add backdrop element
+  const backdrop = document.createElement('div');
+  backdrop.classList.add('header__backdrop', 'd-none', 'position-relative', 'position-fixed');
+  block.append(backdrop);
+
+  // Event listener for backdrop to close open menus
+  backdrop.addEventListener('click', () => {
+    const openHamburger = document.querySelector('.header__hamburger--menu-active');
+    const openSearch = document.querySelector('.global__search--wrapper--active');
+    const openNotification = document.querySelector('.header__notification--panel.active');
+
+    if (openHamburger) {
+      toggleMobileMenu();
+    }
+    if (openSearch) {
+      toggleSearch();
+    }
+    if (openNotification) {
+      toggleNotificationPanel();
+    }
   });
 
+  // Sync overlay and backdrop visibility
+  const observer = new MutationObserver(() => {
+    if (!overlay.classList.contains('d-none')) {
+      backdrop.classList.remove('d-none');
+    } else {
+      backdrop.classList.add('d-none');
+    }
+  });
+  observer.observe(overlay, { attributes: true, attributeFilter: ['class'] });
 
-  // Initial state and resize listener
-  toggleMenu(block, linksDiv, isDesktop.matches);
-  isDesktop.addEventListener('change', () => toggleMenu(block, linksDiv, isDesktop.matches));
+  // Handle mobile/desktop view changes
+  const handleMediaQueryChange = (e) => {
+    const hamburgerMenuElement = document.querySelector('.header__hamburger--menu');
+    const searchOverlayElement = document.querySelector('.global__search--wrapper');
+    const notificationPanelElement = document.querySelector('.header__notification--panel');
+    const hamburgerOpenIcon = document.querySelector('.header__hamburger--open');
+    const hamburgerCloseIcon = document.querySelector('.header__hamburger--close');
+
+    if (e.matches) { // Desktop view
+      document.body.classList.remove('no-scroll');
+      if (hamburgerMenuElement) hamburgerMenuElement.classList.remove('header__hamburger--menu-active');
+      if (searchOverlayElement) searchOverlayElement.classList.remove('global__search--wrapper--active');
+      if (notificationPanelElement) notificationPanelElement.classList.remove('active');
+      overlay.classList.add('d-none');
+      if (hamburgerOpenIcon) hamburgerOpenIcon.style.opacity = '1';
+      if (hamburgerCloseIcon) hamburgerCloseIcon.style.opacity = '0';
+      window.removeEventListener('keydown', closeOnEscape);
+    } else { // Mobile view
+      // If any menu is open, apply no-scroll
+      if ((hamburgerMenuElement && hamburgerMenuElement.classList.contains('header__hamburger--menu-active')) ||
+          (searchOverlayElement && searchOverlayElement.classList.contains('global__search--wrapper--active')) ||
+          (notificationPanelElement && notificationPanelElement.classList.contains('active'))) {
+        document.body.classList.add('no-scroll');
+      }
+    }
+  };
+
+  isDesktop.addEventListener('change', handleMediaQueryChange);
+  handleMediaQueryChange(isDesktop); // Initial check
 }
