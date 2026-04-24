@@ -200,7 +200,7 @@ async function parseStructure(nav) {
   container.append(wrap);
 
   // Brand section
-  const navBrand = nav.querySelector('div:has(p > picture)');
+  const navBrand = Array.from(nav.children).find((div) => div.querySelector('p > picture'));
   if (navBrand) {
     const logoDiv = document.createElement('div');
     logoDiv.classList.add('logo');
@@ -238,7 +238,7 @@ async function parseStructure(nav) {
   mainNav.setAttribute('aria-expanded', 'false'); // Initial state for accessibility
   wrap.append(mainNav);
 
-  const navSectionsFragment = nav.querySelector('div:has(p > a[href="#"])'); // Find the section containing placeholder buttons
+  const navSectionsFragment = Array.from(nav.children).find((div) => div.querySelector('p > a[href="#"]')); // Find the section containing placeholder buttons
   if (navSectionsFragment) {
     const navUl = document.createElement('ul');
     navUl.setAttribute('itemscope', '');
@@ -358,8 +358,8 @@ async function parseStructure(nav) {
   }
 
   // Tools section
-  const navTools = nav.querySelector('div:has(ul:has(a[title="Facebook"]))'); // Find social links
-  const navUtility = nav.querySelector('div:has(ul:has(a[href*="contact-us"]))'); // Find utility links
+  const navTools = Array.from(nav.children).find((div) => div.querySelector('ul a[title="Facebook"]')); // Find social links
+  const navUtility = Array.from(nav.children).find((div) => div.querySelector('ul a[href*="contact-us"]')); // Find utility links
 
   if (navTools || navUtility) {
     const iconNavDesktop = document.createElement('div');
@@ -413,7 +413,7 @@ async function parseStructure(nav) {
         ulMobile.append(searchLiMobile);
 
         // Search screen (dynamic content from fragment)
-        const searchScreenFragment = nav.querySelector('div:has(form#search-block-form)');
+        const searchScreenFragment = Array.from(nav.children).find((div) => div.querySelector('form#search-block-form'));
         if (searchScreenFragment) {
           const searchScreenWrap = document.createElement('div');
           searchScreenWrap.classList.add('search-screen-wrap');
