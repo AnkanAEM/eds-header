@@ -592,7 +592,7 @@ export default async function decorate(block) {
   // Search toggle functionality
   const searchToggleBtn = block.querySelector('.icon-nav .search > a');
   const searchScreen = block.querySelector('.search-screen-wrap');
-  const searchCloseBtn = blockScreen.querySelector('.icon-nav .search .close'); // Corrected selector
+  //const searchCloseBtn = blockScreen.querySelector('.icon-nav .search .close'); // Corrected selector
 
   if (searchToggleBtn && searchScreen) {
     const toggleSearch = (open) => {
@@ -622,26 +622,25 @@ export default async function decorate(block) {
     });
 
     // Use a more robust selector for the close button, assuming it's within the search screen or the search link
-    const actualSearchCloseBtn = searchScreen.querySelector('.close') || searchToggleBtn.querySelector('.close');
-    if (actualSearchCloseBtn) {
-      actualSearchCloseBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        toggleSearch(false);
-      });
-    }
-
-    // Close search on escape key
-    window.addEventListener('keydown', (e) => {
-      if (e.code === 'Escape' && searchScreen.style.opacity === '1') {
-        toggleSearch(false);
-        searchToggleBtn.focus();
-      }
-    });
-
-    // Stop propagation for search screen elements
-    searchScreen.querySelectorAll('[data-once="search-stop-propagation"]').forEach((el) => {
-      el.addEventListener('click', (e) => e.stopPropagation());
-      el.addEventListener('keydown', (e) => e.stopPropagation());
-    });
+    // const actualSearchCloseBtn = searchScreen.querySelector('.close') || searchToggleBtn.querySelector('.close');
+    // if (actualSearchCloseBtn) {
+    //   actualSearchCloseBtn.addEventListener('click', (e) => {
+    //     e.preventDefault();
+    //     toggleSearch(false);
+    //   });
   }
+
+  // Close search on escape key
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'Escape' && searchScreen.style.opacity === '1') {
+      toggleSearch(false);
+      searchToggleBtn.focus();
+    }
+  });
+
+  // Stop propagation for search screen elements
+  searchScreen.querySelectorAll('[data-once="search-stop-propagation"]').forEach((el) => {
+    el.addEventListener('click', (e) => e.stopPropagation());
+    el.addEventListener('keydown', (e) => e.stopPropagation());
+  });
 }
