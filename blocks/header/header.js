@@ -342,11 +342,15 @@ function setupToolsRow(toolsRow, mainNav) { // Changed block to mainNav
       const desktopMailLink = clonedLink.cloneNode(true);
       desktopMailLink.textContent = ''; // Clear text content for desktop icon
       desktopMailLink.append(createSVG(desktopSvg));
-      desktopUl.append(li.cloneNode(false)).append(desktopMailLink); // Append to desktop
+      const desktopLi = li.cloneNode(false);
+      desktopLi.append(desktopMailLink);
+      desktopUl.append(desktopLi); // Append to desktop
 
       const mobileMailLink = clonedLink.cloneNode(true);
       mobileMailLink.textContent = link.textContent || 'Contact Us'; // Use fragment text or fallback
-      mobileUl.append(li.cloneNode(false)).append(mobileMailLink); // Append to mobile
+      const mobileLi = li.cloneNode(false);
+      mobileLi.append(mobileMailLink);
+      mobileUl.append(mobileLi); // Append to mobile
     } else if (link.textContent.toLowerCase().includes('search')) { // Check for 'search' in textContent
       li.classList.add('search');
       li.setAttribute('data-once', 'search-toggle search-stop-propagation');
