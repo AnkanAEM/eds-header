@@ -457,10 +457,10 @@ export default async function decorate(block) {
       searchForm.append(searchInputWrap);
 
       const searchIconDiv = document.createElement('div');
-  searchIconDiv.classList.add('search-icon');
-  searchIconDiv.setAttribute('data-once', 'search-stop-propagation');
-  searchIconDiv.innerHTML = SEARCH_ICON_SVG;
-  searchInputWrap.append(searchIconDiv);
+      searchIconDiv.classList.add('search-icon');
+      searchIconDiv.setAttribute('data-once', 'search-stop-propagation');
+      searchIconDiv.innerHTML = SEARCH_ICON_SVG;
+      searchInputWrap.append(searchIconDiv);
 
       const searchInput = document.createElement('input');
       searchInput.type = 'text';
@@ -569,7 +569,7 @@ export default async function decorate(block) {
   }
 
   // Search functionality setup
-  setupSearch(block, nav);
+  //setupSearch(block, nav);
 
   // Close mobile menu or search on Escape key
   document.addEventListener('keydown', (e) => {
