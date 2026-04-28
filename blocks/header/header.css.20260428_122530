@@ -194,10 +194,6 @@
         height: auto;
        }
 
-.main-header.nav-up { 
-   transform: unset;
- }
-
 .main-header .wrap .main-nav { 
     top:68px } }
 
@@ -907,8 +903,6 @@ body .rotate-div{display:flex;} }
 .main-header { position:fixed;width:100%;left:0;top:0;transition:all 0.3s ease-in-out;z-index:10;background:#ffffff; }
 
 .main-header.solid { background:#ffffff; }
-
-.main-header.nav-up { transform:translate(0,-100%); }
 
 .main-header .wrap { display:flex;align-items:center;transition:all 0.3s ease-in-out; }
 
