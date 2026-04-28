@@ -2,271 +2,14 @@ import { getMetadata } from '../../scripts/aem.js';
 import { loadFragment } from '../fragment/fragment.js';
 
 // media query match that indicates mobile/tablet width
-const isDesktop = window.matchMedia('(min-width: 992px)'); // Adjusted breakpoint based on CSS
+const isDesktop = window.matchMedia('(min-width: 992px)');
 
 /**
- * Moves instrumentation attributes from an original element to a new element.
- * This is crucial for AEM's tracking and editing functionalities.
- * @param {Element} originalElement The original element from the fragment.
- * @param {Element} newElement The newly created or decorated element.
+ * Creates an SVG element from a given path data.
+ * @param {string} pathData The SVG path data.
+ * @returns {SVGElement} The created SVG element.
  */
-function moveInstrumentation(originalElement, newElement) {
-  if (!originalElement || !newElement) return;
-
-  // Move data-once attributes
-  const dataOnce = originalElement.getAttribute('data-once');
-  if (dataOnce) {
-    newElement.setAttribute('data-once', dataOnce);
-    originalElement.removeAttribute('data-once');
-  }
-
-  // Move any data-cq-* attributes that might be relevant for instrumentation
-  Array.from(originalElement.attributes).forEach((attr) => {
-    if (attr.name.startsWith('data-cq-')) {
-      newElement.setAttribute(attr.name, attr.value);
-      originalElement.removeAttribute(attr.name);
-    }
-  });
-}
-
-function closeOnEscape(e) {
-  if (e.code === 'Escape') {
-    const nav = document.querySelector('.main-nav');
-    const navSections = nav.querySelector('ul[itemscope]');
-    if (!nav || !navSections) return;
-
-    const navSectionExpanded = navSections.querySelector('li[aria-expanded="true"]');
-    if (navSectionExpanded && isDesktop.matches) {
-      // eslint-disable-next-line no-use-before-define
-      toggleAllNavSections(navSections, false);
-      navSectionExpanded.focus();
-    } else if (!isDesktop.matches) {
-      // eslint-disable-next-line no-use-before-define
-      toggleMenu(nav, navSections, false);
-      const hamburger = document.querySelector('.hamburger');
-      if (hamburger) hamburger.focus();
-    }
-  }
-}
-
-function closeOnFocusLost(e) {
-  const header = e.currentTarget;
-  if (!header.contains(e.relatedTarget)) {
-    const nav = header.querySelector('.main-nav');
-    const navSections = nav.querySelector('ul[itemscope]');
-    if (!nav || !navSections) return;
-
-    const navSectionExpanded = navSections.querySelector('li[aria-expanded="true"]');
-    if (navSectionExpanded && isDesktop.matches) {
-      // eslint-disable-next-line no-use-before-define
-      toggleAllNavSections(navSections, false);
-    } else if (!isDesktop.matches) {
-      // eslint-disable-next-line no-use-before-define
-      toggleMenu(nav, navSections, false);
-    }
-  }
-}
-
-/**
- * Toggles all nav sections
- * @param {Element} sections The container element (ul[itemscope])
- * @param {Boolean} expanded Whether the element should be expanded or collapsed
- */
-function toggleAllNavSections(sections, expanded = false) {
-  if (!sections) return;
-  sections.querySelectorAll(':scope > li.has-child').forEach((section) => {
-    section.setAttribute('aria-expanded', expanded);
-    const megaMenu = section.querySelector('.mega-menu');
-    if (megaMenu) {
-      if (expanded) {
-        megaMenu.style.display = ''; // Reset to CSS default
-      } else {
-        megaMenu.style.display = 'none'; // Hide mega menu
-      }
-    }
-  });
-}
-
-/**
- * Toggles the entire nav
- * @param {Element} nav The container element (.main-nav)
- * @param {Element} navSections The nav sections within the container element (ul[itemscope])
- * @param {*} forceExpanded Optional param to force nav expand behavior when not null
- */
-function toggleMenu(nav, navSections, forceExpanded = null) {
-  if (!nav || !navSections) return;
-
-  const expanded = forceExpanded !== null ? !forceExpanded : nav.getAttribute('aria-expanded') === 'true';
-  const hamburger = document.querySelector('.hamburger');
-  if (!hamburger) return;
-
-  document.body.style.overflowY = (expanded || isDesktop.matches) ? '' : 'hidden';
-  nav.setAttribute('aria-expanded', expanded ? 'false' : 'true');
-  hamburger.setAttribute('aria-expanded', expanded ? 'false' : 'true');
-
-  toggleAllNavSections(navSections, expanded || isDesktop.matches ? 'false' : 'true');
-
-  if (!expanded || isDesktop.matches) {
-    window.addEventListener('keydown', closeOnEscape);
-    document.querySelector('.main-header').addEventListener('focusout', closeOnFocusLost);
-  } else {
-    window.removeEventListener('keydown', closeOnEscape);
-    document.querySelector('.main-header').removeEventListener('focusout', closeOnFocusLost);
-  }
-}
-
-function setupMobileNav(nav) {
-  if (!nav) return;
-
-  nav.querySelectorAll('li.has-child').forEach((li) => {
-    const span = li.querySelector(':scope > span');
-    const megaMenu = li.querySelector(':scope > .mega-menu');
-
-    if (span && megaMenu) {
-      span.addEventListener('click', () => {
-        const isExpanded = li.getAttribute('aria-expanded') === 'true';
-        li.setAttribute('aria-expanded', !isExpanded);
-        megaMenu.style.display = !isExpanded ? 'block' : 'none';
-      });
-    }
-
-    // Handle nested sub-menus for mobile
-    megaMenu?.querySelectorAll('.has-sub-child').forEach((subChild) => {
-      const subChildSpan = subChild.querySelector(':scope > span');
-      const innerSubChild = subChild.querySelector(':scope > div.has-inner-sub-child');
-      if (subChildSpan && innerSubChild) {
-        subChildSpan.addEventListener('click', () => {
-          const isSubExpanded = subChild.classList.contains('active');
-          if (isSubExpanded) {
-            subChild.classList.remove('active');
-            innerSubChild.classList.remove('active-child');
-          } else {
-            // Close other open sub-children at the same level
-            subChild.closest('ul').querySelectorAll('.has-sub-child.active').forEach((openSub) => {
-              openSub.classList.remove('active');
-              const openInnerSub = openSub.querySelector(':scope > div.has-inner-sub-child');
-              if (openInnerSub) openInnerSub.classList.remove('active-child');
-            });
-            subChild.classList.add('active');
-innerSubChild.classList.add('active-child');
-          }
-        });
-      }
-    });
-  });
-}
-
-function setupSearchFunctionality(block) {
-  const searchToggle = block.querySelector('.icon-nav .search > a');
-  const searchScreen = block.querySelector('.search-screen-wrap');
-  const searchInput = block.querySelector('.search-screen-wrap .input-text');
-  const searchForm = block.querySelector('#search-block-form');
-  const searchLensIcon = block.querySelector('.icon-nav .search .lens');
-  const searchCloseIcon = block.querySelector('.icon-nav .search .close');
-
-  if (!searchToggle || !searchScreen || !searchInput || !searchForm || !searchLensIcon || !searchCloseIcon) {
-    return;
-  }
-
-  const toggleSearch = (open) => {
-    if (open) {
-      searchScreen.classList.add('active');
-      searchToggle.setAttribute('aria-expanded', 'true');
-      searchLensIcon.style.display = 'none';
-      searchCloseIcon.style.display = 'block';
-      document.body.style.overflowY = 'hidden';
-      setTimeout(() => searchInput.focus(), 300); // Focus after transition
-    } else {
-      searchScreen.classList.remove('active');
-      searchToggle.setAttribute('aria-expanded', 'false');
-      searchLensIcon.style.display = 'block';
-      searchCloseIcon.style.display = 'none';
-      document.body.style.overflowY = '';
-      searchInput.value = ''; // Clear search input
-    }
-  };
-
-  searchToggle.addEventListener('click', (e) => {
-    e.preventDefault();
-    e.stopPropagation(); // Prevent immediate closing
-    const isExpanded = searchToggle.getAttribute('aria-expanded') === 'true';
-    toggleSearch(!isExpanded);
-  });
-
-  // Close search when clicking outside the search screen
-  document.addEventListener('click', (e) => {
-    if (searchScreen.classList.contains('active') && !searchScreen.contains(e.target) && !searchToggle.contains(e.target)) {
-      toggleSearch(false);
-    }
-  });
-
-  // Close search on escape key
-  window.addEventListener('keydown', (e) => {
-    if (e.code === 'Escape' && searchScreen.classList.contains('active')) {
-      toggleSearch(false);
-    }
-  });
-
-  // Prevent closing when clicking inside search screen
-  searchScreen.addEventListener('click', (e) => {
-    e.stopPropagation();
-  });
-
-  // Popular Keywords / Recommended for you click handlers
-  block.querySelectorAll('.search-suggestions-wrap .tokens-wrap ul li').forEach((li) => {
-    li.addEventListener('click', (e) => {
-      e.stopPropagation();
-      searchInput.value = e.target.textContent;
-      searchForm.submit();
-    });
-  });
-}
-
-/**
- * Parses the fragment structure into logical rows.
- * @param {Element} fragment The loaded fragment HTML.
- * @returns {object} An object containing the brandRow, navRow, and toolsRow elements.
- */
-function parseStructure(fragment) {
-  const children = Array.from(fragment.children).filter((node) => node.nodeType === 1); // Only element nodes
-
-  let brandRow = null;
-  let navRow = null;
-  let toolsRow = null;
-
-  children.forEach((child) => {
-    const potentialWrapper = child.querySelector('.default-content-wrapper');
-    const contentRoot = potentialWrapper || child;
-
-    if (contentRoot.querySelector('picture, img')) {
-      brandRow = child;
-    } else if (contentRoot.querySelector('p > a[href], ul')) {
-      // Prioritize nav row as it contains multiple p > a and ul elements
-      const links = contentRoot.querySelectorAll('p > a[href]');
-      const uls = contentRoot.querySelectorAll('ul');
-      if (links.length > 1 || uls.length > 1) {
-        navRow = child;
-      } else if (!toolsRow) { // If it's not clearly nav, it might be tools, but prefer nav
-        toolsRow = child;
-      }
-    } else if (contentRoot.querySelector('ul')) {
-      toolsRow = child;
-    }
-  });
-
-  // Fallback if identification is ambiguous
-  if (!brandRow && children[0]) brandRow = children[0];
-  if (!navRow && children[1]) navRow = children[1];
-  if (!toolsRow && children[2]) toolsRow = children[2];
-
-  return { brandRow, navRow, toolsRow };
-}
-
-/**
- * Creates an SVG element with a path.
- * @returns {SVGElement} The SVG element.
- */
-function createChevronSVG() {
+function createSVG(pathData) {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('viewBox', '-23.5 -23.5 122.80 122.80');
   svg.setAttribute('fill', '#000000');
@@ -277,537 +20,585 @@ function createChevronSVG() {
   g.setAttribute('id', 'Group_65');
   g.setAttribute('data-name', 'Group 65');
   g.setAttribute('transform', 'translate(-831.568 -384.448)');
+  svg.append(g);
 
   const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
   path.setAttribute('id', 'Path_57');
   path.setAttribute('data-name', 'Path 57');
-  path.setAttribute('d', 'M833.068,460.252a1.5,1.5,0,0,1-1.061-2.561l33.557-33.56a2.53,2.53,0,0,0,0-3.564l-33.557-33.558a1.5,1.5,0,0,1,2.122-2.121l33.556,33.558a5.53,5.53,0,0,1,0,7.807l-33.557,33.56A1.5,1.5,0,0,1,833.068,460.252Z');
+  path.setAttribute('d', pathData);
   path.setAttribute('fill', '#030408');
-
   g.append(path);
-  svg.append(g);
+
   return svg;
 }
 
 /**
- * Recursively processes UL/LI structure.
- * @param {Element} ulElement The <ul> element to process.
- * @param {string} levelClass Class to add to <li> elements for styling (e.g., 'first-level-li').
- * @returns {Element} The processed <ul> element.
+ * Creates a mail SVG element.
+ * @returns {SVGElement} The created mail SVG element.
  */
-function processNestedUl(ulElement, levelClass = '') {
-  if (!ulElement || ulElement.tagName !== 'UL') return null;
+function createMailSVG() {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('version', '1.1');
+  svg.setAttribute('id', 'Layer_1');
+  svg.setAttribute('x', '0px');
+  svg.setAttribute('y', '0px');
+  svg.setAttribute('viewBox', '0 0 48 38.4');
+  svg.setAttribute('style', 'enable-background:new 0 0 48 38.4;');
+  svg.setAttribute('xml:space', 'preserve');
+  svg.setAttribute('width', '21');
+  svg.setAttribute('height', '21');
 
-  const newUl = document.createElement('ul');
-  Array.from(ulElement.children).forEach((li) => {
-    if (li.tagName !== 'LI') return;
-
-    const newLi = document.createElement('li');
-    if (levelClass) newLi.classList.add(levelClass);
-    moveInstrumentation(li, newLi); // Move instrumentation from original LI to new LI
-
-    // Extract immediate text content and first anchor
-    let link = null;
-    let textContent = '';
-    Array.from(li.childNodes).forEach((node) => {
-      if (node.nodeType === 1 && node.tagName === 'A' && !link) {
-        link = node.cloneNode(true);
-        moveInstrumentation(node, link);
-      } else if (node.nodeType === 3) { // Text node
-        textContent += node.textContent.trim();
-      }
-    });
-
-    if (link) {
-      newLi.append(link);
-    } else if (textContent) {
-      newLi.textContent = textContent; // If no link, just put text
-    }
-
-    // Check for nested ULs
-    const nestedUl = li.querySelector(':scope > ul');
-    if (nestedUl) {
-      newLi.classList.add('has-child'); // Use has-child for nested ULs as well
-      const span = document.createElement('span');
-      span.append(createChevronSVG());
-      newLi.append(span);
-
-      const nestedDiv = document.createElement('div');
-      nestedDiv.classList.add('has-inner-sub-child'); // Use a generic class for nested divisions
-      nestedDiv.append(processNestedUl(nestedUl, '')); // Recursive call
-      newLi.append(nestedDiv);
-    }
-    newUl.append(newLi);
-  });
-  return newUl;
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('d', 'M3.6,38.4c-1,0-1.8-0.4-2.5-1.1S0,35.8,0,34.8V3.6c0-1,0.4-1.8,1.1-2.5S2.6,0,3.6,0h40.8c1,0,1.8,0.4,2.5,1.1C47.6,1.8,48,2.6,48,3.6v31.2c0,1-0.4,1.8-1.1,2.5c-0.7,0.7-1.6,1.1-2.5,1.1H3.6z M24,20.3L3.6,6.9v27.9h40.8V6.9L24,20.3z M24,16.7L44.2,3.6H3.9L24,16.7z M3.6,6.9V3.6v31.2V6.9z');
+  svg.append(path);
+  return svg;
 }
 
 /**
- * Sets up the desktop navigation structure.
- * @param {Element} navRow The navigation row from the fragment.
- * @returns {DocumentFragment} The constructed navigation DOM.
+ * Creates a search lens SVG element.
+ * @returns {SVGElement} The created search lens SVG element.
  */
-function setupDesktopNav(navRow) {
-  const navContent = navRow ? navRow.querySelector('.default-content-wrapper') || navRow : null;
-  if (!navContent) return new DocumentFragment();
+function createSearchLensSVG() {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 21 21');
+  svg.setAttribute('fill', 'none');
+  svg.classList.add('lens');
 
-  const navFragment = new DocumentFragment();
-  const mainNavUl = document.createElement('ul');
-  mainNavUl.setAttribute('itemscope', '');
-  mainNavUl.setAttribute('itemtype', 'http://www.schema.org/SiteNavigationElement');
-  moveInstrumentation(navRow, mainNavUl); // Move instrumentation from navRow to mainNavUl
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('d', 'M15.0934 2.73157L15.0934 2.73156C11.6883 -0.67354 6.14543 -0.67354 2.74033 2.73156C-0.666039 6.13793 -0.666063 11.6795 2.74035 15.0847C4.38993 16.7342 6.58308 17.6433 8.91623 17.6433C10.9916 17.6433 12.9533 16.9181 14.5221 15.5975L19.5217 20.5972C19.6721 20.7476 19.8687 20.8212 20.0632 20.8212C20.2588 20.8212 20.4554 20.7476 20.6059 20.5972C20.905 20.2981 20.905 19.8121 20.6059 19.513L15.6062 14.5132C18.4815 11.0845 18.3159 5.95535 15.0934 2.73157ZM14.0092 14.0004C12.6491 15.3606 10.8404 16.1098 8.91623 16.1098C6.99211 16.1098 5.18468 15.3606 3.82452 14.0004C1.01633 11.1923 1.01633 6.62394 3.82452 3.81575C5.22857 2.41171 7.07147 1.71024 8.91623 1.71024C10.7609 1.71024 12.6052 2.41296 14.0092 3.81575C16.8174 6.62394 16.8174 11.1923 14.0092 14.0004Z');
+  path.setAttribute('stroke-width', '0.25');
+  svg.append(path);
+  return svg;
+}
 
-  let currentLi = null;
-  let leftDivBuffer = [];
+/**
+ * Creates a search close SVG element.
+ * @returns {SVGElement} The created search close SVG element.
+ */
+function createSearchCloseSVG() {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 50 50');
+  svg.classList.add('close');
 
-  Array.from(navContent.children).forEach((child) => {
-    if (child.nodeType !== 1) return; // Skip non-element nodes
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('d', 'M 9.15625 6.3125 L 6.3125 9.15625 L 22.15625 25 L 6.21875 40.96875 L 9.03125 43.78125 L 25 27.84375 L 40.9375 43.78125 L 43.78125 40.9375 L 27.84375 25 L 43.6875 9.15625 L 40.84375 6.3125 L 25 22.15625 Z');
+  svg.append(path);
+  return svg;
+}
+
+/**
+ * Creates a submit arrow SVG element.
+ * @returns {SVGElement} The created submit arrow SVG element.
+ */
+function createSubmitArrowSVG() {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('width', '12');
+  svg.setAttribute('height', '8');
+  svg.setAttribute('viewBox', '0 0 12 8');
+  svg.setAttribute('fill', 'none');
+
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('d', 'M11.3536 4.35355C11.5488 4.15829 11.5488 3.84171 11.3536 3.64645L8.17157 0.464465C7.97631 0.269203 7.65973 0.269203 7.46447 0.464465C7.2692 0.659728 7.2692 0.97631 7.46447 1.17157L10.2929 4L7.46447 6.82843C7.2692 7.02369 7.2692 7.34027 7.46447 7.53553C7.65973 7.7308 7.97631 7.7308 8.17157 7.53553L11.3536 4.35355ZM4.37114e-08 4.5L11 4.5L11 3.5L-4.37114e-08 3.5L4.37114e-08 4.5Z');
+  path.setAttribute('fill', 'black');
+  svg.append(path);
+  return svg;
+}
+
+/**
+ * Moves instrumentation attributes from an original element to a new element.
+ * @param {Element} originalElement The original element from the fragment.
+ * @param {Element} newElement The newly created or decorated element.
+ */
+function moveInstrumentation(originalElement, newElement) {
+  if (!originalElement || !newElement) return;
+  [...originalElement.attributes].forEach((attr) => {
+    if (attr.name.startsWith('data-aue-') || attr.name.startsWith('data-cq-')) {
+      newElement.setAttribute(attr.name, attr.value);
+    }
+  });
+}
+
+function closeOnEscape(e) {
+  if (e.code === 'Escape') {
+    const nav = document.getElementById('nav');
+    if (!nav) return;
+
+    const navSectionExpanded = nav.querySelector('.has-child.is-active');
+    if (navSectionExpanded && isDesktop.matches) {
+      navSectionExpanded.classList.remove('is-active');
+      const megaMenu = navSectionExpanded.querySelector('.mega-menu');
+      if (megaMenu) {
+        megaMenu.style.display = 'none';
+      }
+      navSectionExpanded.focus(); // Return focus to the parent menu item
+    } else if (!isDesktop.matches) {
+      // eslint-disable-next-line no-use-before-define
+      toggleMenu(nav, false);
+      const hamburger = nav.closest('.main-header').querySelector('.hamburger');
+      if (hamburger) hamburger.focus(); // Return focus to the hamburger
+    }
+
+    // Close search if open
+    const searchScreenWrap = document.querySelector('.search-screen-wrap');
+    const searchElement = document.querySelector('.search.is-active');
+    if (searchScreenWrap && searchElement && searchScreenWrap.style.display === 'block') {
+      searchScreenWrap.style.display = 'none';
+      searchElement.classList.remove('is-active');
+      const searchLink = searchElement.querySelector('a');
+      if (searchLink) {
+        searchLink.querySelector('.lens')?.style.setProperty('display', 'block');
+        searchLink.querySelector('.close')?.style.setProperty('display', 'none');
+        searchLink.querySelector('span')?.style.setProperty('display', 'block');
+      }
+      document.body.style.overflowY = '';
+      searchLink.focus(); // Return focus to the search icon
+    }
+  }
+}
+
+function closeOnFocusLost(e) {
+  const nav = e.currentTarget;
+  if (!nav.contains(e.relatedTarget)) {
+    const navSectionExpanded = nav.querySelector('.has-child.is-active');
+    if (navSectionExpanded && isDesktop.matches) {
+      navSectionExpanded.classList.remove('is-active');
+      const megaMenu = navSectionExpanded.querySelector('.mega-menu');
+      if (megaMenu) {
+        megaMenu.style.display = 'none';
+      }
+    } else if (!isDesktop.matches) {
+      // eslint-disable-next-line no-use-before-define
+      toggleMenu(nav, false);
+    }
+  }
+}
+
+/**
+ * Toggles the entire nav
+ * @param {Element} nav The container element
+ * @param {*} forceExpanded Optional param to force nav expand behavior when not null
+ */
+function toggleMenu(nav, forceExpanded = null) {
+  if (!nav) return;
+  const expanded = forceExpanded !== null ? forceExpanded : nav.getAttribute('aria-expanded') === 'true';
+  const hamburger = nav.closest('.main-header').querySelector('.hamburger');
+
+  document.body.style.overflowY = (expanded || isDesktop.matches) ? '' : 'hidden';
+  nav.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+  if (hamburger) {
+    hamburger.setAttribute('aria-label', expanded ? 'Close navigation' : 'Open navigation');
+    hamburger.classList.toggle('is-active', expanded);
+  }
+  nav.classList.toggle('is-active', expanded);
+
+  // enable menu collapse on escape keypress
+  if (expanded || isDesktop.matches) {
+    window.addEventListener('keydown', closeOnEscape);
+    nav.addEventListener('focusout', closeOnFocusLost);
+  } else {
+    window.removeEventListener('keydown', closeOnEscape);
+    nav.removeEventListener('focusout', closeOnFocusLost);
+  }
+}
+
+/**
+ * Parses the fragment into brand, nav, and tools rows.
+ * @param {Element} fragment The fragment element.
+ * @returns {{brandRow: Element, navRow: Element, toolsRow: Element}} The parsed rows.
+ */
+function parseStructure(fragment) {
+  const children = Array.from(fragment.children).filter(
+    (child) => child.nodeType === Node.ELEMENT_NODE && !child.matches('style, script, link'),
+  );
+
+  let brandRow = null;
+  let navRow = null;
+  let toolsRow = null;
+
+  // Identify brand row: contains a picture or img
+  brandRow = children.find((child) => child.querySelector('picture, img'));
+
+  // Identify nav row: contains multiple p > a elements followed by ul
+  navRow = children.find((child) => {
+    const pLinks = child.querySelectorAll('p > a');
+    return pLinks.length > 0 && Array.from(pLinks).some((link) => link.nextElementSibling?.tagName === 'UL');
+  });
+
+  // Identify tools row: contains ul elements, typically for social or utility links
+  toolsRow = children.find((child) => child !== brandRow && child !== navRow && child.querySelector('ul'));
+
+  // Handle default-content-wrapper if present
+  const unwrap = (row) => (row && row.classList.contains('default-content-wrapper') ? row.firstElementChild : row);
+
+  return {
+    brandRow: unwrap(brandRow),
+    navRow: unwrap(navRow),
+    toolsRow: unwrap(toolsRow),
+  };
+}
+
+/**
+ * Sets up the brand logo.
+ * @param {Element} brandRow The brand row element from the fragment.
+ * @param {DocumentFragment} docFragment The document fragment to append to.
+ * @returns {Element} The created logo container.
+ */
+function setupBrand(brandRow, docFragment) {
+  if (!brandRow) return null;
+
+  const logoDiv = document.createElement('div');
+  logoDiv.classList.add('logo');
+  moveInstrumentation(brandRow, logoDiv);
+
+  let link = brandRow.querySelector('a');
+  const img = brandRow.querySelector('img');
+
+  if (!link) {
+    link = document.createElement('a');
+    link.href = '/'; // Default home link if not present
+  }
+
+  if (img) {
+    link.innerHTML = ''; // Clear existing content to re-append img
+    link.append(img);
+    img.classList.add('hiddenlogo1'); // Add class from original HTML
+    img.setAttribute('alt', img.getAttribute('alt') || 'Mahindra Brand Logo');
+    img.setAttribute('title', img.getAttribute('title') || 'Mahindra Brand Logo');
+    img.setAttribute('width', img.getAttribute('width') || '200');
+    img.setAttribute('height', img.getAttribute('height') || '30');
+    img.setAttribute('loading', 'lazy');
+    img.style.width = 'auto';
+  }
+  logoDiv.append(link);
+
+  docFragment.append(logoDiv);
+  return logoDiv;
+}
+
+/**
+ * Sets up desktop navigation.
+ * @param {Element} navRow The navigation row element from the fragment.
+ * @param {DocumentFragment} docFragment The document fragment to append to.
+ * @returns {Element} The created main nav element.
+ */
+function setupDesktopNav(navRow, docFragment) {
+  if (!navRow) return null;
+
+  const mainNav = document.createElement('nav');
+  mainNav.classList.add('main-nav');
+  mainNav.setAttribute('data-once', 'initSubChildToggle');
+  moveInstrumentation(navRow, mainNav);
+
+  const ul = document.createElement('ul');
+  ul.setAttribute('itemscope', '');
+  ul.setAttribute('itemtype', 'http://www.schema.org/SiteNavigationElement');
+  mainNav.append(ul);
+
+  let currentLeftDivContent = [];
+  const svgPathData = 'M833.068,460.252a1.5,1.5,0,0,1-1.061-2.561l33.557-33.56a2.53,2.53,0,0,0,0-3.564l-33.557-33.558a1.5,1.5,0,0,1,2.122-2.121l33.556,33.558a5.53,5.53,0,0,1,0,7.807l-33.557,33.56A1.5,1.5,0,0,1,833.068,460.252Z';
+
+  Array.from(navRow.children).forEach((child) => {
+    // Skip empty text nodes and comments
+    if (child.nodeType === Node.TEXT_NODE || child.nodeType === Node.COMMENT_NODE) {
+      return;
+    }
 
     if (child.tagName === 'P' && child.querySelector('a')) {
       // This is a navigation trigger (e.g., "Who We Are")
-      if (currentLi) {
-        mainNavUl.append(currentLi); // Add previous item if exists
-        currentLi = null; // Reset for next item
+      const li = document.createElement('li');
+      li.classList.add('has-child', 'hover-red');
+      li.setAttribute('itemprop', 'name');
+      li.setAttribute('data-once', 'nav-close-search');
+      moveInstrumentation(child, li);
+
+      const a = child.querySelector('a');
+      if (a) {
+        a.setAttribute('itemprop', 'url');
+        li.append(a);
       }
-
-      const originalP = child;
-      const originalA = originalP.querySelector('a');
-      if (!originalA) return;
-
-      currentLi = document.createElement('li');
-      currentLi.classList.add('has-child', 'hover-red');
-      currentLi.setAttribute('itemprop', 'name');
-      moveInstrumentation(originalP, currentLi); // Move instrumentation from P to LI
-
-      const newA = document.createElement('a');
-      newA.setAttribute('itemprop', 'url');
-      newA.href = originalA.href;
-      newA.textContent = originalA.textContent;
-      moveInstrumentation(originalA, newA); // Move instrumentation from A to newA
-      currentLi.append(newA);
 
       const span = document.createElement('span');
-      span.append(createChevronSVG());
-      currentLi.append(span);
+      span.append(createSVG(svgPathData));
+      li.append(span);
 
-      // Create mega-menu container
-      const megaMenu = document.createElement('div');
-      megaMenu.classList.add('mega-menu');
-      const megaMenuWrap = document.createElement('div');
-      megaMenuWrap.classList.add('wrap', 'container');
-      const centerDiv = document.createElement('div');
-      centerDiv.classList.add('center-div');
-
-      // Flush leftDivBuffer into the current mega-menu's left-div
-      if (leftDivBuffer.length > 0) {
-        const leftDiv = document.createElement('div');
-        leftDiv.classList.add('left-div');
-        // Dynamically create class based on link text if needed, but ensure it's allowed
-        const titleText = originalA.textContent.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-');
-        leftDiv.classList.add(`${titleText}-left-div`);
-
-        leftDivBuffer.forEach((bufferedItem) => {
-          leftDiv.append(bufferedItem);
-        });
-        centerDiv.append(leftDiv);
-        leftDivBuffer = []; // Clear buffer
+      // Find the next sibling UL which is the mega-menu content
+      let nextSibling = child.nextElementSibling;
+      while (nextSibling && (nextSibling.nodeType === Node.TEXT_NODE || nextSibling.nodeType === Node.COMMENT_NODE)) {
+        nextSibling = nextSibling.nextElementSibling;
       }
 
-      megaMenuWrap.append(centerDiv);
-      megaMenu.append(megaMenuWrap);
-      currentLi.append(megaMenu);
-    } else if (child.tagName === 'UL' && currentLi) {
-      // This is a navigation list for the current trigger
-      const megaMenu = currentLi.querySelector('.mega-menu');
-      const centerDiv = megaMenu ? megaMenu.querySelector('.center-div') : null;
-      if (!centerDiv) return;
+      if (nextSibling && nextSibling.tagName === 'UL') {
+        const megaMenu = document.createElement('div');
+        megaMenu.classList.add('mega-menu');
+        moveInstrumentation(nextSibling, megaMenu);
 
-      let subNavWrap = centerDiv.querySelector('.sub-nav-wrap');
-      if (!subNavWrap) {
-        subNavWrap = document.createElement('div');
+        const wrapContainer = document.createElement('div');
+        wrapContainer.classList.add('wrap', 'container');
+        megaMenu.append(wrapContainer);
+
+        const centerDiv = document.createElement('div');
+        centerDiv.classList.add('center-div');
+        wrapContainer.append(centerDiv);
+
+        // Populate left-div with buffered content
+        if (currentLeftDivContent.length > 0) {
+          const leftDiv = document.createElement('div');
+          leftDiv.classList.add('left-div');
+          centerDiv.append(leftDiv);
+
+          currentLeftDivContent.forEach((contentNode) => {
+            if (contentNode.tagName === 'H4') {
+              contentNode.classList.add('left-div-heading');
+            } else if (contentNode.tagName === 'P') {
+              if (contentNode.textContent.includes('#')) {
+                contentNode.classList.add('left-div-subdesc');
+              } else {
+                contentNode.classList.add('left-div-desc');
+              }
+            } else if (contentNode.tagName === 'UL') {
+              Array.from(contentNode.children).forEach((listItem) => {
+                listItem.classList.add('list-text-red');
+                const spanElement = document.createElement('span');
+                const textNodes = Array.from(listItem.childNodes).filter(node => node.nodeType === Node.TEXT_NODE);
+                if (textNodes.length > 1) {
+                  spanElement.textContent = textNodes[1].textContent.trim();
+                  listItem.textContent = textNodes[0].textContent.trim();
+                  listItem.append(spanElement);
+                }
+              });
+            }
+            leftDiv.append(contentNode);
+          });
+          currentLeftDivContent = []; // Clear buffer after flushing
+        }
+
+        const subNavWrap = document.createElement('div');
         subNavWrap.classList.add('sub-nav-wrap');
         centerDiv.append(subNavWrap);
-      }
-      moveInstrumentation(child, subNavWrap); // Move instrumentation from UL to subNavWrap
 
-      // Check if the current UL has nested ULs
-      const hasNestedUl = child.querySelector('ul');
-      if (hasNestedUl) {
-        // If it has nested ULs, apply the top-level-li class and process recursively
-        const processedUl = processNestedUl(child, 'top-level-li');
-        subNavWrap.append(processedUl);
-      } else {
-        // Otherwise, just append the UL as is, with basic LI decoration
-        const newUl = document.createElement('ul');
-        Array.from(child.children).forEach((li) => {
-          if (li.tagName === 'LI') {
+        // Recursively process the UL for nested menus
+        const processNestedUl = (parentUl, targetElement) => {
+          Array.from(parentUl.children).forEach((originalLi) => {
             const newLi = document.createElement('li');
-            newLi.classList.add('top-level-li'); // Add top-level-li for direct children
-            moveInstrumentation(li, newLi); // Move instrumentation from original LI to new LI
-            const link = li.querySelector('a');
-            if (link) {
-              const newLink = link.cloneNode(true);
-              moveInstrumentation(link, newLink);
-              newLi.append(newLink);
-            } else {
-              newLi.textContent = li.textContent.trim();
+            moveInstrumentation(originalLi, newLi);
+
+            const originalLink = originalLi.querySelector('a');
+            const originalTextNodes = Array.from(originalLi.childNodes).filter(node => node.nodeType === Node.TEXT_NODE);
+            const liText = originalLink ? originalLink.textContent.trim() : originalTextNodes[0]?.textContent.trim();
+
+            if (originalLink) {
+              newLi.append(originalLink);
+            } else if (liText) {
+              const tempA = document.createElement('a');
+              tempA.textContent = liText;
+              newLi.append(tempA);
             }
-            newUl.append(newLi);
-          }
-        });
-        subNavWrap.append(newUl);
+
+            const nestedUl = originalLi.querySelector('ul');
+            if (nestedUl) {
+              newLi.classList.add('top-level-li'); // Add class for items with sub-menus
+              const nestedSpan = document.createElement('span');
+              nestedSpan.append(createSVG(svgPathData));
+              newLi.append(nestedSpan);
+
+              const hasSubChildDiv = document.createElement('div');
+              hasSubChildDiv.classList.add('has-sub-child');
+              moveInstrumentation(nestedUl, hasSubChildDiv);
+              newLi.append(hasSubChildDiv);
+
+              const innerUl = document.createElement('ul');
+              hasSubChildDiv.append(innerUl);
+              processNestedUl(nestedUl, innerUl); // Recurse for deeper nesting
+            } else {
+              // Check if it's a first-level-li based on the example structure
+              const parentOfNewLi = newLi.parentElement;
+              if (parentOfNewLi && parentOfNewLi.closest('.has-sub-child')) {
+                newLi.classList.add('first-level-li');
+              }
+            }
+
+            targetElement.append(newLi);
+          });
+        };
+
+        const topLevelUl = document.createElement('ul');
+        subNavWrap.append(topLevelUl);
+        processNestedUl(nextSibling, topLevelUl);
+        ul.append(li);
+        li.append(megaMenu);
       }
-    } else if (currentLi) {
-      // Collect non-navigation siblings (e.g., H4, P, standalone ULs for left-div content)
-      // Clone the node to avoid moving it from the original fragment prematurely
-      const clonedChild = child.cloneNode(true);
-      moveInstrumentation(child, clonedChild);
-      leftDivBuffer.push(clonedChild);
+    } else {
+      // Buffer non-navigation content for the next mega-menu's left-div
+      currentLeftDivContent.push(child.cloneNode(true));
     }
   });
 
-  if (currentLi) {
-    mainNavUl.append(currentLi);
-  }
-  navFragment.append(mainNavUl);
-  return navFragment;
+  docFragment.append(mainNav);
+  return mainNav;
 }
 
 /**
- * Sets up the utility tools and social links.
- * @param {Element} toolsRow The tools row from the fragment.
- * @returns {DocumentFragment} The constructed tools DOM.
+ * Sets up utility tools (contact, search, social).
+ * @param {Element} toolsRow The tools row element from the fragment.
+ * @param {DocumentFragment} docFragment The document fragment to append to.
+ * @returns {Element} The created icon nav element.
  */
-function setupTools(toolsRow) {
-  const toolsContent = toolsRow ? toolsRow.querySelector('.default-content-wrapper') || toolsRow : null;
-  if (!toolsContent) return new DocumentFragment();
+function setupTools(toolsRow, docFragment) {
+  if (!toolsRow) return null;
 
-  const toolsFragment = new DocumentFragment();
+  const iconNavDesktop = document.createElement('div');
+  iconNavDesktop.classList.add('icon-nav', 'desktop-menus-icon');
+  moveInstrumentation(toolsRow, iconNavDesktop);
 
-  // Mobile Icons
-  const mobileIconNav = document.createElement('div');
-  mobileIconNav.classList.add('icon-nav', 'mobile-menus-icon');
-  const mobileUl = document.createElement('ul');
-  mobileIconNav.append(mobileUl);
-  toolsFragment.append(mobileIconNav);
+  const iconNavMobile = document.createElement('div');
+  iconNavMobile.classList.add('icon-nav', 'mobile-menus-icon');
+  moveInstrumentation(toolsRow, iconNavMobile);
 
-  // Desktop Icons
-  const desktopIconNav = document.createElement('div');
-  desktopIconNav.classList.add('icon-nav', 'desktop-menus-icon');
   const desktopUl = document.createElement('ul');
-  desktopIconNav.append(desktopUl);
-  toolsFragment.append(desktopIconNav);
+  const mobileUl = document.createElement('ul');
+  iconNavDesktop.append(desktopUl);
+  iconNavMobile.append(mobileUl);
 
-  let socialLinksUl = null;
-  let utilityLinksUl = null;
-  let searchFormAction = 'https://www.mahindra.com/search'; // Default search action
+  const utilityLinks = toolsRow.querySelector('ul:last-of-type');
 
-  Array.from(toolsContent.children).forEach((child) => {
-    if (child.tagName === 'UL') {
-      const links = child.querySelectorAll('a');
-      if (links.length > 0) {
-        const isSocial = Array.from(links).some(link =>
-          ['facebook', 'twitter', 'instagram', 'youtube', 'linkedin'].some(social =>
-            link.href.toLowerCase().includes(social)
-          )
-        );
+  // Pre-create SVGs to clone
+  const mailSvg = createMailSVG();
+  const lensSvg = createSearchLensSVG();
+  const closeSvg = createSearchCloseSVG();
+  const submitArrowSvg = createSubmitArrowSVG();
 
-        if (isSocial) {
-          socialLinksUl = child;
-        } else {
-          utilityLinksUl = child;
-        }
-      }
-    } else if (child.tagName === 'FORM' && child.id === 'search-block-form') {
-      searchFormAction = child.getAttribute('action') || searchFormAction;
-    }
-  });
-
-  // Process utility links (Contact Us, Search)
-  if (utilityLinksUl) {
-    Array.from(utilityLinksUl.children).forEach((li) => {
+  if (utilityLinks) {
+    Array.from(utilityLinks.children).forEach((li) => {
       const link = li.querySelector('a');
-      if (link) {
-        const newLiMobile = document.createElement('li');
-        const newLiDesktop = document.createElement('li');
-        moveInstrumentation(li, newLiMobile); // Move instrumentation from LI to newLiMobile
-        moveInstrumentation(li, newLiDesktop); // Move instrumentation from LI to newLiDesktop
+      if (!link) return;
 
-        if (link.textContent.toLowerCase() === 'contact us') {
-          newLiMobile.classList.add('mail');
-          newLiDesktop.classList.add('mail');
+      const desktopLi = document.createElement('li');
+      const mobileLi = document.createElement('li');
+      moveInstrumentation(li, desktopLi);
+      moveInstrumentation(li, mobileLi);
 
-          const newLinkMobile = link.cloneNode(true);
-          const newLinkDesktop = link.cloneNode(true);
-          moveInstrumentation(link, newLinkMobile);
-          moveInstrumentation(link, newLinkDesktop);
+      if (link.textContent.toLowerCase().includes('contact us')) {
+        desktopLi.classList.add('mail');
+        mobileLi.classList.add('mail');
 
-          // Mobile Contact Us text
-          newLinkMobile.textContent = link.textContent; // Use original text
-          newLiMobile.append(newLinkMobile);
+        const contactLinkDesktop = link.cloneNode(true);
+        contactLinkDesktop.innerHTML = ''; // Clear existing text
+        contactLinkDesktop.append(mailSvg.cloneNode(true)); // Append cloned SVG
+        desktopLi.append(contactLinkDesktop);
 
-          // Desktop Contact Us SVG
-          const mailSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-          mailSvg.setAttribute('version', '1.1');
-          mailSvg.setAttribute('id', 'Layer_1');
-          mailSvg.setAttribute('x', '0px');
-          mailSvg.setAttribute('y', '0px');
-          mailSvg.setAttribute('viewBox', '0 0 48 38.4');
-          mailSvg.setAttribute('style', 'enable-background:new 0 0 48 38.4;');
-          mailSvg.setAttribute('xml:space', 'preserve');
-          mailSvg.setAttribute('width', '21');
-          mailSvg.setAttribute('height', '21');
-          const mailPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-          mailPath.setAttribute('d', 'M3.6,38.4c-1,0-1.8-0.4-2.5-1.1S0,35.8,0,34.8V3.6c0-1,0.4-1.8,1.1-2.5S2.6,0,3.6,0h40.8c1,0,1.8,0.4,2.5,1.1C47.6,1.8,48,2.6,48,3.6v31.2c0,1-0.4,1.8-1.1,2.5c-0.7,0.7-1.6,1.1-2.5,1.1H3.6z M24,20.3L3.6,6.9v27.9h40.8V6.9L24,20.3z M24,16.7L44.2,3.6H3.9L24,16.7z M3.6,6.9V3.6v31.2V6.9z');
-          mailSvg.append(mailPath);
-          newLinkDesktop.textContent = ''; // Clear text for desktop
-          newLinkDesktop.append(mailSvg);
-          newLiDesktop.append(newLinkDesktop);
+        const contactLinkMobile = link.cloneNode(true);
+        mobileLi.append(contactLinkMobile); // Mobile keeps text
+      } else if (link.textContent.toLowerCase().includes('search')) {
+        desktopLi.classList.add('search');
+        mobileLi.classList.add('search');
+        desktopLi.setAttribute('data-once', 'search-toggle search-stop-propagation');
+        mobileLi.setAttribute('data-once', 'search-toggle search-stop-propagation');
 
-        } else if (link.textContent.toLowerCase() === 'search') {
-          newLiMobile.classList.add('search');
-          newLiDesktop.classList.add('search');
+        const searchLink = document.createElement('a');
+        searchLink.href = '#';
+        searchLink.setAttribute('data-once', 'search-stop-propagation');
+        searchLink.append(lensSvg.cloneNode(true));
+        searchLink.append(closeSvg.cloneNode(true));
 
-          // Search Link with SVG icons
-          const createSearchLinkContent = () => {
-            const searchA = link.cloneNode(true);
-            moveInstrumentation(link, searchA);
-            searchA.textContent = ''; // Clear original text
+        const searchSpan = document.createElement('span');
+        searchSpan.append(document.createTextNode(' Search')); // Use createTextNode
+        searchLink.append(searchSpan); // Add text for mobile
 
-            const lensSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-            lensSvg.setAttribute('viewBox', '0 0 21 21');
-            lensSvg.setAttribute('fill', 'none');
-            lensSvg.classList.add('lens');
-            moveInstrumentation(link, lensSvg); // Instrumentation for SVG
-            const lensPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            lensPath.setAttribute('d', 'M15.0934 2.73157L15.0934 2.73156C11.6883 -0.67354 6.14543 -0.67354 2.74033 2.73156C-0.666039 6.13793 -0.666063 11.6795 2.74035 15.0847C4.38993 16.7342 6.58308 17.6433 8.91623 17.6433C10.9916 17.6433 12.9533 16.9181 14.5221 15.5975L19.5217 20.5972C19.6721 20.7476 19.8687 20.8212 20.0632 20.8212C20.2588 20.8212 20.4554 20.7476 20.6059 20.5972C20.905 20.2981 20.905 19.8121 20.6059 19.513L15.6062 14.5132C18.4815 11.0845 18.3159 5.95535 15.0934 2.73157ZM14.0092 14.0004C12.6491 15.3606 10.8404 16.1098 8.91623 16.1098C6.99211 16.1098 5.18468 15.3606 3.82452 14.0004C1.01633 11.1923 1.01633 6.62394 3.82452 3.81575C5.22857 2.41171 7.07147 1.71024 8.91623 1.71024C10.7609 1.71024 12.6052 2.41296 14.0092 3.81575C16.8174 6.62394 16.8174 11.1923 14.0092 14.0004Z');
-            lensPath.setAttribute('stroke-width', '0.25');
-            moveInstrumentation(link, lensPath); // Instrumentation for path
-            lensSvg.append(lensPath);
+        const searchScreenWrap = document.createElement('div');
+        searchScreenWrap.classList.add('search-screen-wrap');
 
-            const closeSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-            closeSvg.setAttribute('viewBox', '0 0 50 50');
-            closeSvg.classList.add('close');
-            moveInstrumentation(link, closeSvg); // Instrumentation for SVG
-            const closePath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            closePath.setAttribute('d', 'M 9.15625 6.3125 L 6.3125 9.15625 L 22.15625 25 L 6.21875 40.96875 L 9.03125 43.78125 L 25 27.84375 L 40.9375 43.78125 L 43.78125 40.9375 L 27.84375 25 L 43.6875 9.15625 L 40.84375 6.3125 L 25 22.15625 Z');
-            moveInstrumentation(link, closePath); // Instrumentation for path
-            closeSvg.append(closePath);
+        const searchWrapInner = document.createElement('div');
+        searchWrapInner.classList.add('wrap');
+        searchScreenWrap.append(searchWrapInner);
 
-            const searchSpan = document.createElement('span');
-            searchSpan.textContent = ` ${link.textContent}`; // Use original text
-            moveInstrumentation(link, searchSpan); // Instrumentation for span
+        const searchForm = document.createElement('form');
+        searchForm.action = 'https://www.mahindra.com/search';
+        searchForm.method = 'get';
+        searchForm.id = 'search-block-form';
+        searchForm.setAttribute('accept-charset', 'UTF-8');
+        searchForm.setAttribute('data-drupal-form-fields', 'edit-keys');
+        searchWrapInner.append(searchForm);
 
-            searchA.append(lensSvg);
-            searchA.append(closeSvg);
-            searchA.append(searchSpan);
-            return searchA;
-          };
+        const searchInputWrap = document.createElement('div');
+        searchInputWrap.classList.add('search-wrap');
+        searchForm.append(searchInputWrap);
 
-          newLiMobile.append(createSearchLinkContent());
-          newLiDesktop.append(createSearchLinkContent());
+        const searchIconDiv = document.createElement('div');
+        searchIconDiv.classList.add('search-icon');
+        searchIconDiv.append(lensSvg.cloneNode(true)); // Re-use lens SVG for input icon
+        searchInputWrap.append(searchIconDiv);
 
-          // Search Screen Wrap
-          const searchScreenWrap = document.createElement('div');
-          searchScreenWrap.classList.add('search-screen-wrap');
-          moveInstrumentation(link, searchScreenWrap); // Instrumentation for searchScreenWrap
+        const searchInput = document.createElement('input');
+        searchInput.type = 'text';
+        searchInput.classList.add('input-text', 'searchtext');
+        searchInput.required = true;
+        searchInput.name = 'key';
+        searchInput.id = 'searchInput';
+        searchInput.autocomplete = 'off';
+        searchInputWrap.append(searchInput);
 
-          const searchScreenWrapInner = document.createElement('div');
-          searchScreenWrapInner.classList.add('wrap');
-          moveInstrumentation(link, searchScreenWrapInner); // Instrumentation for searchScreenWrapInner
+        const submitButton = document.createElement('button');
+        submitButton.classList.add('submit-button');
+        const submitLabel = document.createElement('div');
+        submitLabel.classList.add('label');
+        submitLabel.append(document.createTextNode(' Submit')); // Use createTextNode
+        submitButton.append(submitLabel);
+        submitButton.append(submitArrowSvg.cloneNode(true)); // Append SVG after label
+        searchInputWrap.append(submitButton);
 
-          // Form
-          const searchForm = document.createElement('form');
-          searchForm.setAttribute('action', searchFormAction); // Use dynamic action
-          searchForm.setAttribute('method', 'get');
-          searchForm.setAttribute('id', 'search-block-form');
-          searchForm.setAttribute('accept-charset', 'UTF-8');
-          searchForm.setAttribute('data-drupal-form-fields', 'edit-keys');
-          moveInstrumentation(link, searchForm); // Instrumentation for searchForm
+        const searchResultBox = document.createElement('div');
+        searchResultBox.classList.add('searchResultBox');
+        searchResultBox.style.display = 'none';
+        searchForm.append(searchResultBox);
 
-          const searchWrap = document.createElement('div');
-          searchWrap.classList.add('search-wrap');
-          moveInstrumentation(link, searchWrap); // Instrumentation for searchWrap
+        const swiper = document.createElement('div');
+        swiper.classList.add('swiper', 'scrollSwiper');
+        searchResultBox.append(swiper);
 
-          const searchIconDiv = document.createElement('div');
-          searchIconDiv.classList.add('search-icon');
-          moveInstrumentation(link, searchIconDiv); // Instrumentation for searchIconDiv
-          const searchIconSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-          searchIconSvg.setAttribute('viewBox', '0 0 21 21');
-          searchIconSvg.setAttribute('fill', 'none');
-          moveInstrumentation(link, searchIconSvg); // Instrumentation for searchIconSvg
-          const searchIconPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-          searchIconPath.setAttribute('d', 'M15.0934 2.73157L15.0934 2.73156C11.6883 -0.67354 6.14543 -0.67354 2.74033 2.73156C-0.666039 6.13793 -0.666063 11.6795 2.74035 15.0847C4.38993 16.7342 6.58308 17.6433 8.91623 17.6433C10.9916 17.6433 12.9533 16.9181 14.5221 15.5975L19.5217 20.5972C19.6721 20.7476 19.8687 20.8212 20.0632 20.8212C20.2588 20.8212 20.4554 20.7476 20.6059 20.5972C20.905 20.2981 20.905 19.8121 20.6059 19.513L15.6062 14.5132C18.4815 11.0845 18.3159 5.95535 15.0934 2.73157ZM14.0092 14.0004C12.6491 15.3606 10.8404 16.1098 8.91623 16.1098C6.99211 16.1098 5.18468 15.3606 3.82452 14.0004C1.01633 11.1923 1.01633 6.62394 3.82452 3.81575C5.22857 2.41171 7.07147 1.71024 8.91623 1.71024C10.7609 1.71024 12.6052 2.41296 14.0092 3.81575C16.8174 6.62394 16.8174 11.1923 14.0092 14.0004Z');
-          searchIconPath.setAttribute('stroke-width', '0.25');
-          moveInstrumentation(link, searchIconPath); // Instrumentation for path
-          searchIconSvg.append(searchIconPath);
-          searchIconDiv.append(searchIconSvg);
+        const swiperWrapper = document.createElement('div');
+        swiperWrapper.classList.add('swiper-wrapper');
+        swiper.append(swiperWrapper);
 
-          const searchInput = document.createElement('input');
-          searchInput.setAttribute('type', 'text');
-          searchInput.classList.add('input-text', 'searchtext');
-          searchInput.setAttribute('required', '');
-          searchInput.setAttribute('name', 'key');
-          searchInput.setAttribute('id', 'searchInput');
-          searchInput.setAttribute('autocomplete', 'off');
-          moveInstrumentation(link, searchInput); // Instrumentation for input
+        const swiperSlide = document.createElement('div');
+        swiperSlide.classList.add('swiper-slide');
+        swiperWrapper.append(swiperSlide);
 
-          const submitButton = document.createElement('button');
-          submitButton.classList.add('submit-button');
-          submitButton.setAttribute('type', 'submit');
-          moveInstrumentation(link, submitButton); // Instrumentation for button
+        const swiperScrollbar = document.createElement('div');
+        swiperScrollbar.classList.add('swiper-scrollbar');
+        searchResultBox.append(swiperScrollbar);
 
-          const submitLabel = document.createElement('div');
-          submitLabel.classList.add('label');
-          submitLabel.textContent = ' Submit ';
-          moveInstrumentation(link, submitLabel); // Instrumentation for label
-          submitButton.append(submitLabel);
+        // Popular Keywords (Hardcoded, should come from fragment/metadata)
+        // const popularKeywords = ['Business', 'FY 21', 'Brands', 'XUV700', 'Global', 'Nanhi Kali'];
+        // const popularKeywordsWrap = document.createElement('div');
+        // popularKeywordsWrap.classList.add('search-suggestions-wrap');
+        // popularKeywordsWrap.innerHTML = `<div class="label">Popular Keywords:</div>
+        //   <div class="tokens-wrap"><ul>${popularKeywords.map((keyword) => `<li>${keyword}</li>`).join('')}</ul></div>`;
+        // searchWrapInner.append(popularKeywordsWrap);
 
-          const submitSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-          submitSvg.setAttribute('width', '12');
-          submitSvg.setAttribute('height', '8');
-          submitSvg.setAttribute('viewBox', '0 0 12 8');
-          submitSvg.setAttribute('fill', 'none');
-          moveInstrumentation(link, submitSvg); // Instrumentation for svg
-          const submitPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-          submitPath.setAttribute('d', 'M11.3536 4.35355C11.5488 4.15829 11.5488 3.84171 11.3536 3.64645L8.17157 0.464465C7.97631 0.269203 7.65973 0.269203 7.46447 0.464465C7.2692 0.659728 7.2692 0.97631 7.46447 1.17157L10.2929 4L7.46447 6.82843C7.2692 7.02369 7.2692 7.34027 7.46447 7.53553C7.65973 7.7308 7.97631 7.7308 8.17157 7.53553L11.3536 4.35355ZM4.37114e-08 4.5L11 4.5L11 3.5L-4.37114e-08 3.5L4.37114e-08 4.5Z');
-          submitPath.setAttribute('fill', 'black');
-          moveInstrumentation(link, submitPath); // Instrumentation for path
-          submitSvg.append(submitPath);
-          submitButton.append(submitSvg);
+        // Recommended for you (Hardcoded, should come from fragment/metadata)
+        // const recommendedKeywords = ['Annual Report 2021 - 2022', 'Leadership Announcement', 'Latest Press Release', 'Brand Guidelines'];
+        // const recommendedKeywordsWrap = document.createElement('div');
+        // recommendedKeywordsWrap.classList.add('search-suggestions-wrap');
+        // recommendedKeywordsWrap.innerHTML = `<div class="label">Recommended for you:</div>
+        //   <div class="tokens-wrap"><ul>${recommendedKeywords.map((keyword) => `<li>${keyword}</li>`).join('')}</ul></div>`;
+        // searchWrapInner.append(recommendedKeywordsWrap);
 
-          searchWrap.append(searchIconDiv);
-          searchWrap.append(searchInput);
-          searchWrap.append(submitButton);
-          searchForm.append(searchWrap);
-
-          // Search Result Box
-          const searchResultBox = document.createElement('div');
-          searchResultBox.classList.add('searchResultBox');
-          searchResultBox.style.display = 'none';
-          moveInstrumentation(link, searchResultBox); // Instrumentation for searchResultBox
-
-          const swiper = document.createElement('div');
-          swiper.classList.add('swiper', 'scrollSwiper');
-          moveInstrumentation(link, swiper); // Instrumentation for swiper
-          const swiperWrapper = document.createElement('div');
-          swiperWrapper.classList.add('swiper-wrapper');
-          moveInstrumentation(link, swiperWrapper); // Instrumentation for swiperWrapper
-          const swiperSlide = document.createElement('div');
-          swiperSlide.classList.add('swiper-slide');
-          moveInstrumentation(link, swiperSlide); // Instrumentation for swiperSlide
-          swiperWrapper.append(swiperSlide);
-          swiper.append(swiperWrapper);
-          searchResultBox.append(swiper);
-
-          const swiperScrollbar = document.createElement('div');
-          swiperScrollbar.classList.add('swiper-scrollbar');
-          moveInstrumentation(link, swiperScrollbar); // Instrumentation for swiperScrollbar
-          searchResultBox.append(swiperScrollbar);
-          searchForm.append(searchResultBox);
-
-          // Search Suggestions (Popular Keywords) - Dynamically extract from fragment if available
-          const popularKeywordsSection = toolsContent.querySelector('.search-suggestions-wrap .label:contains("Popular Keywords:")')?.closest('.search-suggestions-wrap');
-          if (popularKeywordsSection) {
-            const popularKeywordsWrap = popularKeywordsSection.cloneNode(true);
-            moveInstrumentation(popularKeywordsSection, popularKeywordsWrap);
-            searchForm.append(popularKeywordsWrap);
-          } else {
-            // Fallback if not found in fragment, but ideally should be dynamic
-            const popularKeywordsWrap = document.createElement('div');
-            popularKeywordsWrap.classList.add('search-suggestions-wrap');
-            const popularKeywordsLabel = document.createElement('div');
-            popularKeywordsLabel.classList.add('label');
-            popularKeywordsLabel.textContent = 'Popular Keywords:';
-            const popularKeywordsTokens = document.createElement('div');
-            popularKeywordsTokens.classList.add('tokens-wrap');
-            const popularKeywordsUl = document.createElement('ul');
-            ['Business', 'FY 21', 'Brands', 'XUV700', 'Global', 'Nanhi Kali'].forEach(keyword => {
-              const li = document.createElement('li');
-              li.textContent = keyword;
-              popularKeywordsUl.append(li);
-            });
-            popularKeywordsTokens.append(popularKeywordsUl);
-            popularKeywordsWrap.append(popularKeywordsLabel);
-            popularKeywordsWrap.append(popularKeywordsTokens);
-            searchForm.append(popularKeywordsWrap);
-          }
-
-
-          // Search Suggestions (Recommended for you) - Dynamically extract from fragment if available
-          const recommendedSection = toolsContent.querySelector('.search-suggestions-wrap .label:contains("Recommended for you:")')?.closest('.search-suggestions-wrap');
-          if (recommendedSection) {
-            const recommendedWrap = recommendedSection.cloneNode(true);
-            moveInstrumentation(recommendedSection, recommendedWrap);
-            searchForm.append(recommendedWrap);
-          } else {
-            // Fallback if not found in fragment, but ideally should be dynamic
-            const recommendedWrap = document.createElement('div');
-            recommendedWrap.classList.add('search-suggestions-wrap');
-            const recommendedLabel = document.createElement('div');
-            recommendedLabel.classList.add('label');
-            recommendedLabel.textContent = 'Recommended for you:';
-            const recommendedTokens = document.createElement('div');
-            recommendedTokens.classList.add('tokens-wrap');
-            const recommendedUl = document.createElement('ul');
-            ['Annual Report 2021 - 2022', 'Leadership Announcement', 'Latest Press Release', 'Brand Guidelines'].forEach(keyword => {
-              const li = document.createElement('li');
-              li.textContent = keyword;
-              recommendedUl.append(li);
-            });
-            recommendedTokens.append(recommendedUl);
-            recommendedWrap.append(recommendedLabel);
-            recommendedWrap.append(recommendedTokens);
-            searchForm.append(recommendedWrap);
-          }
-
-          searchScreenWrapInner.append(searchForm);
-          searchScreenWrap.append(searchScreenWrapInner);
-
-          newLiMobile.append(searchScreenWrap.cloneNode(true)); // Clone for mobile
-          newLiDesktop.append(searchScreenWrap); // Use original for desktop
-        }
-        mobileUl.append(newLiMobile);
-        desktopUl.append(newLiDesktop);
+        desktopLi.append(searchLink, searchScreenWrap);
+        mobileLi.append(searchLink.cloneNode(true), searchScreenWrap.cloneNode(true)); // Clone for mobile
       }
+      desktopUl.append(desktopLi);
+      mobileUl.append(mobileLi);
     });
   }
 
-  // Process social links
-  if (socialLinksUl) {
-    const socialNav = document.createElement('div');
-    socialNav.classList.add('icon-nav', 'social-menus-icon'); // Assuming a class for social icons
-    const socialUl = document.createElement('ul');
-    moveInstrumentation(socialLinksUl, socialUl); // Move instrumentation from original UL to new socialUl
-
-    Array.from(socialLinksUl.children).forEach((li) => {
-      const link = li.querySelector('a');
-      if (link) {
-        const newLi = document.createElement('li');
-        moveInstrumentation(li, newLi); // Move instrumentation from original LI to new LI
-        const newLink = link.cloneNode(true);
-        moveInstrumentation(link, newLink);
-
-        // Add specific classes for social icons based on href or text content
-        const socialName = link.href.toLowerCase().match(/(facebook|twitter|instagram|youtube|linkedin)/)?.[0];
-        if (socialName) {
-          newLi.classList.add(socialName);
-        }
-        newLi.append(newLink);
-        socialUl.append(newLi);
-      }
-    });
-    socialNav.append(socialUl);
-    // Append socialNav to desktopIconNav or a separate container as per design
-    desktopIconNav.append(socialNav);
-  }
-
-  return toolsFragment;
+  docFragment.append(iconNavMobile);
+  docFragment.append(iconNavDesktop);
+  return { iconNavDesktop, iconNavMobile };
 }
 
 /**
- * loads and decorates the header, mainly the nav
- * @param {Element} block The header block element
+ * Decorates the header block.
+ * @param {Element} block The header block element.
  */
 export default async function decorate(block) {
   // load nav as fragment
@@ -815,159 +606,293 @@ export default async function decorate(block) {
   const navPath = navMeta ? new URL(navMeta, window.location).pathname : '/nav';
   const fragment = await loadFragment(navPath);
 
+  if (!fragment) {
+    block.innerHTML = '';
+    return;
+  }
+
   // decorate nav DOM
-  const headerFragment = new DocumentFragment();
-  const mainHeader = document.createElement('header');
-  mainHeader.classList.add('main-header', 'with-marquee', 'solid', 'nav-up');
-  mainHeader.setAttribute('data-once', 'header-hover');
-  moveInstrumentation(block, mainHeader); // Move instrumentation from block to mainHeader
+  block.textContent = '';
+  block.classList.add('main-header', 'with-marquee', 'solid', 'nav-up'); // Add classes from original header
+  block.setAttribute('data-once', 'header-hover');
 
-  const container = document.createElement('div');
-  container.classList.add('container');
-  const wrap = document.createElement('div');
-  wrap.classList.add('wrap');
+  const docFragment = document.createDocumentFragment();
 
-  mainHeader.append(container);
-  container.append(wrap);
+  const containerDiv = document.createElement('div');
+  containerDiv.classList.add('container');
+  docFragment.append(containerDiv);
+
+  const wrapDiv = document.createElement('div');
+  wrapDiv.classList.add('wrap');
+  containerDiv.append(wrapDiv);
 
   const { brandRow, navRow, toolsRow } = parseStructure(fragment);
 
-  // 1. Setup Brand/Logo
-  if (brandRow) {
-    const brandContent = brandRow.querySelector('.default-content-wrapper') || brandRow;
-    const logoDiv = document.createElement('div');
-    logoDiv.classList.add('logo');
-    moveInstrumentation(brandRow, logoDiv); // Move instrumentation from brandRow to logoDiv
+  // 1. Setup Brand
+  setupBrand(brandRow, wrapDiv);
 
-    const link = brandContent.querySelector('a') || document.createElement('a');
-    if (!link.href) link.href = '/'; // Default home link
-    moveInstrumentation(brandContent.querySelector('a'), link);
-
-    const picture = brandContent.querySelector('picture');
-    if (picture) {
-      const img = picture.querySelector('img');
-      if (img) {
-        img.classList.add('hiddenlogo1');
-        img.setAttribute('width', '200'); // Set default width/height as per original HTML
-        img.setAttribute('height', '30');
-        img.setAttribute('loading', 'lazy');
-        img.style.width = 'auto'; // Re-apply inline style if needed
-        link.append(picture);
-        moveInstrumentation(picture, link.querySelector('picture')); // Instrumentation for picture
-        moveInstrumentation(img, link.querySelector('img')); // Instrumentation for img
-      }
-    } else {
-      // Fallback if no picture, check for direct img
-      const img = brandContent.querySelector('img');
-      if (img) {
-        img.classList.add('hiddenlogo1');
-        img.setAttribute('width', '200');
-        img.setAttribute('height', '30');
-        img.setAttribute('loading', 'lazy');
-        img.style.width = 'auto';
-        link.append(img);
-        moveInstrumentation(img, link.querySelector('img'));
-      }
-    }
-    logoDiv.append(link);
-    wrap.append(logoDiv);
-  }
-
-  // Hamburger for mobile
+  // 2. Hamburger for mobile
   const hamburger = document.createElement('div');
   hamburger.classList.add('hamburger');
   hamburger.setAttribute('data-once', 'hamburger-click nav-close-search');
-  moveInstrumentation(block, hamburger); // Move instrumentation from block to hamburger
-
+  hamburger.setAttribute('aria-label', 'Open navigation');
+  hamburger.setAttribute('aria-expanded', 'false');
   const hamburgerUl = document.createElement('ul');
-  for (let i = 0; i < 3; i += 1) {
-    hamburgerUl.append(document.createElement('li'));
-  }
+  hamburgerUl.append(document.createElement('li'));
+  hamburgerUl.append(document.createElement('li'));
+  hamburgerUl.append(document.createElement('li'));
   hamburger.append(hamburgerUl);
-  wrap.append(hamburger);
+  wrapDiv.append(hamburger);
 
-  // 2. Setup Main Navigation
-  const mainNav = document.createElement('nav');
-  mainNav.classList.add('main-nav');
-  mainNav.setAttribute('data-once', 'initSubChildToggle');
-  moveInstrumentation(block, mainNav); // Move instrumentation from block to mainNav
+  // 3. Setup Desktop Navigation
+  const mainNav = setupDesktopNav(navRow, wrapDiv);
+  if (mainNav) {
+    mainNav.id = 'nav'; // Assign ID for toggleMenu
+    mainNav.setAttribute('aria-expanded', 'false'); // Initial state
+  }
 
-  mainNav.append(setupDesktopNav(navRow));
-  wrap.append(mainNav);
+  // 4. Setup Tools (Contact, Search, Social)
+  const { iconNavDesktop, iconNavMobile } = setupTools(toolsRow, docFragment); // Append to docFragment, not mainNav
+  if (iconNavMobile) wrapDiv.append(iconNavMobile);
+  if (iconNavDesktop) wrapDiv.append(iconNavDesktop);
 
-  // 3. Setup Tools (Contact Us, Search)
-  mainNav.append(setupTools(toolsRow));
 
-  // 80th year logo
+  // 5. Add 80th-year logo if available (hardcoded in original HTML, not in fragment)
   const year80LogoDiv = document.createElement('div');
   year80LogoDiv.classList.add('logo', 'year-80-logo');
-  moveInstrumentation(block, year80LogoDiv); // Move instrumentation from block to year80LogoDiv
-
   const year80Link = document.createElement('a');
   year80Link.href = 'https://www.mahindra.com/';
-  moveInstrumentation(block, year80Link); // Instrumentation for year80Link
-
   const year80Img = document.createElement('img');
   year80Img.src = 'https://www.mahindra.com/sites/default/files/2026-03/80thYearLogo_Gold_com.webp';
   year80Img.alt = '80th Year Logo Gold';
   year80Img.title = '80thYearLogo_Gold';
   year80Img.classList.add('hiddenlogo1', 'years-80');
-  year80Img.setAttribute('width', '74');
-  year80Img.setAttribute('height', '60');
-  year80Img.setAttribute('loading', 'lazy');
-  moveInstrumentation(block, year80Img); // Instrumentation for year80Img
-
+  year80Img.width = '74';
+  year80Img.height = '60';
+  year80Img.loading = 'lazy';
   year80Link.append(year80Img);
   year80LogoDiv.append(year80Link);
-  wrap.append(year80LogoDiv);
+  wrapDiv.append(year80LogoDiv);
 
-  headerFragment.append(mainHeader);
-  block.replaceChildren(headerFragment);
+  block.append(docFragment);
 
-  // Post-render initialization and event listeners
-  const nav = block.querySelector('.main-nav');
-  const navSections = nav.querySelector('ul[itemscope]');
-  if (nav && navSections) {
-    // Hamburger click event
-    hamburger.addEventListener('click', () => toggleMenu(nav, navSections));
+  // --- Event Listeners and Mobile Toggle Logic ---
+  const nav = block.querySelector('#nav');
+  if (!nav) return;
 
-    // Prevent mobile nav behavior on window resize
-    toggleMenu(nav, navSections, isDesktop.matches);
-    isDesktop.addEventListener('change', () => toggleMenu(nav, navSections, isDesktop.matches));
+  // Toggle menu for mobile
+  hamburger.addEventListener('click', () => {
+    const isExpanded = nav.getAttribute('aria-expanded') === 'true';
+    toggleMenu(nav, !isExpanded);
+  });
 
-    // Desktop nav hover behavior
-    if (isDesktop.matches) {
-      navSections.querySelectorAll('li.has-child').forEach((li) => {
-        li.addEventListener('mouseenter', () => {
-          toggleAllNavSections(navSections, false); // Close others
-          li.setAttribute('aria-expanded', 'true');
-          const megaMenu = li.querySelector('.mega-menu');
-          if (megaMenu) megaMenu.style.display = 'block';
-        });
-        li.addEventListener('mouseleave', () => {
-          li.setAttribute('aria-expanded', 'false');
-          const megaMenu = li.querySelector('.mega-menu');
-          if (megaMenu) megaMenu.style.display = 'none';
-        });
+  // Desktop navigation hover/click logic
+  const navSections = nav.querySelector('ul');
+  if (navSections) {
+    navSections.querySelectorAll(':scope > li.has-child').forEach((navSection) => {
+      if (!navSection) return;
 
-        // Handle nested sub-menus for desktop hover
-        li.querySelectorAll('.has-sub-child').forEach((subChild) => {
-          subChild.addEventListener('mouseenter', () => {
-            subChild.classList.add('active');
-            const innerSubChild = subChild.querySelector(':scope > div.has-inner-sub-child');
-            if (innerSubChild) innerSubChild.classList.add('active-child');
+      const megaMenu = navSection.querySelector('.mega-menu');
+      if (!megaMenu) return;
+
+      // Desktop hover
+      navSection.addEventListener('mouseenter', () => {
+        if (isDesktop.matches) {
+          navSections.querySelectorAll('.has-child.is-active').forEach((activeSection) => {
+            if (activeSection !== navSection) {
+              activeSection.classList.remove('is-active');
+              const activeMegaMenu = activeSection.querySelector('.mega-menu');
+              if (activeMegaMenu) activeMegaMenu.style.display = 'none';
+            }
           });
-          subChild.addEventListener('mouseleave', () => {
-            subChild.classList.remove('active');
-            const innerSubChild = subChild.querySelector(':scope > div.has-inner-sub-child');
-            if (innerSubChild) innerSubChild.classList.remove('active-child');
+          navSection.classList.add('is-active');
+          megaMenu.style.display = 'block';
+          navSection.setAttribute('aria-expanded', 'true');
+        }
+      });
+
+      navSection.addEventListener('mouseleave', () => {
+        if (isDesktop.matches) {
+          navSection.classList.remove('is-active');
+          megaMenu.style.display = 'none';
+          navSection.setAttribute('aria-expanded', 'false');
+        }
+      });
+
+      // Mobile click
+      const navSectionLink = navSection.querySelector(':scope > a');
+      const navSectionSpan = navSection.querySelector(':scope > span');
+
+      const toggleSubMenu = (e) => {
+        if (!isDesktop.matches) {
+          e.preventDefault();
+          e.stopPropagation();
+          const wasActive = navSection.classList.contains('is-active');
+          navSections.querySelectorAll('.has-child.is-active').forEach((activeSection) => {
+            activeSection.classList.remove('is-active');
+            const activeMegaMenu = activeSection.querySelector('.mega-menu');
+            if (activeMegaMenu) activeMegaMenu.style.display = 'none';
+            activeSection.setAttribute('aria-expanded', 'false');
           });
+
+          if (!wasActive) {
+            navSection.classList.add('is-active');
+            megaMenu.style.display = 'block';
+            navSection.setAttribute('aria-expanded', 'true');
+          } else {
+            navSection.setAttribute('aria-expanded', 'false');
+          }
+        }
+      };
+
+      if (navSectionLink) navSectionLink.addEventListener('click', toggleSubMenu);
+      if (navSectionSpan) navSectionSpan.addEventListener('click', toggleSubMenu);
+
+      // Handle nested mobile toggles
+      navSection.querySelectorAll('.has-sub-child').forEach((subChildDiv) => {
+        const parentLi = subChildDiv.closest('li');
+        const subChildSpan = parentLi?.querySelector(':scope > span');
+        const subChildLink = parentLi?.querySelector(':scope > a');
+
+        // Set initial aria-expanded state for nested menus
+        if (parentLi) parentLi.setAttribute('aria-expanded', 'false');
+
+        const toggleInnerSubMenu = (e) => {
+          if (!isDesktop.matches) {
+            e.preventDefault();
+            e.stopPropagation();
+            const wasActive = subChildDiv.classList.contains('active');
+
+            // Close other active siblings at the same level
+            Array.from(parentLi.parentElement.children).forEach((siblingLi) => {
+              const siblingSubChildDiv = siblingLi.querySelector('.has-sub-child');
+              if (siblingSubChildDiv && siblingSubChildDiv !== subChildDiv) {
+                siblingSubChildDiv.classList.remove('active');
+                siblingLi.querySelector(':scope > span svg')?.style.setProperty('transform', 'rotate(90deg)');
+                siblingLi.setAttribute('aria-expanded', 'false');
+              }
+            });
+
+            if (!wasActive) {
+              subChildDiv.classList.add('active');
+              subChildSpan?.querySelector('svg')?.style.setProperty('transform', 'rotate(-180deg)');
+              if (parentLi) parentLi.setAttribute('aria-expanded', 'true');
+            } else {
+              subChildDiv.classList.remove('active');
+              subChildSpan?.querySelector('svg')?.style.setProperty('transform', 'rotate(90deg)');
+              if (parentLi) parentLi.setAttribute('aria-expanded', 'false');
+            }
+          }
+        };
+        if (subChildLink) subChildLink.addEventListener('click', toggleInnerSubMenu);
+        if (subChildSpan) subChildSpan.addEventListener('click', toggleInnerSubMenu);
+
+        // Handle deepest nested mobile toggles
+        subChildDiv.querySelectorAll('.has-inner-sub-child').forEach((innerSubChildDiv) => {
+          const innerParentLi = innerSubChildDiv.closest('li');
+          const innerSubChildSpan = innerParentLi?.querySelector(':scope > span');
+          const innerSubChildLink = innerParentLi?.querySelector(':scope > a');
+
+          // Set initial aria-expanded state for deepest nested menus
+          if (innerParentLi) innerParentLi.setAttribute('aria-expanded', 'false');
+
+          const toggleDeepestSubMenu = (e) => {
+            if (!isDesktop.matches) {
+              e.preventDefault();
+              e.stopPropagation();
+              const wasActive = innerSubChildDiv.classList.contains('active-child');
+
+              // Close other active siblings at the same level
+              Array.from(innerParentLi.parentElement.children).forEach((siblingLi) => {
+                const siblingInnerSubChildDiv = siblingLi.querySelector('.has-inner-sub-child');
+                if (siblingInnerSubChildDiv && siblingInnerSubChildDiv !== innerSubChildDiv) {
+                  siblingInnerSubChildDiv.classList.remove('active-child');
+                  siblingLi.querySelector(':scope > span svg')?.style.setProperty('transform', 'rotate(90deg)');
+                  siblingLi.setAttribute('aria-expanded', 'false');
+                }
+              });
+
+              if (!wasActive) {
+                innerSubChildDiv.classList.add('active-child');
+                innerSubChildSpan?.querySelector('svg')?.style.setProperty('transform', 'rotate(-180deg)');
+                if (innerParentLi) innerParentLi.setAttribute('aria-expanded', 'true');
+              } else {
+                innerSubChildDiv.classList.remove('active-child');
+                innerSubChildSpan?.querySelector('svg')?.style.setProperty('transform', 'rotate(90deg)');
+                if (innerParentLi) innerParentLi.setAttribute('aria-expanded', 'false');
+              }
+            }
+          };
+          if (innerSubChildLink) innerSubChildLink.addEventListener('click', toggleDeepestSubMenu);
+          if (innerSubChildSpan) innerSubChildSpan.addEventListener('click', toggleDeepestSubMenu);
         });
       });
-    } else {
-      setupMobileNav(nav);
-    }
+    });
   }
 
-  setupSearchFunctionality(block);
+  // Search functionality
+  const searchToggleElements = block.querySelectorAll('.search[data-once*="search-toggle"]');
+  searchToggleElements.forEach((searchElement) => {
+    const searchLink = searchElement.querySelector('a');
+    const searchScreenWrap = searchElement.querySelector('.search-screen-wrap');
+    const searchInput = searchScreenWrap?.querySelector('#searchInput');
+
+    if (searchLink && searchScreenWrap && searchInput) {
+      searchLink.setAttribute('aria-expanded', 'false');
+      searchLink.setAttribute('aria-controls', 'search-block-form');
+
+      searchLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation(); // Prevent search from closing immediately
+        const isSearchOpen = searchScreenWrap.style.display === 'block';
+
+        // Close other open mega menus if any
+        navSections.querySelectorAll('.has-child.is-active').forEach((activeSection) => {
+          activeSection.classList.remove('is-active');
+          const activeMegaMenu = activeSection.querySelector('.mega-menu');
+          if (activeMegaMenu) activeMegaMenu.style.display = 'none';
+          activeSection.setAttribute('aria-expanded', 'false');
+        });
+
+        if (isSearchOpen) {
+          searchScreenWrap.style.display = 'none';
+          searchElement.classList.remove('is-active');
+          searchLink.querySelector('.lens')?.style.setProperty('display', 'block');
+          searchLink.querySelector('.close')?.style.setProperty('display', 'none');
+          searchLink.querySelector('span')?.style.setProperty('display', 'block');
+          document.body.style.overflowY = '';
+          searchLink.setAttribute('aria-expanded', 'false');
+        } else {
+          searchScreenWrap.style.display = 'block';
+          searchElement.classList.add('is-active');
+          searchLink.querySelector('.lens')?.style.setProperty('display', 'none');
+          searchLink.querySelector('.close')?.style.setProperty('display', 'block');
+          searchLink.querySelector('span')?.style.setProperty('display', 'none');
+          document.body.style.overflowY = 'hidden';
+          searchInput.focus();
+          searchLink.setAttribute('aria-expanded', 'true');
+        }
+      });
+
+      // Prevent closing when clicking inside the search screen
+      searchScreenWrap.addEventListener('click', (e) => e.stopPropagation());
+
+      // Close search when clicking outside
+      document.addEventListener('click', (e) => {
+        if (!searchElement.contains(e.target) && searchScreenWrap.style.display === 'block') {
+          searchScreenWrap.style.display = 'none';
+          searchElement.classList.remove('is-active');
+          searchLink.querySelector('.lens')?.style.setProperty('display', 'block');
+          searchLink.querySelector('.close')?.style.setProperty('display', 'none');
+          searchLink.querySelector('span')?.style.setProperty('display', 'block');
+          document.body.style.overflowY = '';
+          searchLink.setAttribute('aria-expanded', 'false');
+        }
+      });
+    }
+  });
+
+  // Initial state for mobile/desktop
+  toggleMenu(nav, isDesktop.matches);
+  isDesktop.addEventListener('change', () => toggleMenu(nav, isDesktop.matches));
 }
