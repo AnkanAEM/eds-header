@@ -7,725 +7,572 @@ const isDesktop = window.matchMedia('(min-width: 992px)'); // Adjusted to 992px 
 const SVG_CHEVRON = '<svg viewBox="-23.5 -23.5 122.80 122.80" fill="#000000" stroke="#000000" stroke-width="4.851456000000001"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round" stroke="#CCCCCC" stroke-width="0.30321600000000004"></g><g id="SVGRepo_iconCarrier"> <g id="Group_65" data-name="Group 65" transform="translate(-831.568 -384.448)"> <path id="Path_57" data-name="Path 57" d="M833.068,460.252a1.5,1.5,0,0,1-1.061-2.561l33.557-33.56a2.53,2.53,0,0,0,0-3.564l-33.557-33.558a1.5,1.5,0,0,1,2.122-2.121l33.556,33.558a5.53,5.53,0,0,1,0,7.807l-33.557,33.56A1.5,1.5,0,0,1,833.068,460.252Z" fill="#030408"></path> </g> </g></svg>';
 const SVG_SEARCH_LENS = '<svg viewBox="0 0 21 21" fill="none" class="lens" data-once="search-stop-propagation"><path d="M15.0934 2.73157L15.0934 2.73156C11.6883 -0.67354 6.14543 -0.67354 2.74033 2.73156C-0.666039 6.13793 -0.666063 11.6795 2.74035 15.0847C4.38993 16.7342 6.58308 17.6433 8.91623 17.6433C10.9916 17.6433 12.9533 16.9181 14.5221 15.5975L19.5217 20.5972C19.6721 20.7476 19.8687 20.8212 20.0632 20.8212C20.2588 20.8212 20.4554 20.7476 20.6059 20.5972C20.905 20.2981 20.905 19.8121 20.6059 19.513L15.6062 14.5132C18.4815 11.0845 18.3159 5.95535 15.0934 2.73157ZM14.0092 14.0004C12.6491 15.3606 10.8404 16.1098 8.91623 16.1098C6.99211 16.1098 5.18468 15.3606 3.82452 14.0004C1.01633 11.1923 1.01633 6.62394 3.82452 3.81575C5.22857 2.41171 7.07147 1.71024 8.91623 1.71024C10.7609 1.71024 12.6052 2.41296 14.0092 3.81575C16.8174 6.62394 16.8174 11.1923 14.0092 14.0004Z" stroke-width="0.25" data-once="search-stop-propagation"></path></svg>';
 const SVG_SEARCH_CLOSE = '<svg viewBox="0 0 50 50" class="close" data-once="search-stop-propagation"><path d="M 9.15625 6.3125 L 6.3125 9.15625 L 22.15625 25 L 6.21875 40.96875 L 9.03125 43.78125 L 25 27.84375 L 40.9375 43.78125 L 43.78125 40.9375 L 27.84375 25 L 43.6875 9.15625 L 40.84375 6.3125 L 25 22.15625 Z" data-once="search-stop-propagation"></path></svg>';
-const SVG_MAIL = '<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 48 38.4" style="enable-background:new 0 0 48 38.4;" xml:space="preserve" width="21" height="21"><path d="M3.6,38.4c-1,0-1.8-0.4-2.5-1.1S0,35.8,0,34.8V3.6c0-1,0.4-1.8,1.1-2.5S2.6,0,3.6,0h40.8c1,0,1.8,0.4,2.5,1.1C47.6,1.8,48,2.6,48,3.6v31.2c0,1-0.4,1.8-1.1,2.5c-0.7,0.7-1.6,1.1-2.5,1.1H3.6z M24,20.3L3.6,6.9v27.9h40.8V6.9L24,20.3z M24,16.7L44.2,3.6H3.9L24,16.7z M3.6,6.9V3.6v31.2V6.9z" /></svg>';
-const SVG_ARROW_RIGHT = '<svg width="12" height="8" viewBox="0 0 12 8" fill="none" data-once="search-stop-propagation"><path d="M11.3536 4.35355C11.5488 4.15829 11.5488 3.84171 11.3536 3.64645L8.17157 0.464465C7.97631 0.269203 7.65973 0.269203 7.46447 0.464465C7.2692 0.659728 7.2692 0.97631 7.46447 1.17157L10.2929 4L7.46447 6.82843C7.2692 7.02369 7.2692 7.34027 7.46447 7.53553C7.65973 7.7308 7.97631 7.7308 8.17157 7.53553L11.3536 4.35355ZM4.37114e-08 4.5L11 4.5L11 3.5L-4.37114e-08 3.5L4.37114e-08 4.5Z" fill="black" data-once="search-stop-propagation"></path></svg>';
+const SVG_MAIL = '<svg version="1.1" id="Layer_1" x="0px" y="0px" viewBox="0 0 48 38.4" style="enable-background:new 0 0 48 38.4;" xml:space="preserve" width="21" height="21" xmlns:xlink="http://www.w3.org/1999/xlink"><path d="M3.6,38.4c-1,0-1.8-0.4-2.5-1.1S0,35.8,0,34.8V3.6c0-1,0.4-1.8,1.1-2.5S2.6,0,3.6,0h40.8c1,0,1.8,0.4,2.5,1.1C47.6,1.8,48,2.6,48,3.6v31.2c0,1-0.4,1.8-1.1,2.5c-0.7,0.7-1.6,1.1-2.5,1.1H3.6z M24,20.3L3.6,6.9v27.9h40.8V6.9L24,20.3z M24,16.7L44.2,3.6H3.9L24,16.7z M3.6,6.9V3.6v31.2V6.9z"></path></svg>';
+const SVG_SUBMIT_ARROW = '<svg width="12" height="8" viewBox="0 0 12 8" fill="none" data-once="search-stop-propagation"><path d="M11.3536 4.35355C11.5488 4.15829 11.5488 3.84171 11.3536 3.64645L8.17157 0.464465C7.97631 0.269203 7.65973 0.269203 7.46447 0.464465C7.2692 0.659728 7.2692 0.97631 7.46447 1.17157L10.2929 4L7.46447 6.82843C7.2692 7.02369 7.2692 7.34027 7.46447 7.53553C7.65973 7.7308 7.97631 7.7308 8.17157 7.53553L11.3536 4.35355ZM4.37114e-08 4.5L11 4.5L11 3.5L-4.37114e-08 3.5L4.37114e-08 4.5Z" fill="black" data-once="search-stop-propagation"></path></svg>';
 
 /**
- * Moves instrumentation attributes from an old element to a new element.
- * @param {Element} oldElement The element to move attributes from.
- * @param {Element} newElement The element to move attributes to.
+ * Moves instrumentation attributes from an original element to a new element.
+ * @param {Element} originalElement The original element.
+ * @param {Element} newElement The new element.
  */
-function moveInstrumentation(oldElement, newElement) {
-  if (!oldElement || !newElement) return;
-  [...oldElement.attributes].forEach((attr) => {
-    if (attr.name.startsWith('data-')) {
+function moveInstrumentation(originalElement, newElement) {
+  if (!originalElement || !newElement) return;
+  [...originalElement.attributes].forEach((attr) => {
+    if (attr.name.startsWith('data-aue-') || attr.name.startsWith('data-cq-')) {
       newElement.setAttribute(attr.name, attr.value);
     }
   });
 }
 
-/**
- * Parses the fragment into its structural components.
- * @param {Element} fragment The loaded fragment HTML.
- * @returns {{brandRow: Element, navRow: Element, toolsRow: Element}} The parsed rows.
- */
-function parseStructure(fragment) {
-  const children = Array.from(fragment.children).filter(node => node.nodeType === Node.ELEMENT_NODE);
-  const getChildContent = (el) => (el.classList.contains('default-content-wrapper') ? el.firstElementChild : el);
-
-  const brandRow = children[0] ? getChildContent(children[0]) : null;
-  const navRow = children[1] ? getChildContent(children[1]) : null;
-  const toolsRow = children[2] ? getChildContent(children[2]) : null;
-
-  return { brandRow, navRow, toolsRow };
+function sanitizeClassName(name) {
+  return name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-');
 }
 
-/**
- * Creates the hamburger menu icon.
- * @returns {Element} The hamburger div.
- */
-function createHamburger() {
+function setupHamburger(nav, block) {
+  if (!nav || !block) return;
+
   const hamburger = document.createElement('div');
   hamburger.classList.add('hamburger');
-  hamburger.setAttribute('data-once', 'hamburger-click nav-close-search');
-  hamburger.setAttribute('role', 'button');
-  hamburger.setAttribute('aria-label', 'Toggle navigation');
+  hamburger.setAttribute('aria-controls', 'main-navigation');
   hamburger.setAttribute('aria-expanded', 'false');
-  hamburger.innerHTML = '<ul><li></li><li></li><li></li></ul>';
-  return hamburger;
-}
-
-/**
- * Handles toggling of the mobile navigation menu.
- * @param {Element} nav The main navigation element.
- * @param {Element} hamburger The hamburger icon element.
- */
-function toggleMobileMenu(nav, hamburger) {
-  if (!nav || !hamburger) return;
-
-  const isExpanded = nav.classList.contains('expanded');
-  if (isExpanded) {
-    nav.classList.remove('expanded');
-    hamburger.classList.remove('active');
-    hamburger.setAttribute('aria-expanded', 'false');
-    document.body.style.overflowY = '';
-  } else {
-    nav.classList.add('expanded');
-    hamburger.classList.add('active');
-    hamburger.setAttribute('aria-expanded', 'true');
-    document.body.style.overflowY = 'hidden';
+  hamburger.setAttribute('aria-label', 'Toggle navigation');
+  moveInstrumentation(block.querySelector('.hamburger'), hamburger); // Assuming a placeholder hamburger might exist in original block
+  const ul = document.createElement('ul');
+  for (let i = 0; i < 3; i += 1) {
+    ul.append(document.createElement('li'));
   }
-}
+  hamburger.append(ul);
 
-/**
- * Recursively processes nested ULs within a menu.
- * @param {Element} ulElement The UL element to process.
- * @param {boolean} isInnerSubChild Indicates if it's an inner sub-child for class naming.
- */
-function processNestedUl(ulElement, isInnerSubChild = false) {
-  if (!ulElement) return;
+  hamburger.addEventListener('click', () => {
+    const expanded = nav.getAttribute('aria-expanded') === 'true';
+    nav.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+    hamburger.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+    document.body.style.overflowY = expanded ? '' : 'hidden'; // Control body scroll
+  });
 
-  Array.from(ulElement.children).forEach((li) => {
-    if (li.tagName === 'LI') {
-      const nestedUl = li.querySelector(':scope > ul');
-      if (nestedUl) {
-        // Find the direct link or text content within the LI
-        let linkOrTextElement = li.querySelector(':scope > a');
-        if (!linkOrTextElement) {
-          const directText = Array.from(li.childNodes).find(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim().length > 0);
-          if (directText) {
-            const textSpan = document.createElement('span');
-            textSpan.textContent = directText.textContent.trim();
-            directText.remove();
-            linkOrTextElement = document.createElement('a'); // Create a dummy link for consistency
-            linkOrTextElement.href = '#';
-            linkOrTextElement.append(textSpan);
-            li.prepend(linkOrTextElement);
-          }
-        }
+  // Append hamburger to the wrap, before nav
+  const wrap = nav.closest('.wrap');
+  if (wrap) {
+    wrap.insertBefore(hamburger, nav);
+  }
 
-        const arrowSpan = document.createElement('span');
-        arrowSpan.innerHTML = SVG_CHEVRON;
-        arrowSpan.setAttribute('role', 'button');
-        arrowSpan.setAttribute('aria-label', 'Toggle submenu');
-        arrowSpan.setAttribute('aria-expanded', 'false');
-        li.append(arrowSpan);
-
-        const subChildWrapper = document.createElement('div');
-        subChildWrapper.classList.add('has-sub-child');
-        if (isInnerSubChild) {
-          subChildWrapper.classList.add('has-inner-sub-child');
-        }
-        moveInstrumentation(nestedUl, subChildWrapper); // Move instrumentation from original UL
-        subChildWrapper.append(nestedUl);
-        li.append(subChildWrapper);
-
-        // Add click listener for mobile expansion
-        arrowSpan.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const isActive = subChildWrapper.classList.toggle('active');
-          li.classList.toggle('active'); // Add active class to parent LI
-          arrowSpan.setAttribute('aria-expanded', isActive);
-          if (isInnerSubChild) {
-            subChildWrapper.classList.toggle('active-child');
-          }
-        });
-
-        // Recursively process the nested UL
-        processNestedUl(nestedUl, true);
-      } else {
-        // If it's a leaf LI, ensure it has an 'a' tag. If not, wrap its content.
-        if (!li.querySelector(':scope > a')) {
-          const content = li.innerHTML;
-          li.innerHTML = '';
-          const a = document.createElement('a');
-          a.innerHTML = content;
-          a.href = '#'; // Default href if none present
-          li.append(a);
-        }
-      }
+  // Close nav on Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && nav.getAttribute('aria-expanded') === 'true') {
+      nav.setAttribute('aria-expanded', 'false');
+      hamburger.setAttribute('aria-expanded', 'false');
+      document.body.style.overflowY = '';
     }
   });
 }
 
-/**
- * Sets up the desktop navigation structure and behavior.
- * @param {Element} navRow The navigation row from the fragment.
- * @param {Element} mainNav The main nav element to append to.
- */
-function setupDesktopNav(navRow, mainNav) {
-  if (!navRow || !mainNav) return;
+function createSearchScreen(searchLink, searchFragmentContent) {
+  if (!searchLink || !searchFragmentContent) return null;
 
-  const navUl = document.createElement('ul');
-  navUl.setAttribute('itemscope', '');
-  navUl.setAttribute('itemtype', 'http://www.schema.org/SiteNavigationElement');
-  mainNav.append(navUl);
-  moveInstrumentation(navRow, mainNav); // Move instrumentation from original navRow to mainNav
-
-  let contentBuffer = [];
-  Array.from(navRow.children).forEach((child) => {
-    if (child.nodeType === Node.ELEMENT_NODE) {
-      if (child.tagName === 'P' && child.querySelector('a')) {
-        // This is a navigation trigger
-        const navItem = document.createElement('li');
-        navItem.classList.add('has-child', 'hover-red');
-        navItem.setAttribute('itemprop', 'name');
-        navItem.setAttribute('data-once', 'nav-close-search');
-
-        const link = child.querySelector('a');
-        if (link) {
-          moveInstrumentation(child, navItem); // Move instrumentation from original P to navItem
-          const clonedLink = link.cloneNode(true);
-          clonedLink.setAttribute('itemprop', 'url');
-          navItem.append(clonedLink);
-        }
-
-        const arrowSpan = document.createElement('span');
-        arrowSpan.innerHTML = SVG_CHEVRON;
-        navItem.append(arrowSpan);
-
-        const megaMenu = document.createElement('div');
-        megaMenu.classList.add('mega-menu');
-        const wrapContainer = document.createElement('div');
-        wrapContainer.classList.add('wrap', 'container');
-        const centerDiv = document.createElement('div');
-        centerDiv.classList.add('center-div');
-        megaMenu.append(wrapContainer);
-        wrapContainer.append(centerDiv);
-
-        // Flush buffer into left-div
-        if (contentBuffer.length > 0) {
-          const leftDiv = document.createElement('div');
-          leftDiv.classList.add('left-div');
-          const titleText = link ? link.textContent.trim() : 'untitled';
-          const semanticClass = titleText.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-') + '-left-div';
-          leftDiv.classList.add(semanticClass);
-
-          contentBuffer.forEach(bufferedNode => {
-            if (bufferedNode.tagName === 'H4' && bufferedNode.querySelector('a')) {
-              const headingLink = bufferedNode.querySelector('a');
-              const h4 = document.createElement('h4');
-              h4.classList.add('left-div-heading');
-              const a = document.createElement('a');
-              a.href = headingLink.href;
-              a.textContent = headingLink.textContent;
-              h4.append(a);
-              leftDiv.append(h4);
-            } else if (bufferedNode.tagName === 'P') {
-              const p = document.createElement('p');
-              if (bufferedNode.textContent.includes('#')) {
-                p.classList.add('left-div-subdesc');
-              } else {
-                p.classList.add('left-div-desc');
-              }
-              p.textContent = bufferedNode.textContent;
-              leftDiv.append(p);
-            } else if (bufferedNode.tagName === 'UL') {
-              const ul = bufferedNode.cloneNode(true);
-              Array.from(ul.children).forEach(li => {
-                // Check if the LI contains a span, which is the heuristic for 'list-text-red'
-                if (li.querySelector('span')) {
-                  li.classList.add('list-text-red');
-                }
-              });
-              leftDiv.append(ul);
-            } else {
-              leftDiv.append(bufferedNode.cloneNode(true));
-            }
-          });
-          centerDiv.append(leftDiv);
-          contentBuffer = []; // Clear buffer
-        }
-
-        const nextSibling = child.nextElementSibling;
-        if (nextSibling && (nextSibling.tagName === 'UL' || nextSibling.tagName === 'DIV')) {
-          const subNavWrap = document.createElement('div');
-          subNavWrap.classList.add('sub-nav-wrap');
-          moveInstrumentation(nextSibling, subNavWrap); // Move instrumentation from original UL/DIV to subNavWrap
-
-          const linkText = link ? link.textContent.toLowerCase() : '';
-
-          if (linkText.includes('who we are')) {
-            subNavWrap.classList.add('about-us-sub-nav');
-          } else if (linkText.includes('what we do')) {
-            subNavWrap.classList.add('what-we-do');
-          } else if (linkText.includes('investor relations')) {
-            subNavWrap.classList.add('element-block');
-            const oneLinkUl = document.createElement('ul');
-            oneLinkUl.classList.add('sub-nav-wrap-one-link');
-            const innerSubNavWrapList = document.createElement('div');
-            innerSubNavWrapList.classList.add('inner-sub-nav-wrap-list');
-            subNavWrap.append(oneLinkUl);
-            subNavWrap.append(innerSubNavWrapList);
-
-            // Distribute LIs into two ULs within innerSubNavWrapList
-            const uls = Array.from(nextSibling.children).filter(el => el.tagName === 'UL');
-            if (uls.length > 0) {
-              const originalLis = Array.from(uls[0].children);
-              const firstUl = document.createElement('ul');
-              const secondUl = document.createElement('ul');
-              originalLis.forEach((li, idx) => {
-                if (idx === 0 && li.querySelector('a')) { // First LI goes to sub-nav-wrap-one-link
-                  oneLinkUl.append(li.cloneNode(true));
-                } else if (idx < 3) { // First few to first ul
-                  firstUl.append(li.cloneNode(true));
-                } else { // Rest to second ul
-                  secondUl.append(li.cloneNode(true));
-                }
-              });
-              innerSubNavWrapList.append(firstUl);
-              innerSubNavWrapList.append(secondUl);
-              processNestedUl(firstUl);
-              processNestedUl(secondUl);
-            }
-          } else if (linkText.includes('careers')) {
-            subNavWrap.classList.add('careers-div');
-            const clonedUl = nextSibling.cloneNode(true);
-            processNestedUl(clonedUl);
-            subNavWrap.append(clonedUl);
-          } else {
-            const clonedUl = nextSibling.cloneNode(true);
-            processNestedUl(clonedUl);
-            subNavWrap.append(clonedUl);
-          }
-          centerDiv.append(subNavWrap);
-          navItem.append(megaMenu);
-        }
-        navUl.append(navItem);
-      } else {
-        // Collect non-navigation P/UL/etc. into the buffer
-        contentBuffer.push(child.cloneNode(true));
-      }
-    }
-  });
-
-  // Handle any remaining buffer content if no more nav items
-  if (contentBuffer.length > 0) {
-    const lastNavItem = navUl.lastElementChild;
-    if (lastNavItem) {
-      const megaMenu = lastNavItem.querySelector('.mega-menu');
-      if (megaMenu) {
-        const centerDiv = megaMenu.querySelector('.center-div');
-        if (centerDiv) {
-          const leftDiv = document.createElement('div');
-          leftDiv.classList.add('left-div', 'extra-content-left-div');
-          contentBuffer.forEach(bufferedNode => {
-            if (bufferedNode.tagName === 'H4' && bufferedNode.querySelector('a')) {
-              const headingLink = bufferedNode.querySelector('a');
-              const h4 = document.createElement('h4');
-              h4.classList.add('left-div-heading');
-              const a = document.createElement('a');
-              a.href = headingLink.href;
-              a.textContent = headingLink.textContent;
-              h4.append(a);
-              leftDiv.append(h4);
-            } else if (bufferedNode.tagName === 'P') {
-              const p = document.createElement('p');
-              if (bufferedNode.textContent.includes('#')) {
-                p.classList.add('left-div-subdesc');
-              } else {
-                p.classList.add('left-div-desc');
-              }
-              p.textContent = bufferedNode.textContent;
-              leftDiv.append(p);
-            } else if (bufferedNode.tagName === 'UL') {
-              const ul = bufferedNode.cloneNode(true);
-              Array.from(ul.children).forEach(li => {
-                if (li.querySelector('span')) { // Heuristic for list-text-red
-                  li.classList.add('list-text-red');
-                }
-              });
-              leftDiv.append(ul);
-            } else {
-              leftDiv.append(bufferedNode.cloneNode(true));
-            }
-          });
-          centerDiv.prepend(leftDiv); // Prepend to ensure it appears on the left
-        }
-      }
-    }
-  }
-}
-
-/**
- * Creates the search screen HTML structure.
- * @param {Element} toolsRow The tools row from the fragment to extract dynamic content.
- * @returns {Element} The search screen wrapper.
- */
-function createSearchScreen(toolsRow) {
   const searchScreenWrap = document.createElement('div');
   searchScreenWrap.classList.add('search-screen-wrap');
   searchScreenWrap.setAttribute('data-once', 'search-stop-propagation');
-  searchScreenWrap.setAttribute('aria-hidden', 'true'); // Initially hidden for accessibility
 
-  const searchWrapInner = document.createElement('div');
-  searchWrapInner.classList.add('wrap');
-  searchWrapInner.setAttribute('data-once', 'search-stop-propagation');
-  searchScreenWrap.append(searchWrapInner);
+  const wrapDiv = document.createElement('div');
+  wrapDiv.classList.add('wrap');
+  wrapDiv.setAttribute('data-once', 'search-stop-propagation');
+  searchScreenWrap.append(wrapDiv);
 
-  const searchForm = document.createElement('form');
-  searchForm.action = getMetadata('search-page-url') || '/search'; // Dynamic search page URL
-  searchForm.method = 'get';
-  searchForm.id = 'search-block-form';
-  searchForm.setAttribute('accept-charset', 'UTF-8');
-  searchForm.setAttribute('data-drupal-form-fields', 'edit-keys');
-  searchForm.setAttribute('data-once', 'search-stop-propagation');
-  searchWrapInner.append(searchForm);
+  const form = document.createElement('form');
+  // Extract action from the fragment's form if available, otherwise use a default
+  const fragmentForm = searchFragmentContent.querySelector('form');
+  form.action = fragmentForm?.action || 'https://www.mahindra.com/search';
+  form.method = fragmentForm?.method || 'get';
+  form.id = fragmentForm?.id || 'search-block-form';
+  form.setAttribute('accept-charset', fragmentForm?.getAttribute('accept-charset') || 'UTF-8');
+  form.setAttribute('data-drupal-form-fields', fragmentForm?.getAttribute('data-drupal-form-fields') || 'edit-keys');
+  form.setAttribute('data-once', 'search-stop-propagation');
+  wrapDiv.append(form);
 
-  const searchInputWrap = document.createElement('div');
-  searchInputWrap.classList.add('search-wrap');
-  searchInputWrap.setAttribute('data-once', 'search-stop-propagation');
-  searchForm.append(searchInputWrap);
+  const searchWrap = document.createElement('div');
+  searchWrap.classList.add('search-wrap');
+  searchWrap.setAttribute('data-once', 'search-stop-propagation');
+  form.append(searchWrap);
 
-  const searchIconDiv = document.createElement('div');
-  searchIconDiv.classList.add('search-icon');
-  searchIconDiv.setAttribute('data-once', 'search-stop-propagation');
-  searchIconDiv.innerHTML = SVG_SEARCH_LENS;
-  searchInputWrap.append(searchIconDiv);
+  const searchIcon = document.createElement('div');
+  searchIcon.classList.add('search-icon');
+  searchIcon.setAttribute('data-once', 'search-stop-propagation');
+  searchIcon.innerHTML = SVG_SEARCH_LENS;
+  searchWrap.append(searchIcon);
 
-  const searchInput = document.createElement('input');
-  searchInput.type = 'text';
-  searchInput.classList.add('input-text', 'searchtext');
-  searchInput.required = true;
-  searchInput.name = 'key';
-  searchInput.id = 'searchInput';
-  searchInput.autocomplete = 'off';
-  searchInput.setAttribute('data-once', 'search-stop-propagation');
-  searchInput.setAttribute('aria-label', 'Search input');
-  searchInputWrap.append(searchInput);
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.classList.add('input-text', 'searchtext');
+  input.required = true;
+  input.name = 'key';
+  input.id = 'searchInput';
+  input.autocomplete = 'off';
+  input.setAttribute('data-once', 'search-stop-propagation');
+  searchWrap.append(input);
 
   const submitButton = document.createElement('button');
   submitButton.classList.add('submit-button');
   submitButton.setAttribute('data-once', 'search-stop-propagation');
-  submitButton.setAttribute('aria-label', 'Submit search');
-  const submitLabel = document.createElement('div');
-  submitLabel.classList.add('label');
-  submitLabel.setAttribute('data-once', 'search-stop-propagation');
-  submitLabel.textContent = 'Submit'; // Dynamic label if needed from fragment
-  submitButton.append(submitLabel);
-  submitButton.innerHTML += SVG_ARROW_RIGHT;
-  searchInputWrap.append(submitButton);
+  // Get submit button label from fragment if available, otherwise default
+  const fragmentSubmitButton = fragmentForm?.querySelector('.submit-button .label');
+  const submitLabel = fragmentSubmitButton?.textContent.trim() || 'Submit';
+  submitButton.innerHTML = `<div class="label" data-once="search-stop-propagation">${submitLabel}</div>` + SVG_SUBMIT_ARROW;
+  searchWrap.append(submitButton);
 
   const searchResultBox = document.createElement('div');
   searchResultBox.classList.add('searchResultBox');
   searchResultBox.style.display = 'none';
   searchResultBox.setAttribute('data-once', 'search-stop-propagation');
-  searchResultBox.innerHTML = `
-    <div class="swiper scrollSwiper" data-once="search-stop-propagation">
-      <div class="swiper-wrapper" data-once="search-stop-propagation">
-        <div class="swiper-slide" data-once="search-stop-propagation"></div>
-      </div>
-    </div>
-    <div class="swiper-scrollbar" data-once="search-stop-propagation"></div>
-  `;
-  searchForm.append(searchResultBox);
+  form.append(searchResultBox);
 
-  // Extract Popular Keywords and Recommended for you from toolsRow if available
-  const popularKeywordsDiv = toolsRow.querySelector('.popular-keywords');
-  if (popularKeywordsDiv) {
-    const popularKeywords = document.createElement('div');
-    popularKeywords.classList.add('search-suggestions-wrap');
-    popularKeywords.setAttribute('data-once', 'search-stop-propagation');
-    popularKeywords.innerHTML = `
-      <div class="label" data-once="search-stop-propagation">${popularKeywordsDiv.querySelector('h4')?.textContent || 'Popular Keywords:'}</div>
-      <div class="tokens-wrap" data-once="search-stop-propagation">
-        <ul data-once="search-stop-propagation">
-          ${Array.from(popularKeywordsDiv.querySelectorAll('li')).map(li => `<li data-once="search-stop-propagation">${li.textContent}</li>`).join('')}
-        </ul>
-      </div>
-    `;
-    searchWrapInner.append(popularKeywords);
-  } else {
-    // Fallback if not found in fragment
-    const popularKeywords = document.createElement('div');
-    popularKeywords.classList.add('search-suggestions-wrap');
-    popularKeywords.setAttribute('data-once', 'search-stop-propagation');
-    popularKeywords.innerHTML = `
-      <div class="label" data-once="search-stop-propagation">Popular Keywords:</div>
-      <div class="tokens-wrap" data-once="search-stop-propagation">
-        <ul data-once="search-stop-propagation">
-          <li data-once="search-stop-propagation">Business</li>
-          <li data-once="search-stop-propagation">FY 21</li>
-          <li data-once="search-stop-propagation">Brands</li>
-        </ul>
-      </div>
-    `;
-    searchWrapInner.append(popularKeywords);
-  }
-
-  const recommendedForYouDiv = toolsRow.querySelector('.recommended-for-you');
-  if (recommendedForYouDiv) {
-    const recommendedForYou = document.createElement('div');
-    recommendedForYou.classList.add('search-suggestions-wrap');
-    recommendedForYou.setAttribute('data-once', 'search-stop-propagation');
-    recommendedForYou.innerHTML = `
-      <div class="label" data-once="search-stop-propagation">${recommendedForYouDiv.querySelector('h4')?.textContent || 'Recommended for you:'}</div>
-      <div class="tokens-wrap" data-once="search-stop-propagation">
-        <ul data-once="search-stop-propagation">
-          ${Array.from(recommendedForYouDiv.querySelectorAll('li')).map(li => `<li data-once="search-stop-propagation">${li.textContent}</li>`).join('')}
-        </ul>
-      </div>
-    `;
-    searchWrapInner.append(recommendedForYou);
-  } else {
-    // Fallback if not found in fragment
-    const recommendedForYou = document.createElement('div');
-    recommendedForYou.classList.add('search-suggestions-wrap');
-    recommendedForYou.setAttribute('data-once', 'search-stop-propagation');
-    recommendedForYou.innerHTML = `
-      <div class="label" data-once="search-stop-propagation">Recommended for you:</div>
-      <div class="tokens-wrap" data-once="search-stop-propagation">
-        <ul data-once="search-stop-propagation">
-          <li data-once="search-stop-propagation">Annual Report 2021 - 2022</li>
-          <li data-once="search-stop-propagation">Leadership Announcement</li>
-        </ul>
-      </div>
-    `;
-    searchWrapInner.append(recommendedForYou);
-  }
+  // Extract search suggestions from the fragment
+  const fragmentSuggestions = searchFragmentContent.querySelectorAll('.search-suggestions-wrap');
+  fragmentSuggestions.forEach(suggestionWrap => {
+    const clonedSuggestionWrap = suggestionWrap.cloneNode(true);
+    clonedSuggestionWrap.setAttribute('data-once', 'search-stop-propagation');
+    clonedSuggestionWrap.querySelectorAll('[data-once]').forEach(el => el.setAttribute('data-once', 'search-stop-propagation'));
+    wrapDiv.append(clonedSuggestionWrap);
+  });
 
   return searchScreenWrap;
 }
 
-/**
- * Sets up the utility tools section.
- * @param {Element} toolsRow The tools row from the fragment.
- * @param {Element} nav The main navigation element.
- * @param {Element} headerBlock The main header block element.
- */
-function setupTools(toolsRow, nav, headerBlock) {
-  if (!toolsRow || !nav || !headerBlock) return;
 
-  const desktopIconNav = document.createElement('div');
-  desktopIconNav.classList.add('icon-nav', 'desktop-menus-icon');
-  const desktopUl = document.createElement('ul');
-  desktopIconNav.append(desktopUl);
-  nav.append(desktopIconNav);
-  moveInstrumentation(toolsRow, desktopIconNav); // Move instrumentation from original toolsRow
+function setupTools(toolsRow, nav) {
+  if (!toolsRow || !nav) return;
 
-  const mobileIconNav = document.createElement('div');
-  mobileIconNav.classList.add('icon-nav', 'mobile-menus-icon');
-  const mobileUl = document.createElement('ul');
-  mobileIconNav.append(mobileUl);
-  nav.append(mobileIconNav);
+  const toolsWrapper = document.createElement('div');
+  toolsWrapper.classList.add('icon-nav', 'desktop-menus-icon');
+  moveInstrumentation(toolsRow, toolsWrapper); // Move instrumentation from original toolsRow
 
-  let contactUsLink = null;
+  const ul = document.createElement('ul');
+  toolsWrapper.append(ul);
+
+  let mailLink = null;
   let searchLink = null;
-  // Social links are not explicitly handled in the original HTML, so we'll skip them for now
-  // If they were in the fragment, we'd iterate through toolsRow.children to find them.
+  let searchFragmentContent = null;
 
-  Array.from(toolsRow.children).forEach(child => {
-    if (child.tagName === 'UL') {
-      Array.from(child.children).forEach(li => {
-        const link = li.querySelector('a');
-        if (link) {
-          const text = link.textContent.trim().toLowerCase();
-          if (text === 'contact us') {
-            contactUsLink = link.cloneNode(true);
-          } else if (text === 'search') {
-            searchLink = link.cloneNode(true);
-          }
-        }
-      });
+  // Find mail and search links based on their text content or href
+  const allLinks = toolsRow.querySelectorAll('a');
+  Array.from(allLinks).forEach(link => {
+    const text = link.textContent.trim();
+    if (text === 'Contact Us') {
+      mailLink = link;
+    } else if (text === 'Search') {
+      searchLink = link;
+      // Find the search screen content associated with this search link in the fragment
+      searchFragmentContent = link.closest('li')?.querySelector('.search-screen-wrap');
     }
   });
 
-  // Add Contact Us
-  if (contactUsLink) {
-    const mailLiDesktop = document.createElement('li');
-    mailLiDesktop.classList.add('mail');
-    const mailLinkDesktop = contactUsLink.cloneNode(true);
-    mailLinkDesktop.innerHTML = SVG_MAIL; // Desktop icon
-    mailLiDesktop.append(mailLinkDesktop);
-    desktopUl.append(mailLiDesktop);
-    moveInstrumentation(contactUsLink.closest('li'), mailLiDesktop); // Move instrumentation from original li to mailLiDesktop
-
-    const mailLiMobile = document.createElement('li');
-    mailLiMobile.classList.add('mail');
-    const mailLinkMobile = contactUsLink.cloneNode(true);
-    mailLinkMobile.textContent = contactUsLink.textContent; // Mobile text
-    mailLiMobile.append(mailLinkMobile);
-    mobileUl.append(mailLiMobile);
-    moveInstrumentation(contactUsLink.closest('li'), mailLiMobile); // Move instrumentation from original li to mailLiMobile
+  if (mailLink) {
+    const li = document.createElement('li');
+    li.classList.add('mail');
+    const a = mailLink.cloneNode(true);
+    a.innerHTML = SVG_MAIL; // Replace text with SVG
+    li.append(a);
+    ul.append(li);
+    moveInstrumentation(mailLink.closest('li'), li);
   }
 
-  // Add Search
   if (searchLink) {
-    const searchLiDesktop = document.createElement('li');
-    searchLiDesktop.classList.add('search');
-    searchLiDesktop.setAttribute('data-once', 'search-toggle search-stop-propagation');
-    const searchLinkDesktop = searchLink.cloneNode(true);
-    searchLinkDesktop.innerHTML = SVG_SEARCH_LENS + SVG_SEARCH_CLOSE; // Desktop icons
-    searchLinkDesktop.setAttribute('data-once', 'search-stop-propagation');
-    searchLinkDesktop.setAttribute('aria-label', 'Toggle search');
-    searchLinkDesktop.setAttribute('aria-expanded', 'false');
-    searchLiDesktop.append(searchLinkDesktop);
-    desktopUl.append(searchLiDesktop);
-    moveInstrumentation(searchLink.closest('li'), searchLiDesktop); // Move instrumentation from original li to searchLiDesktop
+    const li = document.createElement('li');
+    li.classList.add('search');
+    li.setAttribute('data-once', 'search-toggle search-stop-propagation');
+    const a = searchLink.cloneNode(true);
+    a.innerHTML = SVG_SEARCH_LENS + SVG_SEARCH_CLOSE; // Add both icons
+    a.removeAttribute('href'); // Remove href="#" to prevent default navigation
+    a.setAttribute('data-once', 'search-stop-propagation');
+    li.append(a);
 
-    const searchLiMobile = document.createElement('li');
-    searchLiMobile.classList.add('search');
-    searchLiMobile.setAttribute('data-once', 'search-toggle search-stop-propagation');
-    const searchLinkMobile = searchLink.cloneNode(true);
-    searchLinkMobile.innerHTML = SVG_SEARCH_LENS + SVG_SEARCH_CLOSE + '<span> Search</span>'; // Mobile icons + text
-    searchLinkMobile.setAttribute('data-once', 'search-stop-propagation');
-    searchLinkMobile.setAttribute('aria-label', 'Toggle search');
-    searchLinkMobile.setAttribute('aria-expanded', 'false');
-    searchLiMobile.append(searchLinkMobile);
-    mobileUl.append(searchLiMobile);
-    moveInstrumentation(searchLink.closest('li'), searchLiMobile); // Move instrumentation from original li to searchLiMobile
+    const searchScreen = createSearchScreen(searchLink, searchFragmentContent);
+    if (searchScreen) {
+      li.append(searchScreen);
+    }
 
-    // Create search screen wrapper
-    const searchScreenWrap = createSearchScreen(toolsRow);
-    headerBlock.append(searchScreenWrap); // Append search screen to the header block for full-screen overlay
+    ul.append(li);
+    moveInstrumentation(searchLink.closest('li'), li);
 
-    // Toggle search screen on click
-    const toggleSearch = (e) => {
+    // Toggle search screen visibility
+    a.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      const isActive = searchScreenWrap.classList.toggle('active');
-      searchLiDesktop.classList.toggle('active');
-      searchLiMobile.classList.toggle('active');
-      document.body.classList.toggle('search-active'); // For body overflow control
-
-      searchLinkDesktop.setAttribute('aria-expanded', isActive);
-      searchLinkMobile.setAttribute('aria-expanded', isActive);
-      searchScreenWrap.setAttribute('aria-hidden', !isActive);
-
-      if (isActive) {
-        searchScreenWrap.querySelector('#searchInput').focus();
+      li.classList.toggle('active');
+      if (searchScreen) {
+        searchScreen.style.display = li.classList.contains('active') ? 'block' : 'none';
       }
-    };
+      // Toggle body scroll
+      document.body.style.overflowY = li.classList.contains('active') ? 'hidden' : '';
+    });
 
-    searchLinkDesktop.addEventListener('click', toggleSearch);
-    searchLinkMobile.addEventListener('click', toggleSearch);
-
-    // Close search on escape
-    window.addEventListener('keydown', (e) => {
-      if (e.code === 'Escape' && searchScreenWrap.classList.contains('active')) {
-        toggleSearch(e);
+    // Close search when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!li.contains(e.target) && li.classList.contains('active')) {
+        li.classList.remove('active');
+        if (searchScreen) {
+          searchScreen.style.display = 'none';
+        }
+        document.body.style.overflowY = '';
       }
     });
 
-    // Close search when clicking outside (only for desktop, mobile has full screen)
-    if (isDesktop.matches) {
-      document.addEventListener('click', (e) => {
-        if (searchScreenWrap.classList.contains('active') && !searchScreenWrap.contains(e.target) && !searchLiDesktop.contains(e.target)) {
-          toggleSearch(e);
+    // Close search on Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && li.classList.contains('active')) {
+        li.classList.remove('active');
+        if (searchScreen) {
+          searchScreen.style.display = 'none';
         }
-      });
-    }
+        document.body.style.overflowY = '';
+      }
+    });
+  }
+
+  // Create mobile tools icon-nav
+  const mobileToolsWrapper = toolsWrapper.cloneNode(true);
+  mobileToolsWrapper.classList.remove('desktop-menus-icon');
+  mobileToolsWrapper.classList.add('mobile-menus-icon');
+  // For mobile, the mail link text is visible, search is icon + text
+  const mobileMailLink = mobileToolsWrapper.querySelector('.mail a');
+  if (mobileMailLink) {
+    mobileMailLink.innerHTML = 'Contact Us'; // Business label, should be from fragment
+  }
+  const mobileSearchLink = mobileToolsWrapper.querySelector('.search a');
+  if (mobileSearchLink) {
+    // Get search label from fragment if available, otherwise default
+    const searchLabel = searchLink?.textContent.trim() || 'Search';
+    mobileSearchLink.innerHTML = SVG_SEARCH_LENS + SVG_SEARCH_CLOSE + `<span> ${searchLabel}</span>`;
+  }
+
+  // Append desktop tools to nav
+  nav.append(toolsWrapper);
+  // Append mobile tools to the main nav UL, as per original HTML structure
+  const mainNavUl = nav.querySelector('ul[itemscope]');
+  if (mainNavUl) {
+    mainNavUl.append(mobileToolsWrapper);
   }
 }
 
+
+function setupDesktopNav(navRow) {
+  if (!navRow) return;
+
+  const mainNavUl = document.createElement('ul');
+  mainNavUl.setAttribute('itemscope', '');
+  mainNavUl.setAttribute('itemtype', 'http://www.schema.org/SiteNavigationElement');
+
+  let currentLeftDivBuffer = [];
+  let currentMegaMenuLi = null;
+
+  // Iterate through all direct children of navRow's default-content-wrapper
+  const navContentWrapper = navRow.querySelector('.default-content-wrapper') || navRow;
+  Array.from(navContentWrapper.children).forEach((child) => {
+    // Skip comment nodes
+    if (child.nodeType === Node.COMMENT_NODE) {
+      return;
+    }
+
+    if (child.tagName === 'P' && child.querySelector('a')) {
+      // This is a navigation trigger (e.g., <p><a href="...">Who We Are</a></p>)
+      const li = document.createElement('li');
+      li.classList.add('has-child', 'hover-red');
+      li.setAttribute('itemprop', 'name');
+      li.setAttribute('data-once', 'nav-close-search');
+
+      const anchor = child.querySelector('a');
+      if (anchor) {
+        const clonedAnchor = anchor.cloneNode(true);
+        clonedAnchor.setAttribute('itemprop', 'url');
+        li.append(clonedAnchor);
+      }
+
+      const span = document.createElement('span');
+      span.innerHTML = SVG_CHEVRON;
+      li.append(span);
+
+      currentMegaMenuLi = li; // Set the current li for mega-menu content
+
+      // Append any buffered content to the previous mega-menu's left-div if it exists
+      if (currentLeftDivBuffer.length > 0 && mainNavUl.lastElementChild) {
+        const prevMegaMenu = mainNavUl.lastElementChild.querySelector('.mega-menu');
+        if (prevMegaMenu) {
+          const prevCenterDiv = prevMegaMenu.querySelector('.center-div');
+          if (prevCenterDiv) {
+            const leftDiv = document.createElement('div');
+            leftDiv.classList.add('left-div');
+            const prevMenuTitle = mainNavUl.lastElementChild.querySelector('a')?.textContent.trim() || 'untitled';
+            leftDiv.classList.add(sanitizeClassName(prevMenuTitle) + '-left-div');
+
+            currentLeftDivBuffer.forEach(bufferedNode => {
+              leftDiv.append(bufferedNode.cloneNode(true));
+            });
+            prevCenterDiv.prepend(leftDiv); // Prepend to maintain order
+          }
+        }
+      }
+      currentLeftDivBuffer = []; // Clear buffer for the new mega-menu
+
+      mainNavUl.append(li);
+    } else if (currentMegaMenuLi) {
+      // If we are currently processing a mega-menu, buffer its content
+      currentLeftDivBuffer.push(child);
+    }
+  });
+
+  // After iterating through all children, process the last buffered content
+  if (currentLeftDivBuffer.length > 0 && currentMegaMenuLi) {
+    const megaMenu = document.createElement('div');
+    megaMenu.classList.add('mega-menu');
+    const wrapContainer = document.createElement('div');
+    wrapContainer.classList.add('wrap', 'container');
+    megaMenu.append(wrapContainer);
+
+    const centerDiv = document.createElement('div');
+    centerDiv.classList.add('center-div');
+    wrapContainer.append(centerDiv);
+
+    const leftDiv = document.createElement('div');
+    leftDiv.classList.add('left-div');
+    const menuTitle = currentMegaMenuLi.querySelector('a')?.textContent.trim() || 'untitled';
+    leftDiv.classList.add(sanitizeClassName(menuTitle) + '-left-div');
+
+    currentLeftDivBuffer.forEach(bufferedNode => {
+      // Special handling for lists in the left-div
+      if (bufferedNode.tagName === 'UL') {
+        Array.from(bufferedNode.children).forEach(liItem => {
+          if (liItem.textContent.includes('span')) { // Check for the pattern "TEXT span NUMBER TEXT"
+            const textParts = liItem.innerHTML.split('<span>');
+            if (textParts.length > 1) {
+              const value = textParts[0].trim();
+              const label = `<span>${textParts[1]}`;
+              const newLi = document.createElement('li');
+              newLi.classList.add('list-text-red');
+              newLi.innerHTML = `${value} ${label}`;
+              leftDiv.append(newLi);
+            } else {
+              leftDiv.append(liItem.cloneNode(true));
+            }
+          } else {
+            leftDiv.append(liItem.cloneNode(true));
+          }
+        });
+      } else {
+        leftDiv.append(bufferedNode.cloneNode(true));
+      }
+    });
+    centerDiv.append(leftDiv);
+
+    const subNavWrap = document.createElement('div');
+    subNavWrap.classList.add('sub-nav-wrap');
+    centerDiv.append(subNavWrap);
+
+    // Now, we need to find the actual submenu content for the currentMegaMenuLi
+    // This part is tricky because the fragment structure is not strictly `p` then `ul`
+    // It could be `p`, then `div` containing multiple `ul`s or other elements.
+    // We need to look at the *original* navRow content to find the corresponding submenu.
+    const originalAnchor = navContentWrapper.querySelector(`a[href="${currentMegaMenuLi.querySelector('a').href}"]`);
+    let subMenuContent = null;
+    if (originalAnchor) {
+      let sibling = originalAnchor.closest('p').nextElementSibling;
+      while (sibling && sibling.nodeType === Node.COMMENT_NODE) {
+        sibling = sibling.nextElementSibling;
+      }
+      if (sibling && (sibling.tagName === 'UL' || sibling.tagName === 'DIV')) {
+        subMenuContent = sibling;
+      }
+    }
+
+    const processSubmenu = (menuElement, parentUl) => {
+      Array.from(menuElement.children).forEach(menuItem => {
+        if (menuItem.tagName === 'LI') {
+          const liItem = document.createElement('li');
+          const itemLink = menuItem.querySelector('a');
+          let itemText = '';
+          if (itemLink) {
+            liItem.append(itemLink.cloneNode(true));
+            itemText = itemLink.textContent.trim();
+          } else {
+            itemText = Array.from(menuItem.childNodes)
+              .filter(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim().length > 0)
+              .map(node => node.textContent.trim())
+              .join('');
+            if (itemText) {
+              const tempSpan = document.createElement('span');
+              tempSpan.textContent = itemText;
+              liItem.append(tempSpan);
+            }
+          }
+
+          const nestedUl = menuItem.querySelector('ul');
+          if (nestedUl) {
+            liItem.classList.add('top-level-li');
+            const innerSpan = document.createElement('span');
+            innerSpan.innerHTML = SVG_CHEVRON;
+            liItem.append(innerSpan);
+
+            const hasSubChildDiv = document.createElement('div');
+            hasSubChildDiv.classList.add('has-sub-child');
+            const innerUl = document.createElement('ul');
+            hasSubChildDiv.append(innerUl);
+            processSubmenu(nestedUl, innerUl);
+            liItem.append(hasSubChildDiv);
+
+            innerSpan.addEventListener('click', (e) => {
+              e.stopPropagation();
+              hasSubChildDiv.classList.toggle('active');
+            });
+          } else if (itemLink && itemLink.closest('ul') === menuElement) {
+            liItem.classList.add('first-level-li');
+          }
+          parentUl.append(liItem);
+        } else {
+          // Append non-LI elements directly to subNavWrap if they are direct children of the submenu content
+          // This handles cases like the newsroom's latest-two-press-release div
+          if (menuElement === subMenuContent) {
+            subNavWrap.append(menuItem.cloneNode(true));
+          }
+        }
+      });
+    };
+
+    if (subMenuContent) {
+      if (subMenuContent.tagName === 'UL') {
+        const firstUl = document.createElement('ul');
+        processSubmenu(subMenuContent, firstUl);
+        subNavWrap.append(firstUl);
+      } else if (subMenuContent.tagName === 'DIV') {
+        // Handle complex structures like the Investor Relations section or Newsroom
+        Array.from(subMenuContent.children).forEach(sectionChild => {
+          if (sectionChild.tagName === 'UL') {
+            const newUl = document.createElement('ul');
+            processSubmenu(sectionChild, newUl);
+            subNavWrap.append(newUl);
+          } else {
+            // Append other elements directly, e.g., for newsroom press releases
+            subNavWrap.append(sectionChild.cloneNode(true));
+          }
+        });
+      }
+    }
+    currentMegaMenuLi.append(megaMenu);
+  }
+
+  navRow.innerHTML = ''; // Clear original navRow content
+  navRow.append(mainNavUl);
+}
+
+
+function setupBrand(brandRow, nav) {
+  if (!brandRow || !nav) return;
+
+  const logoDiv = document.createElement('div');
+  logoDiv.classList.add('logo');
+  moveInstrumentation(brandRow.firstElementChild, logoDiv); // Assuming first child of brandRow has instrumentation
+
+  const link = brandRow.querySelector('a');
+  if (link) {
+    const clonedLink = link.cloneNode(true);
+    logoDiv.append(clonedLink);
+  } else {
+    // If no link, just append the picture/image directly
+    const picture = brandRow.querySelector('picture');
+    if (picture) {
+      logoDiv.append(picture.cloneNode(true));
+    }
+  }
+  nav.prepend(logoDiv);
+}
+
+
 /**
- * loads and decorates the header, mainly the nav
- * @param {Element} block The header block element
+ * Parses the fragment HTML into structured rows.
+ * @param {Element} fragment The loaded fragment DOM.
+ * @returns {object} An object containing brandRow, navRow, and toolsRow elements.
  */
+function parseStructure(fragment) {
+  const children = Array.from(fragment.children).filter(node => node.nodeType === Node.ELEMENT_NODE);
+  const structure = {
+    brandRow: null,
+    navRow: null,
+    toolsRow: null,
+  };
+
+  if (children.length >= 1) {
+    structure.brandRow = children[0].querySelector('.default-content-wrapper') || children[0];
+  }
+  if (children.length >= 2) {
+    structure.navRow = children[1].querySelector('.default-content-wrapper') || children[1];
+  }
+  if (children.length >= 3) {
+    structure.toolsRow = children[2].querySelector('.default-content-wrapper') || children[2];
+  }
+  return structure;
+}
+
 export default async function decorate(block) {
-  // load nav as fragment
+  block.classList.add('main-header'); // Add main header class to the block itself
+
   const navMeta = getMetadata('nav');
   const navPath = navMeta ? new URL(navMeta, window.location).pathname : '/nav';
   const fragment = await loadFragment(navPath);
 
   if (!fragment) {
-    block.remove();
     return;
   }
 
-  // decorate nav DOM
-  block.textContent = '';
-  block.classList.add('main-header', 'with-marquee', 'solid', 'nav-up');
-  block.setAttribute('data-once', 'header-hover');
-
-  const container = document.createElement('div');
-  container.classList.add('container');
-  block.append(container);
-
-  const wrap = document.createElement('div');
-  wrap.classList.add('wrap');
-  container.append(wrap);
-
   const { brandRow, navRow, toolsRow } = parseStructure(fragment);
 
-  // 1. Setup Brand/Logo
+  const headerContainer = document.createElement('div');
+  headerContainer.classList.add('container');
+  block.append(headerContainer);
+  moveInstrumentation(block, headerContainer); // Move instrumentation from block to container
+
+  const headerWrap = document.createElement('div');
+  headerWrap.classList.add('wrap');
+  headerContainer.append(headerWrap);
+
+  const nav = document.createElement('nav');
+  nav.classList.add('main-nav');
+  nav.setAttribute('data-once', 'initSubChildToggle');
+  nav.setAttribute('aria-expanded', 'false'); // Initial state for mobile nav
+  nav.setAttribute('id', 'main-navigation'); // ID for aria-controls
+  headerWrap.append(nav);
+
+  // Setup Brand, Nav, and Tools sections
   if (brandRow) {
-    const logoDiv = document.createElement('div');
-    logoDiv.classList.add('logo');
-    const brandLink = brandRow.querySelector('p > picture > a, p > a'); // Check for link wrapping picture or direct link
-    if (brandLink) {
-      const clonedLink = brandLink.cloneNode(true);
-      logoDiv.append(clonedLink);
-      moveInstrumentation(brandRow, logoDiv); // Move instrumentation from original brandRow to logoDiv
-    } else {
-      // Fallback if no link, just append the picture
-      const picture = brandRow.querySelector('picture');
-      if (picture) {
-        logoDiv.append(picture.cloneNode(true));
-        moveInstrumentation(brandRow, logoDiv);
-      }
-    }
-    wrap.append(logoDiv);
+    setupBrand(brandRow, nav);
   }
 
-  // 2. Setup Hamburger
-  const hamburger = createHamburger();
-  wrap.append(hamburger);
+  // Hamburger setup, needs to be after brand and before nav in the wrap
+  setupHamburger(nav, block);
 
-  // 3. Setup Main Navigation
-  const mainNav = document.createElement('nav');
-  mainNav.classList.add('main-nav');
-  mainNav.setAttribute('data-once', 'initSubChildToggle');
-  wrap.append(mainNav);
-  setupDesktopNav(navRow, mainNav);
-
-  // 4. Setup Tools/Icons (Search, Contact, Social)
-  setupTools(toolsRow, mainNav, block); // Pass the main block to append search screen
-
-  // 5. Add 80th Year Logo (if present in metadata)
-  const year80LogoMeta = getMetadata('80th-year-logo');
-  const year80LogoLink = getMetadata('80th-year-logo-link') || 'https://www.mahindra.com/';
-  const year80LogoAlt = getMetadata('80th-year-logo-alt') || '80th Year Logo Gold';
-  const year80LogoTitle = getMetadata('80th-year-logo-title') || '80thYearLogo_Gold';
-
-  if (year80LogoMeta) {
-    const year80LogoDiv = document.createElement('div');
-    year80LogoDiv.classList.add('logo', 'year-80-logo');
-    const year80Link = document.createElement('a');
-    year80Link.href = year80LogoLink;
-    const year80Img = document.createElement('img');
-    year80Img.src = year80LogoMeta;
-    year80Img.alt = year80LogoAlt;
-    year80Img.title = year80LogoTitle;
-    year80Img.classList.add('hiddenlogo1', 'years-80');
-    year80Img.width = '74';
-    year80Img.height = '60';
-    year80Img.loading = 'lazy';
-    year80Link.append(year80Img);
-    year80LogoDiv.append(year80Link);
-    wrap.append(year80LogoDiv);
-    // No direct instrumentation to move from fragment root for this, as it's metadata-driven.
+  if (navRow) {
+    // Clone navRow content to process without modifying original fragment directly
+    const tempNavSections = navRow.cloneNode(true);
+    setupDesktopNav(tempNavSections);
+    nav.append(tempNavSections.querySelector('ul')); // Append the processed UL to the nav
   }
 
-  // Mobile menu toggle logic
-  hamburger.addEventListener('click', () => {
-    toggleMobileMenu(mainNav, hamburger);
-  });
+  if (toolsRow) {
+    setupTools(toolsRow, nav);
+  }
 
-  // Close mobile menu on resize to desktop
-  isDesktop.addEventListener('change', () => {
-    if (isDesktop.matches) {
-      mainNav.classList.remove('expanded');
-      hamburger.classList.remove('active');
-      hamburger.setAttribute('aria-expanded', 'false');
-      document.body.style.overflowY = '';
-    }
-  });
-
-  // Close mobile menu on escape key
-  window.addEventListener('keydown', (e) => {
-    if (e.code === 'Escape' && mainNav.classList.contains('expanded')) {
-      toggleMobileMenu(mainNav, hamburger);
-    }
-  });
+  // Add the 80th year logo if it exists in the original HTML (hardcoded for now as it's not in fragment)
+  // This should ideally come from the fragment or be a separate block.
+  // For now, keeping it as is, but flagging it as a potential hardcoding issue if it's dynamic content.
+  const year80LogoDiv = document.createElement('div');
+  year80LogoDiv.classList.add('logo', 'year-80-logo');
+  const year80Link = document.createElement('a');
+  year80Link.href = 'https://www.mahindra.com/'; // Hardcoded URL
+  const year80Img = document.createElement('img');
+  year80Img.src = 'https://www.mahindra.com/sites/default/files/2026-03/80thYearLogo_Gold_com.webp'; // Hardcoded image URL
+  year80Img.alt = '80th Year Logo Gold'; // Hardcoded alt text
+  year80Img.title = '80thYearLogo_Gold'; // Hardcoded title
+  year80Img.classList.add('hiddenlogo1', 'years-80');
+  year80Img.width = '74';
+  year80Img.height = '60';
+  year80Img.loading = 'lazy';
+  year80Link.append(year80Img);
+  year80LogoDiv.append(year80Link);
+  headerWrap.append(year80LogoDiv); // Append after nav
 }
