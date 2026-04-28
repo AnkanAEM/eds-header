@@ -554,7 +554,8 @@ function toggleMenu(nav, navSections, forceExpanded = null) {
       if (parentLi) {
         parentLi.classList.remove('active');
         parentLi.setAttribute('aria-expanded', 'false');
-        parentLi.querySelector('.has-child > span svg')?.style.transform = 'rotate(90deg)';
+        const svg = parentLi.querySelector('.has-child > span svg');
+        if (svg) svg.style.transform = 'rotate(90deg)';
       }
     });
     navSections.querySelectorAll('.has-sub-child.active').forEach(sub => {
@@ -562,7 +563,8 @@ function toggleMenu(nav, navSections, forceExpanded = null) {
       const parentLi = sub.closest('li.has-sub-child');
       if (parentLi) {
         parentLi.setAttribute('aria-expanded', 'false');
-        parentLi.querySelector('span svg')?.style.transform = 'rotate(90deg)';
+        const svg = parentLi.querySelector('span svg');
+        if (svg) svg.style.transform = 'rotate(90deg)';
       }
     });
     navSections.querySelectorAll('.has-inner-sub-child.active-child').forEach(sub => {
@@ -570,7 +572,8 @@ function toggleMenu(nav, navSections, forceExpanded = null) {
       const parentLi = sub.closest('li.has-sub-child');
       if (parentLi) {
         parentLi.setAttribute('aria-expanded', 'false');
-        parentLi.querySelector('span svg')?.style.transform = 'rotate(90deg)';
+        const svg = parentLi.querySelector('span svg');
+        if (svg) svg.style.transform = 'rotate(90deg)';
       }
     });
   }
@@ -699,7 +702,8 @@ export default async function decorate(block) {
         const parentLi = sub.closest('li.has-sub-child');
         if (parentLi) {
           parentLi.setAttribute('aria-expanded', 'false');
-          parentLi.querySelector('span svg')?.style.transform = 'rotate(90deg)';
+          const svg = parentLi.querySelector('span svg');
+          if (svg) svg.style.transform = 'rotate(90deg)';
         }
       });
       mainNav.querySelectorAll('.has-inner-sub-child').forEach(sub => {
@@ -707,7 +711,8 @@ export default async function decorate(block) {
         const parentLi = sub.closest('li.has-sub-child');
         if (parentLi) {
           parentLi.setAttribute('aria-expanded', 'false');
-          parentLi.querySelector('span svg')?.style.transform = 'rotate(90deg)';
+          const svg = parentLi.querySelector('span svg');
+          if (svg) svg.style.transform = 'rotate(90deg)';
         }
       });
     } else {
@@ -724,7 +729,8 @@ export default async function decorate(block) {
         const parentLi = sub.closest('li.has-sub-child');
         if (parentLi) {
           parentLi.setAttribute('aria-expanded', 'false');
-          parentLi.querySelector('span svg')?.style.transform = 'rotate(90deg)';
+          const svg = parentLi.querySelector('span svg');
+          if (svg) svg.style.transform = 'rotate(90deg)';
         }
       });
       mainNav.querySelectorAll('.has-inner-sub-child').forEach(sub => {
@@ -732,7 +738,8 @@ export default async function decorate(block) {
         const parentLi = sub.closest('li.has-sub-child');
         if (parentLi) {
           parentLi.setAttribute('aria-expanded', 'false');
-          parentLi.querySelector('span svg')?.style.transform = 'rotate(90deg)';
+          const svg = parentLi.querySelector('span svg');
+          if (svg) svg.style.transform = 'rotate(90deg)';
         }
       });
     }
