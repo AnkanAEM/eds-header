@@ -451,7 +451,7 @@ export default async function decorate(block) {
             navIconsDiv.append(iconWrapper);
           }
         });
-      });
+      }
     });
   }
 
