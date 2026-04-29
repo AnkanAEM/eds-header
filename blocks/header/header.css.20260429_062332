@@ -1,0 +1,19 @@
+[data-namespace='s7classic'].s7printdialog .s7dialog * {
+	box-sizing:content-box;
+	-moz-box-sizing:content-box;
+ }
+
+[data-namespace='s7classic'].s7embeddialog .s7dialog * {
+	box-sizing:content-box;
+	-moz-box-sizing:content-box;
+ }
+
+[data-namespace='s7classic'].s7emaildialog .s7dialog * {
+	box-sizing:content-box;
+	-moz-box-sizing:content-box;
+ }
+
+[data-namespace='s7classic'].s7linkdialog .s7dialog * {
+	box-sizing:content-box;
+	-moz-box-sizing:content-box;
+ }
