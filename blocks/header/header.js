@@ -2,184 +2,204 @@ import { getMetadata } from '../../scripts/aem.js';
 import { loadFragment } from '../fragment/fragment.js';
 
 // media query match that indicates mobile/tablet width
-const isDesktop = window.matchMedia('(min-width: 1024px)');
+const isDesktop = window.matchMedia('(min-width: 1024px)'); // Adjusted to 1024px based on CSS media queries
 
 /**
- * Moves instrumentation attributes from an original element to a new element.
- * @param {Element} originalElement The original element from the fragment.
- * @param {Element} newElement The new element created in the block.
+ * moveInstrumentation - Moves AEM instrumentation attributes from one element to another.
+ * @param {Element} sourceElement - The element from which to move attributes.
+ * @param {Element} destinationElement - The element to which to move attributes.
  */
-function moveInstrumentation(originalElement, newElement) {
-  if (!originalElement || !newElement) return;
-  const attributes = Array.from(originalElement.attributes);
-  attributes.forEach((attr) => {
-    if (attr.name.startsWith('data-cmp-') || attr.name.startsWith('data-cq-')) {
-      newElement.setAttribute(attr.name, attr.value);
+function moveInstrumentation(sourceElement, destinationElement) {
+  if (!sourceElement || !destinationElement) return;
+
+  // List of AEM instrumentation attributes
+  const instrumentationAttributes = [
+    'data-cmp-data-layer',
+    'data-cmp-is',
+    'data-cmp-lazy',
+    'data-cmp-mounted',
+    'data-cmp-src',
+    'data-cmp-hook-image',
+    'data-asset-id',
+    'id',
+    'itemscope',
+    'itemtype',
+  ];
+
+  instrumentationAttributes.forEach((attr) => {
+    if (sourceElement.hasAttribute(attr)) {
+      destinationElement.setAttribute(attr, sourceElement.getAttribute(attr));
+      sourceElement.removeAttribute(attr);
     }
   });
 }
 
 /**
- * Sanitizes a string to be used as a CSS class.
- * @param {string} text The input string.
- * @returns {string} The sanitized string.
+ * Toggles the entire nav for mobile.
+ * @param {Element} nav The container element
+ * @param {boolean} forceExpanded Optional param to force nav expand behavior when not null
  */
-function sanitizeClassName(text) {
-  if (!text) return '';
-  return text.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-');
+function toggleMobileMenu(nav, forceExpanded = null) {
+  if (!nav) return;
+
+  const expanded = forceExpanded !== null ? forceExpanded : nav.getAttribute('aria-expanded') === 'true';
+  const hamburger = nav.querySelector('.cmp-header__hamburger');
+
+  if (!hamburger) return;
+
+  // Toggle the checked state of the hidden checkbox
+  hamburger.checked = !expanded;
+  nav.setAttribute('aria-expanded', !expanded);
+  document.body.style.overflowY = (!expanded || isDesktop.matches) ? '' : 'hidden';
 }
 
 /**
- * Toggles the expanded state of a navigation item.
- * @param {HTMLElement} item The navigation item (<li>) to toggle.
- * @param {boolean} expanded The desired expanded state.
+ * Recursively decorates a UL element and its children.
+ * @param {HTMLUListElement} ul The UL element to decorate.
+ * @param {number} level The current nesting level (0 for top-level).
+ * @param {Array} contentBuffer A buffer to collect non-list content.
  */
-function toggleNavItem(item, expanded) {
-  if (!item) return;
-  item.classList.toggle('cmp-header__nav-products-click', expanded);
-  item.setAttribute('aria-expanded', expanded);
-  const submenu = item.querySelector('.cmp-header__product-items, .cmp-header__submenu');
-  if (submenu) {
-    submenu.setAttribute('aria-hidden', !expanded);
-  }
-}
+function decorateNavigation(ul, level, contentBuffer = []) {
+  if (!ul) return;
 
-/**
- * Closes all expanded navigation sections except the one provided.
- * @param {HTMLElement} navGroup The main navigation group.
- * @param {HTMLElement} excludeItem The item to exclude from closing.
- */
-function closeAllNavItems(navGroup, excludeItem = null) {
-  if (!navGroup) return;
-  navGroup.querySelectorAll('.cmp-header__nav-products-click').forEach((item) => {
-    if (item !== excludeItem) {
-      toggleNavItem(item, false);
-    }
-  });
-}
+  ul.classList.add('cmp-navigation__group');
 
-/**
- * Sets up the mobile navigation behavior.
- * @param {HTMLElement} nav The main nav element.
- * @param {HTMLElement} navSections The nav sections container.
- * @param {HTMLInputElement} hamburger The hamburger checkbox.
- */
-function setupMobileNav(nav, navSections, hamburger) {
-  if (!nav || !navSections || !hamburger) return;
+  Array.from(ul.children).forEach((li) => {
+    if (li.nodeName === 'LI') {
+      li.classList.add('cmp-navigation__item', `cmp-navigation__item--level-${level}`);
 
-  hamburger.addEventListener('change', () => {
-    const expanded = hamburger.checked;
-    nav.setAttribute('aria-expanded', expanded);
-    document.body.style.overflowY = expanded ? 'hidden' : '';
+      const strongElement = li.querySelector('strong');
+      const anchorElement = li.querySelector('a');
+      let triggerElement = anchorElement;
 
-    if (!expanded) {
-      closeAllNavItems(navSections);
-    }
-  });
+      if (strongElement) {
+        // This is a mega-menu trigger
+        triggerElement = document.createElement('a');
+        triggerElement.href = anchorElement ? anchorElement.href : '#'; // Use existing anchor href if present
+        triggerElement.textContent = strongElement.textContent;
+        triggerElement.classList.add('cmp-navigation__item-link');
+        strongElement.replaceWith(triggerElement);
+        li.classList.add('cmp-header__nav-products', 'cmp-header__nav-products-click');
 
-  // Close mobile nav on Escape key
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && hamburger.checked) {
-      hamburger.checked = false;
-      hamburger.dispatchEvent(new Event('change'));
-    }
-  });
+        // Add chevron for expandable items
+        const chevron = document.createElement('span');
+        chevron.classList.add('icon-chevron-down'); // Assuming a chevron class from CSS
+        triggerElement.append(chevron);
 
-  navSections.querySelectorAll('.cmp-navigation__item--level-0').forEach((navItem) => {
-    const hasChildren = navItem.querySelector('ul');
-    if (hasChildren) {
-      const link = navItem.querySelector('.cmp-navigation__item-link');
-      if (link) {
-        link.addEventListener('click', (e) => {
-          e.preventDefault();
-          const isExpanded = navItem.classList.contains('cmp-header__nav-products-click');
-          closeAllNavItems(navSections, navItem);
-          toggleNavItem(navItem, !isExpanded);
-        });
-      }
+        // Handle nested UL for sub-menus
+        const nestedUl = li.querySelector('ul');
+        if (nestedUl) {
+          nestedUl.classList.add('cmp-header__product-items');
+          const categoryMenu = document.createElement('div');
+          categoryMenu.classList.add('cmp-header__category-menu');
 
-      navItem.querySelectorAll('.cmp-navigation__item--level-1').forEach((subNavItem) => {
-        const hasSubChildren = subNavItem.querySelector('ul');
-        if (hasSubChildren) {
-          const subLink = subNavItem.querySelector('.cmp-navigation__item-link');
-          if (subLink) {
-            subLink.addEventListener('click', (e) => {
-              e.preventDefault();
-              const isSubExpanded = subNavItem.classList.contains('cmp-header__nav-products-click');
-              navItem.querySelectorAll('.cmp-navigation__item--level-1.cmp-header__nav-products-click').forEach((otherSub) => {
-                if (otherSub !== subNavItem) {
-                  toggleNavItem(otherSub, false);
+          // Move any buffered content into a .left-div for mega-menu items
+          if (contentBuffer.length > 0) {
+            const titleText = triggerElement.textContent.trim();
+            const sanitizedTitle = titleText.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+            const leftDiv = document.createElement('div');
+            leftDiv.classList.add('left-div', `${sanitizedTitle}-left-div`);
+            contentBuffer.forEach((node) => leftDiv.append(node));
+            categoryMenu.prepend(leftDiv);
+            contentBuffer.length = 0; // Clear the buffer
+          }
+
+          nestedUl.prepend(categoryMenu);
+          moveInstrumentation(nestedUl, categoryMenu); // Move instrumentation from ul to categoryMenu
+          decorateNavigation(nestedUl, level + 1); // Recurse for sub-menus
+        }
+
+        // Mobile click behavior for mega-menus
+        if (!isDesktop.matches) {
+          triggerElement.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation(); // Prevent immediate closing of parent menu
+            const parentLi = e.currentTarget.closest('li');
+            if (parentLi) {
+              const isExpanded = parentLi.classList.contains('active');
+              // Close all other open siblings at this level
+              Array.from(parentLi.parentNode.children).forEach((sibling) => {
+                if (sibling !== parentLi && sibling.classList.contains('active')) {
+                  sibling.classList.remove('active');
+                  sibling.setAttribute('aria-expanded', 'false');
+                  const siblingSubmenu = sibling.querySelector('.cmp-header__product-items, .cmp-header__submenu');
+                  if (siblingSubmenu) siblingSubmenu.style.display = 'none';
                 }
               });
-              toggleNavItem(subNavItem, !isSubExpanded);
+
+              // Toggle current item
+              parentLi.classList.toggle('active', !isExpanded);
+              parentLi.setAttribute('aria-expanded', !isExpanded);
+              const submenu = parentLi.querySelector('.cmp-header__product-items, .cmp-header__submenu');
+              if (submenu) {
+                submenu.style.display = isExpanded ? 'none' : 'flex';
+              }
+            }
+          });
+        }
+      } else if (anchorElement) {
+        anchorElement.classList.add('cmp-navigation__item-link');
+        li.classList.add('cmp-header__no-items'); // For items without sub-menus
+        if (level === 0) {
+          li.classList.add('cmp-header__nav-products');
+        }
+
+        const nestedUl = li.querySelector('ul');
+        if (nestedUl) {
+          nestedUl.classList.add('cmp-header__submenu');
+          const categoryMenu = document.createElement('div');
+          categoryMenu.classList.add('cmp-header__category-menu');
+          nestedUl.prepend(categoryMenu);
+          moveInstrumentation(nestedUl, categoryMenu);
+          decorateNavigation(nestedUl, level + 1);
+          // Add chevron for expandable items
+          const chevron = document.createElement('span');
+          chevron.classList.add('icon-chevron-down');
+          anchorElement.append(chevron);
+
+          // Mobile click behavior for sub-menus (L2+)
+          if (!isDesktop.matches) {
+            anchorElement.addEventListener('click', (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              const parentLi = e.currentTarget.closest('li');
+              if (parentLi) {
+                const isExpanded = parentLi.classList.contains('active');
+                Array.from(parentLi.parentNode.children).forEach((sibling) => {
+                  if (sibling !== parentLi && sibling.classList.contains('active')) {
+                    sibling.classList.remove('active');
+                    sibling.setAttribute('aria-expanded', 'false');
+                    const siblingSubmenu = sibling.querySelector('.cmp-header__product-items, .cmp-header__submenu');
+                    if (siblingSubmenu) siblingSubmenu.style.display = 'none';
+                  }
+                });
+
+                parentLi.classList.toggle('active', !isExpanded);
+                parentLi.setAttribute('aria-expanded', !isExpanded);
+                const submenu = parentLi.querySelector('.cmp-header__product-items, .cmp-header__submenu');
+                if (submenu) {
+                  submenu.style.display = isExpanded ? 'none' : 'flex';
+                }
+              }
             });
           }
         }
-      });
-    }
-  });
-}
-
-/**
- * Decorates the navigation list items.
- * @param {HTMLElement} ulElement The <ul> element to decorate.
- * @param {number} level The current nesting level (0 for top-level).
- * @param {boolean} isMobile Whether the current view is mobile.
- */
-function decorateNavList(ulElement, level, isMobile) {
-  if (!ulElement) return;
-
-  Array.from(ulElement.children).filter(el => el.nodeType === 1).forEach((li) => {
-    li.classList.add('cmp-navigation__item', `cmp-navigation__item--level-${level}`);
-
-    const linkOrStrong = li.querySelector(':scope > a, :scope > strong');
-    if (linkOrStrong) {
-      const link = linkOrStrong.tagName === 'A' ? linkOrStrong : document.createElement('a');
-      if (linkOrStrong.tagName === 'STRONG') {
-        link.textContent = linkOrStrong.textContent;
-        linkOrStrong.replaceWith(link);
-      }
-      link.classList.add('cmp-navigation__item-link');
-
-      const nestedUl = li.querySelector(':scope > ul');
-      if (nestedUl) {
-        li.classList.add('cmp-header__nav-products');
-        // Add specific class for click behavior on mobile
-        if (isMobile) {
-          li.classList.add('cmp-header__nav-products-click');
-          li.setAttribute('aria-expanded', 'false');
-        } else {
-          li.setAttribute('aria-expanded', 'false'); // Default for desktop, CSS handles hover
-        }
-
-        const categoryMenu = document.createElement('div');
-        categoryMenu.classList.add('cmp-header__category-menu');
-        // Move instrumentation from the text node or p tag before ul, if it exists
-        const prevSibling = nestedUl.previousElementSibling;
-        if (prevSibling && (prevSibling.tagName === 'P' || prevSibling.nodeType === Node.TEXT_NODE)) {
-          moveInstrumentation(prevSibling, categoryMenu);
-        }
-
-        while (nestedUl.firstChild) {
-          categoryMenu.append(nestedUl.firstChild);
-        }
-        nestedUl.append(categoryMenu);
-        nestedUl.classList.add('cmp-navigation__group', level === 0 ? 'cmp-header__product-items' : 'cmp-header__submenu');
-        nestedUl.setAttribute('aria-hidden', 'true');
-
-        decorateNavList(nestedUl, level + 1, isMobile);
-      } else {
-        li.classList.add('cmp-header__no-items');
       }
 
-      const linkText = link.textContent.toLowerCase();
-      if (linkText.includes('recipes')) {
-        li.classList.add('mobile-icon-recipes');
-      } else if (linkText.includes('media')) {
-        li.classList.add('mobile-icon-media');
-      } else if (linkText.includes('about us')) {
-        li.classList.add('mobile-icon-about-us');
+      // Add specific mobile icons based on text content
+      if (!isDesktop.matches && triggerElement) {
+        const text = triggerElement.textContent.toLowerCase();
+        if (text.includes('recipes')) {
+          li.classList.add('mobile-icon-recipes');
+        } else if (text.includes('media')) {
+          li.classList.add('mobile-icon-media');
+        } else if (text.includes('about us')) {
+          li.classList.add('mobile-icon-about-us');
+        }
       }
+    } else {
+      // Collect non-LI siblings into the buffer
+      contentBuffer.push(child);
     }
   });
 }
@@ -189,235 +209,250 @@ function decorateNavList(ulElement, level, isMobile) {
  * @param {Element} block The header block element
  */
 export default async function decorate(block) {
+  // Add root classes from the original HTML
   block.classList.add('cmp-header');
+  moveInstrumentation(block.firstElementChild, block);
 
+  // load nav as fragment
   const navMeta = getMetadata('nav');
   const navPath = navMeta ? new URL(navMeta, window.location).pathname : '/nav';
   const fragment = await loadFragment(navPath);
 
+  // decorate nav DOM
   const headerContent = document.createDocumentFragment();
 
+  // Create hamburger input
   const hamburgerInput = document.createElement('input');
-  hamburgerInput.type = 'checkbox';
   hamburgerInput.classList.add('cmp-header__hamburger');
+  hamburgerInput.type = 'checkbox';
   headerContent.append(hamburgerInput);
-  const originalHamburger = fragment.querySelector('.cmp-header__hamburger');
-  if (originalHamburger) {
-    moveInstrumentation(originalHamburger, hamburgerInput);
-  }
 
-  const sections = Array.from(fragment.children).filter(el => el.nodeType === 1);
-  if (sections.length < 3) {
-    console.warn('Header fragment does not contain expected 3 sections (Brand, Nav, Tools).');
-    return;
-  }
+  // Section 1: Brand (Logo)
+  const brandSection = fragment.children[0];
+  if (brandSection) {
+    const logoDiv = document.createElement('div');
+    logoDiv.classList.add('logo', 'image', 'cmp-header__logo');
+    moveInstrumentation(brandSection.firstElementChild, logoDiv); // Move instrumentation from p to logoDiv
 
-  const brandSection = sections[0];
-  const navSection = sections[1];
-  const toolsSection = sections[2];
-
-  // 1. Brand Section (Logo)
-  const logoDiv = document.createElement('div');
-  const brandLink = brandSection.querySelector('p > picture > img')?.closest('a');
-  if (brandLink) {
-    const picture = brandLink.querySelector('picture');
+    const picture = brandSection.querySelector('picture');
     if (picture) {
       const img = picture.querySelector('img');
-      if (img && img.src) {
-        logoDiv.classList.add('logo', 'image', 'cmp-header__logo');
-        const newPicture = picture.cloneNode(true);
-        const newLink = brandLink.cloneNode(false);
-        newLink.append(newPicture);
-        logoDiv.append(newLink);
-        moveInstrumentation(brandSection, logoDiv);
-        headerContent.append(logoDiv);
+      if (img) {
+        img.classList.add('cmp-image__image');
+        img.setAttribute('loading', 'lazy'); // Add lazy loading
       }
+      const anchor = document.createElement('a');
+      anchor.classList.add('cmp-image__link');
+      anchor.href = '/'; // Hardcoded home link as per original HTML
+      anchor.append(picture);
+      logoDiv.append(anchor);
     }
+    headerContent.append(logoDiv);
+    moveInstrumentation(brandSection, logoDiv); // Move instrumentation from section to logoDiv
   }
 
-  // 2. Navigation Links
+  // Section 2: Nav Links
   const navLinksDiv = document.createElement('div');
   navLinksDiv.classList.add('cmp-header__nav-links');
-  const navigationContainer = document.createElement('div');
-  navigationContainer.classList.add('navigation');
+
+  const navigationWrapper = document.createElement('div');
+  navigationWrapper.classList.add('navigation');
+
   const navElement = document.createElement('nav');
+  navElement.id = 'navigation-fff59bc8e9'; // Hardcoded ID from original HTML
   navElement.classList.add('cmp-navigation');
   navElement.setAttribute('itemscope', '');
   navElement.setAttribute('itemtype', 'http://schema.org/SiteNavigationElement');
   navElement.setAttribute('role', 'navigation');
-  navElement.setAttribute('aria-label', 'Main navigation');
-  navElement.setAttribute('aria-expanded', 'false'); // Initial state for main nav
-  moveInstrumentation(navSection, navLinksDiv);
 
   const mainUl = document.createElement('ul');
   mainUl.classList.add('cmp-navigation__group', 'cmp-header__nav-group');
 
-  let navContentBuffer = [];
+  const navSection = fragment.children[1];
+  if (navSection) {
+    const contentBuffer = [];
 
-  Array.from(navSection.children).forEach((child) => {
-    if (child.nodeType === 1) {
-      if (child.tagName === 'P' && child.querySelector('a')) {
-        if (navContentBuffer.length > 0) {
-          const lastLi = mainUl.lastElementChild;
-          if (lastLi && lastLi.classList.contains('cmp-header__nav-products')) {
-            const lastMenu = lastLi.querySelector('.cmp-header__product-items');
-            if (lastMenu) {
-              const leftDiv = document.createElement('div');
-              const title = lastLi.querySelector('.cmp-navigation__item-link')?.textContent || 'untitled';
-              leftDiv.classList.add('left-div', `${sanitizeClassName(title)}-left-div`);
-              navContentBuffer.forEach(bufferedNode => leftDiv.append(bufferedNode));
-              lastMenu.prepend(leftDiv);
+    Array.from(navSection.children).forEach((child) => {
+      // Ignore AEM comments
+      if (child.nodeType === Node.COMMENT_NODE) {
+        return;
+      }
+
+      if (child.nodeName === 'UL') {
+        const tempUl = document.createElement('ul');
+        // Move children from fragment UL to tempUl to process them
+        while (child.firstChild) {
+          tempUl.append(child.firstChild);
+        }
+        decorateNavigation(tempUl, 0, contentBuffer);
+        // Append decorated UL children to mainUl
+        Array.from(tempUl.children).forEach((li) => {
+          mainUl.append(li);
+        });
+        child.remove(); // Remove the original UL as its children are moved
+      } else if (child.nodeName === 'P') {
+        const link = child.querySelector('a');
+        if (link) {
+          const li = document.createElement('li');
+          li.classList.add('cmp-navigation__item', 'cmp-navigation__item--level-0', 'cmp-header__nav-products', 'cmp-header__no-items');
+          link.classList.add('cmp-navigation__item-link');
+          li.append(link);
+          mainUl.append(li);
+          moveInstrumentation(child, li); // Move instrumentation from p to li
+
+          // Add specific mobile icons based on text content
+          if (!isDesktop.matches) {
+            const text = link.textContent.toLowerCase();
+            if (text.includes('recipes')) {
+              li.classList.add('mobile-icon-recipes');
+            } else if (text.includes('media')) {
+              li.classList.add('mobile-icon-media');
+            } else if (text.includes('about us')) {
+              li.classList.add('mobile-icon-about-us');
             }
           }
-          navContentBuffer = [];
         }
-        const li = document.createElement('li');
-        const link = child.querySelector('a').cloneNode(true);
-        li.append(link);
-        moveInstrumentation(child, li);
-        mainUl.append(li);
-      } else if (child.tagName === 'UL') {
-        const lastLi = mainUl.lastElementChild;
-        if (lastLi) {
-          const clonedUl = child.cloneNode(true);
-          lastLi.append(clonedUl);
-          moveInstrumentation(child, clonedUl);
-        }
-      } else if (child.textContent.trim() !== '') {
-        navContentBuffer.push(child.cloneNode(true));
+      } else {
+        // Collect non-UL/P siblings into the buffer for mega-menu left-div
+        contentBuffer.push(child);
       }
-    }
-  });
+    });
 
-  if (navContentBuffer.length > 0) {
-    const lastLi = mainUl.lastElementChild;
-    if (lastLi && lastLi.classList.contains('cmp-header__nav-products')) {
-      const lastMenu = lastLi.querySelector('.cmp-header__product-items');
-      if (lastMenu) {
-        const leftDiv = document.createElement('div');
-        const title = lastLi.querySelector('.cmp-navigation__item-link')?.textContent || 'untitled';
-        leftDiv.classList.add('left-div', `${sanitizeClassName(title)}-left-div`);
-        navContentBuffer.forEach(bufferedNode => leftDiv.append(bufferedNode));
-        lastMenu.prepend(leftDiv);
-      }
-    }
+    navElement.append(mainUl);
   }
 
-  decorateNavList(mainUl, 0, !isDesktop.matches);
-
-  navElement.append(mainUl);
-
-  const mobileListDiv = document.createElement('div');
-  mobileListDiv.classList.add('cmp-header__mobile-list');
+  // Mobile policy and social media links (from original HTML, not fragment)
+  const mobileList = document.createElement('div');
+  mobileList.classList.add('cmp-header__mobile-list');
 
   const policyUl = document.createElement('ul');
   policyUl.classList.add('cmp-header__policy');
+
+  const navSectionFragment = fragment.children[1];
+  if (navSectionFragment) {
+    const policyLinks = Array.from(navSectionFragment.querySelectorAll('p > a')).filter(
+      (link) => link.textContent.includes('Contact us') || link.textContent.includes('FAQs') || link.textContent.includes('Terms of use') || link.textContent.includes('Privacy Policy')
+    );
+
+    policyLinks.forEach((link) => {
+      const li = document.createElement('li');
+      li.classList.add('cmp-header__policy-list');
+      const clonedLink = link.cloneNode(true);
+      clonedLink.setAttribute('target', '_self');
+      li.append(clonedLink);
+      policyUl.append(li);
+    });
+  }
+  mobileList.append(policyUl);
+
   const socialMediaDiv = document.createElement('div');
   socialMediaDiv.classList.add('cmp-header__social-media');
-
-  Array.from(toolsSection.children).forEach((child) => {
-    if (child.tagName === 'UL') {
-      Array.from(child.children).forEach((li) => {
+  const toolsSection = fragment.children[2];
+  if (toolsSection) {
+    const socialLinksUl = toolsSection.querySelector('ul');
+    if (socialLinksUl) {
+      Array.from(socialLinksUl.children).forEach((li) => {
         const link = li.querySelector('a');
         if (link) {
-          const newLi = document.createElement('li');
-          newLi.classList.add('cmp-header__policy-list');
-          newLi.append(link.cloneNode(true));
-          moveInstrumentation(li, newLi);
-
-          const href = link.href.toLowerCase();
-          if (href.includes('instagram')) {
-            const socialLink = link.cloneNode(true);
-            socialLink.classList.add('icon-instagram');
-            socialLink.removeAttribute('title');
-            socialMediaDiv.append(socialLink);
-          } else if (href.includes('facebook')) {
-            const socialLink = link.cloneNode(true);
-            socialLink.classList.add('icon-facebok');
-            socialLink.removeAttribute('title');
-            socialMediaDiv.append(socialLink);
-          } else if (href.includes('twitter')) {
-            const socialLink = link.cloneNode(true);
-            socialLink.classList.add('icon-twitter');
-            socialLink.removeAttribute('title');
-            socialMediaDiv.append(socialLink);
-          } else if (href.includes('youtube')) {
-            const socialLink = link.cloneNode(true);
-            socialLink.classList.add('icon-youtube');
-            socialLink.removeAttribute('title');
-            socialMediaDiv.append(socialLink);
-          } else {
-            policyUl.append(newLi);
-          }
+          const socialName = link.textContent.toLowerCase();
+          link.classList.add(`icon-${socialName}`); // Assuming icon classes match social names
+          link.setAttribute('data-social', socialName);
+          link.setAttribute('target', '_blank'); // As per original HTML
+          socialMediaDiv.append(link);
         }
       });
     }
-  });
+  }
+  mobileList.append(socialMediaDiv);
+  navElement.append(mobileList);
 
-  if (policyUl.children.length > 0) {
-    mobileListDiv.append(policyUl);
-  }
-  if (socialMediaDiv.children.length > 0) {
-    mobileListDiv.append(socialMediaDiv);
-  }
-  if (mobileListDiv.children.length > 0) {
-    navElement.append(mobileListDiv);
-  }
-
-  navigationContainer.append(navElement);
-  navLinksDiv.append(navigationContainer);
+  navigationWrapper.append(navElement);
+  navLinksDiv.append(navigationWrapper);
   headerContent.append(navLinksDiv);
 
-  // 3. Navigation Icons (Accessibility, Search, Login)
+  // Section 3: Nav Icons (Accessibility, Search, Login)
   const navIconsDiv = document.createElement('div');
-  let hasIcons = false;
+  navIconsDiv.classList.add('cmp-header__nav-icons');
 
-  Array.from(toolsSection.querySelectorAll('ul > li')).forEach((li) => {
-    const strong = li.querySelector('strong');
-    if (strong) {
-      const text = strong.textContent.trim().toLowerCase();
-      const iconDiv = document.createElement('div');
-      const iconLink = document.createElement('a');
-      iconLink.href = '#';
-      iconLink.classList.add('cmp-header__icon-img');
-      const iconSpan = document.createElement('div');
-      const iconText = document.createElement('div');
-      iconText.classList.add('cmp-header__icon-text');
-      iconText.textContent = strong.textContent.trim();
+  const toolsSectionFragment = fragment.children[2];
+  if (toolsSectionFragment) {
+    const toolItemsUl = toolsSectionFragment.querySelector('ul:last-of-type'); // Assuming the last UL is for tools
+    if (toolItemsUl) {
+      Array.from(toolItemsUl.children).forEach((li) => {
+        const toolText = li.querySelector('strong')?.textContent.trim();
+        if (toolText) {
+          const toolDiv = document.createElement('div');
+          toolDiv.classList.add(`cmp-header__${toolText.toLowerCase().replace(/\s/g, '')}`);
 
-      if (text === 'accessibility') {
-        iconDiv.classList.add('cmp-header__accessbility', 'cmp-header__hide-icon');
-        iconSpan.classList.add('icon-accessibility');
-        hasIcons = true;
-      } else if (text === 'search') {
-        iconDiv.classList.add('cmp-header__search');
-        iconSpan.classList.add('icon-search');
-        hasIcons = true;
-      } else if (text === 'login') {
-        iconDiv.classList.add('cmp-header__login', 'cmp-header__hide-icon');
-        iconSpan.classList.add('icon-profile');
-        hasIcons = true;
-      } else {
-        return;
-      }
-      iconLink.append(iconSpan);
-      iconLink.append(iconText);
-      iconDiv.append(iconLink);
-      navIconsDiv.append(iconDiv);
-      moveInstrumentation(li, iconDiv);
+          // Hide Accessibility and Login as per original HTML
+          if (toolText === 'Accessibility' || toolText === 'Login') {
+            toolDiv.classList.add('cmp-header__hide-icon');
+          }
+
+          const toolLink = document.createElement('a');
+          toolLink.href = '#'; // Hardcoded as per original HTML
+          toolLink.classList.add('cmp-header__icon-img');
+
+          const iconDiv = document.createElement('div');
+          iconDiv.classList.add(`icon-${toolText.toLowerCase().replace(/\s/g, '')}`);
+          toolLink.append(iconDiv);
+
+          const textDiv = document.createElement('div');
+          textDiv.classList.add('cmp-header__icon-text');
+          textDiv.textContent = toolText;
+          toolLink.append(textDiv);
+
+          toolDiv.append(toolLink);
+          navIconsDiv.append(toolDiv);
+        }
+      });
     }
-  });
-
-  if (hasIcons) {
-    navIconsDiv.classList.add('cmp-header__nav-icons');
-    moveInstrumentation(toolsSection, navIconsDiv);
-    headerContent.append(navIconsDiv);
   }
+  headerContent.append(navIconsDiv);
 
   block.append(headerContent);
 
-  // Setup mobile navigation interactions only if not desktop
-  if (!isDesktop.matches) {
-    setupMobileNav(block, navLinksDiv, hamburgerInput);
+  // Add event listener for mobile hamburger toggle
+  hamburgerInput.addEventListener('change', () => {
+    toggleMobileMenu(navElement, hamburgerInput.checked);
+  });
+
+  // Close mobile menu on desktop resize
+  isDesktop.addEventListener('change', () => {
+    if (isDesktop.matches) {
+      toggleMobileMenu(navElement, false); // Close menu on desktop
+    }
+  });
+
+  // Ensure initial state is correct based on desktop/mobile
+  toggleMobileMenu(navElement, false); // Initially closed for mobile, or open for desktop (handled by CSS)
+
+  // Add escape key listener for accessibility
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && hamburgerInput.checked) {
+      toggleMobileMenu(navElement, false);
+    }
+  });
+
+  // Manage aria-expanded for desktop navigation items
+  if (isDesktop.matches) {
+    const topLevelItems = navElement.querySelectorAll('.cmp-navigation__item--level-0');
+    topLevelItems.forEach(item => {
+      const submenu = item.querySelector('.cmp-header__product-items, .cmp-header__submenu');
+      if (submenu) {
+        item.setAttribute('aria-haspopup', 'true');
+        item.setAttribute('aria-expanded', 'false');
+
+        item.addEventListener('mouseenter', () => {
+          item.setAttribute('aria-expanded', 'true');
+          submenu.style.display = 'flex';
+        });
+
+        item.addEventListener('mouseleave', () => {
+          item.setAttribute('aria-expanded', 'false');
+          submenu.style.display = 'none';
+        });
+      }
+    });
   }
 }
