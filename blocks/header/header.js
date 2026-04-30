@@ -13,6 +13,7 @@ let contactToggleBox = null;
 let userAccountDropdown = null;
 let navHamburgerButton = null;
 let contactBlock = null;
+let rightDiv = null;
 
 function closeOnEscape(e) {
   if (e.code === 'Escape') {
@@ -404,7 +405,7 @@ export default async function decorate(block) {
   // --- Section 3: Tools (Contact, Language, Sign-in) ---
   const navTools = navElements.tools;
   if (navTools) {
-    const rightDiv = document.createElement('div');
+    rightDiv = document.createElement('div');
     rightDiv.classList.add('right');
     rightDiv.id = 'nav-right';
 
