@@ -1,679 +1,557 @@
 import { getMetadata } from '../../scripts/aem.js';
 import { loadFragment } from '../fragment/fragment.js';
 
+// media query match that indicates mobile/tablet width
 const isDesktop = window.matchMedia('(min-width: 1200px)');
-const EXPANDED_CLASS = 'active';
-const VISIBLE_CLASS = 'is-visible';
-const HIDDEN_CLASS = 'hidden';
+
+let nav;
+let navSections;
+let desktopPanelContainer; // Renamed for clarity
+let menuList;
+let carFilterMenu;
+let mobileMenu; // Renamed from 'menu' to avoid conflict with global menu variable
+let navRight;
+
+function closeOnEscape(e) {
+  if (e.code === 'Escape') {
+    if (!nav || !navSections) return;
+    const navSectionExpanded = navSections.querySelector('[aria-expanded="true"]');
+    if (navSectionExpanded && isDesktop.matches) {
+      // eslint-disable-next-line no-use-before-define
+      toggleAllNavSections(navSections, false); // Collapse all desktop dropdowns
+      navSectionExpanded.focus();
+    } else if (!isDesktop.matches) {
+      // eslint-disable-next-line no-use-before-define
+      toggleMenu(nav, navSections, false); // Close mobile menu
+      nav.querySelector('.nav-hamburger button').focus();
+    }
+  }
+}
+
+function closeOnFocusLost(e) {
+  const currentNav = e.currentTarget;
+  if (!currentNav || !navSections) return;
+  if (!currentNav.contains(e.relatedTarget)) {
+    const navSectionExpanded = navSections.querySelector('[aria-expanded="true"]');
+    if (navSectionExpanded && isDesktop.matches) {
+      // eslint-disable-next-line no-use-before-define
+      toggleAllNavSections(navSections, false); // Collapse all desktop dropdowns
+    } else if (!isDesktop.matches) {
+      // eslint-disable-next-line no-use-before-define
+      toggleMenu(currentNav, navSections, false); // Close mobile menu
+    }
+  }
+}
+
+function openOnKeydown(e) {
+  const focused = document.activeElement;
+  const isNavDrop = focused && focused.classList.contains('nav-drop');
+  if (isNavDrop && (e.code === 'Enter' || e.code === 'Space')) {
+    const dropExpanded = focused.getAttribute('aria-expanded') === 'true';
+    // eslint-disable-next-line no-use-before-define
+    toggleNavSection(focused, !dropExpanded); // Toggle the specific nav section
+  }
+}
+
+/**
+ * Toggles a single nav section's expanded state.
+ * @param {Element} section The nav section element (e.g., .link-title with .nav-drop)
+ * @param {Boolean} expanded Whether the element should be expanded or collapsed
+ */
+function toggleNavSection(section, expanded) {
+  if (!section) return;
+  section.setAttribute('aria-expanded', expanded);
+  const panel = section.nextElementSibling;
+  if (panel && panel.classList.contains('desktop-panel')) {
+    panel.style.display = expanded ? 'flex' : 'none';
+    panel.style.opacity = expanded ? '1' : '0';
+    panel.style.visibility = expanded ? 'visible' : 'hidden';
+  }
+}
+
+/**
+ * Toggles all nav sections
+ * @param {Element} sections The container element (navSections)
+ * @param {Boolean} expanded Whether the elements should be expanded or collapsed
+ */
+function toggleAllNavSections(sections, expanded = false) {
+  if (!sections) return;
+  sections.querySelectorAll('.nav-sections > ul > li.nav-drop').forEach((section) => {
+    toggleNavSection(section, expanded);
+  });
+}
+
+/**
+ * Toggles the entire nav
+ * @param {Element} navElement The container element (the <nav> tag)
+ * @param {Element} navSectionsElement The nav sections within the container element
+ * @param {*} forceExpanded Optional param to force nav expand behavior when not null
+ */
+function toggleMenu(navElement, navSectionsElement, forceExpanded = null) {
+  if (!navElement || !navSectionsElement) return;
+
+  const expanded = forceExpanded !== null ? forceExpanded : navElement.getAttribute('aria-expanded') === 'true';
+  const button = navElement.querySelector('.nav-hamburger button');
+  if (!button) return;
+
+  document.body.style.overflowY = (expanded || isDesktop.matches) ? '' : 'hidden';
+  navElement.setAttribute('aria-expanded', expanded);
+  button.setAttribute('aria-label', expanded ? 'Close navigation' : 'Open navigation');
+
+  // Manage desktop dropdowns
+  const navDrops = navSectionsElement.querySelectorAll('.nav-drop');
+  if (isDesktop.matches) {
+    navDrops.forEach((drop) => {
+      drop.setAttribute('tabindex', 0);
+      drop.removeEventListener('focus', openOnKeydown); // Remove old listener if any
+      drop.addEventListener('keydown', openOnKeydown); // Add keydown for Enter/Space
+      drop.addEventListener('mouseenter', () => toggleNavSection(drop, true));
+      drop.addEventListener('mouseleave', () => toggleNavSection(drop, false));
+      // Ensure panels are hidden by default on desktop load
+      toggleNavSection(drop, false);
+    });
+    // Collapse all nav sections when switching to desktop
+    toggleAllNavSections(navSectionsElement, false);
+  } else {
+    navDrops.forEach((drop) => {
+      drop.removeAttribute('tabindex');
+      drop.removeEventListener('keydown', openOnKeydown);
+      drop.removeEventListener('mouseenter', () => toggleNavSection(drop, true));
+      drop.removeEventListener('mouseleave', () => toggleNavSection(drop, false));
+      // Ensure panels are hidden on mobile
+      toggleNavSection(drop, false);
+    });
+  }
+
+  // enable menu collapse on escape keypress
+  if (expanded) {
+    window.addEventListener('keydown', closeOnEscape);
+    navElement.addEventListener('focusout', closeOnFocusLost);
+  } else {
+    window.removeEventListener('keydown', closeOnEscape);
+    navElement.removeEventListener('focusout', closeOnFocusLost);
+  }
+}
+
+function moveInstrumentation(sourceElement, targetElement) {
+  if (sourceElement && targetElement) {
+    const blockStatus = sourceElement.dataset.blockStatus;
+    if (blockStatus) {
+      targetElement.dataset.blockStatus = blockStatus;
+    }
+    const blockName = sourceElement.dataset.blockName;
+    if (blockName) {
+      targetElement.dataset.blockName = blockName;
+    }
+  }
+}
+
+function getDirectTextContent(element) {
+  if (!element) return '';
+  return Array.from(element.childNodes)
+    .filter(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim() !== '')
+    .map(node => node.textContent.trim())
+    .join(' ');
+}
 
 function sanitizeClassName(name) {
-  if (!name) return '';
   return name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-');
 }
 
-function moveInstrumentation(sourceEl, targetEl) {
-  if (sourceEl && targetEl) {
-    const blockStatus = sourceEl.dataset.blockStatus;
-    if (blockStatus) {
-      targetEl.dataset.blockStatus = blockStatus;
-    }
-    const blockName = sourceEl.dataset.blockName;
-    if (blockName) {
-      targetEl.dataset.blockName = blockName;
-    }
+function createAndAppend(parent, tagName, classes = [], attributes = {}) {
+  const element = document.createElement(tagName);
+  if (classes.length > 0) {
+    element.classList.add(...classes);
   }
+  Object.entries(attributes).forEach(([key, value]) => {
+    element.setAttribute(key, value);
+  });
+  parent.append(element);
+  return element;
 }
 
-function extractTextContent(element) {
-  if (!element) return '';
-  const a = element.querySelector('a');
-  if (a) return a.textContent.trim();
-  const strong = element.querySelector('strong');
-  if (strong) return strong.textContent.trim();
+function parseList(ulElement, parentContainer, isMobile = false) {
+  if (!ulElement || !parentContainer) return;
 
-  return Array.from(element.childNodes)
-    .filter((node) => node.nodeType === Node.TEXT_NODE)
-    .map((node) => node.textContent.trim())
-    .join('');
-}
+  const items = Array.from(ulElement.children).filter(child => child.nodeType === Node.ELEMENT_NODE);
+  const linkGridColumn = createAndAppend(parentContainer, 'div', ['link-grid-column', 'link-column-vertical']);
 
-function parseNavTree(ulElement) {
-  if (!ulElement || ulElement.tagName !== 'UL') return [];
+  const linksContainer = createAndAppend(linkGridColumn, 'ul', ['content', 'links-container', 'accordian-content']);
 
-  const children = [];
-  Array.from(ulElement.children).forEach((li) => {
-    if (li.tagName !== 'LI') return;
-
-    const link = li.querySelector('a');
-    const strong = li.querySelector('strong');
-    let title = '';
-    let href = null;
-    let description = null;
-
-    if (link) {
-      title = link.textContent.trim();
-      href = link.href;
-      const p = li.querySelector('p');
-      if (p) {
-        description = p.textContent.trim();
-      }
-    } else if (strong) {
-      title = strong.textContent.trim();
-    } else {
-      title = extractTextContent(li);
-    }
-
-    const item = { title, href, description, children: [] };
+  items.forEach(li => {
+    const liElement = createAndAppend(linksContainer, 'li');
+    const anchor = li.querySelector(':scope > a');
+    const strong = li.querySelector(':scope > strong');
     const nestedUl = li.querySelector(':scope > ul');
-    if (nestedUl) {
-      item.children = parseNavTree(nestedUl);
-    }
-    children.push(item);
-  });
-  return children;
-}
 
-function toggleMenu(nav, forceExpanded = null) {
-  if (!nav) return;
-
-  const expanded = forceExpanded !== null ? !forceExpanded : nav.getAttribute('aria-expanded') === 'true';
-  const navHamburger = nav.querySelector('.nav-hamburger');
-  const button = navHamburger ? navHamburger.querySelector('button') : null;
-
-  if (button) {
-    button.setAttribute('aria-label', expanded ? 'Open navigation' : 'Close navigation');
-  }
-
-  document.body.style.overflowY = (expanded || isDesktop.matches) ? '' : 'hidden';
-  nav.setAttribute('aria-expanded', expanded ? 'false' : 'true');
-
-  const mobileMenu = nav.querySelector('.menu');
-  if (mobileMenu) {
-    if (expanded) {
-      mobileMenu.classList.remove(VISIBLE_CLASS);
-      mobileMenu.classList.add(HIDDEN_CLASS);
+    if (anchor) {
+      liElement.append(anchor.cloneNode(true));
+    } else if (strong) {
+      liElement.append(strong.cloneNode(true));
     } else {
-      mobileMenu.classList.add(VISIBLE_CLASS);
-      mobileMenu.classList.remove(HIDDEN_CLASS);
+      const textNode = getDirectTextContent(li);
+      if (textNode) {
+        liElement.textContent = textNode;
+      }
     }
-  }
 
-  // Reset desktop panels when mobile menu is closed
-  if (expanded && !isDesktop.matches) {
-    nav.querySelectorAll('.desktop-panel').forEach((panel) => {
-      panel.classList.remove(VISIBLE_CLASS);
-    });
-    nav.querySelectorAll('.link-title').forEach((title) => {
-      title.classList.remove(EXPANDED_CLASS);
-    });
-  }
-}
-
-function setupMobileNav(navFragment, mobileMenuList) {
-  mobileMenuList.querySelectorAll('.accordion').forEach((itemEl) => {
-    const panelEl = itemEl.nextElementSibling;
-    if (panelEl && panelEl.classList.contains('panel')) {
-      const toggleAccordion = () => {
-        const isOpen = itemEl.classList.contains(EXPANDED_CLASS);
-        if (isOpen) {
-          itemEl.classList.remove(EXPANDED_CLASS);
-          panelEl.style.maxHeight = null;
-          itemEl.setAttribute('aria-expanded', 'false');
-          panelEl.setAttribute('aria-hidden', 'true');
-        } else {
-          itemEl.classList.add(EXPANDED_CLASS);
-          panelEl.style.maxHeight = `${panelEl.scrollHeight}px`;
-          itemEl.setAttribute('aria-expanded', 'true');
-          panelEl.setAttribute('aria-hidden', 'false');
-        }
-      };
-      itemEl.addEventListener('click', toggleAccordion);
-      itemEl.setAttribute('aria-expanded', 'false');
-      panelEl.setAttribute('aria-hidden', 'true');
-    }
-  });
-
-  // Escape key listener for mobile menu
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && navFragment.getAttribute('aria-expanded') === 'true') {
-      toggleMenu(navFragment, false);
-    }
-  });
-}
-
-function setupDesktopNav(navFragment) {
-  const navLinksContainer = navFragment.querySelector('.links');
-  if (!navLinksContainer) return;
-
-  navLinksContainer.querySelectorAll('.link-title').forEach((linkTitle) => {
-    const desktopPanel = linkTitle.nextElementSibling;
-    if (desktopPanel && desktopPanel.classList.contains('desktop-panel')) {
-      let timeout;
-
-      const openPanel = () => {
-        if (isDesktop.matches) {
-          clearTimeout(timeout);
-          navLinksContainer.querySelectorAll('.link-title').forEach((otherLink) => {
-            otherLink.classList.remove(EXPANDED_CLASS);
-            const otherPanel = otherLink.nextElementSibling;
-            if (otherPanel && otherPanel.classList.contains('desktop-panel')) {
-              otherPanel.classList.remove(VISIBLE_CLASS);
-            }
-          });
-          linkTitle.classList.add(EXPANDED_CLASS);
-          desktopPanel.classList.add(VISIBLE_CLASS);
-          linkTitle.setAttribute('aria-expanded', 'true');
-          desktopPanel.setAttribute('aria-hidden', 'false');
-        }
-      };
-
-      const closePanel = () => {
-        if (isDesktop.matches) {
-          timeout = setTimeout(() => {
-            linkTitle.classList.remove(EXPANDED_CLASS);
-            desktopPanel.classList.remove(VISIBLE_CLASS);
-            linkTitle.setAttribute('aria-expanded', 'false');
-            desktopPanel.setAttribute('aria-hidden', 'true');
-          }, 50); // Small delay to allow moving between linkTitle and desktopPanel
-        }
-      };
-
-      linkTitle.addEventListener('mouseenter', openPanel);
-      desktopPanel.addEventListener('mouseenter', () => clearTimeout(timeout));
-      linkTitle.addEventListener('mouseleave', closePanel);
-      desktopPanel.addEventListener('mouseleave', closePanel);
-
-      linkTitle.setAttribute('aria-haspopup', 'true');
-      linkTitle.setAttribute('aria-expanded', 'false');
-      desktopPanel.setAttribute('aria-hidden', 'true');
-    }
-  });
-
-  // Close desktop panels when clicking outside
-  document.addEventListener('click', (event) => {
-    if (isDesktop.matches && !navLinksContainer.contains(event.target) && !event.target.closest('.desktop-panel')) {
-      navLinksContainer.querySelectorAll('.link-title').forEach((linkTitle) => {
-        linkTitle.classList.remove(EXPANDED_CLASS);
-        linkTitle.setAttribute('aria-expanded', 'false');
-        const desktopPanel = linkTitle.nextElementSibling;
-        if (desktopPanel && desktopPanel.classList.contains('desktop-panel')) {
-          desktopPanel.classList.remove(VISIBLE_CLASS);
-          desktopPanel.setAttribute('aria-hidden', 'true');
-        }
-      });
-    }
-  });
-
-  // Escape key listener for desktop panels
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') {
-      navLinksContainer.querySelectorAll('.link-title').forEach((linkTitle) => {
-        if (linkTitle.classList.contains(EXPANDED_CLASS)) {
-          linkTitle.classList.remove(EXPANDED_CLASS);
-          linkTitle.setAttribute('aria-expanded', 'false');
-          const desktopPanel = linkTitle.nextElementSibling;
-          if (desktopPanel && desktopPanel.classList.contains('desktop-panel')) {
-            desktopPanel.classList.remove(VISIBLE_CLASS);
-            desktopPanel.setAttribute('aria-hidden', 'true');
+    if (nestedUl && !isMobile) { // Only parse nested ULs for desktop if needed, but fragment is flat
+      // For this specific header, nested ULs are rendered as flat lists within columns.
+      // If true recursion was needed, this would call parseList again.
+      Array.from(nestedUl.children).forEach(nestedLi => {
+        const nestedLiElement = createAndAppend(linksContainer, 'li');
+        const nestedAnchor = nestedLi.querySelector(':scope > a');
+        if (nestedAnchor) {
+          nestedLiElement.append(nestedAnchor.cloneNode(true));
+          const paragraph = nestedLi.querySelector(':scope > p');
+          if (paragraph) {
+            nestedLiElement.append(paragraph.cloneNode(true));
           }
+        } else {
+          nestedLiElement.textContent = getDirectTextContent(nestedLi);
         }
       });
+    } else {
+      const paragraph = li.querySelector(':scope > p');
+      if (paragraph) {
+        liElement.append(paragraph.cloneNode(true));
+      }
     }
   });
 }
 
+/**
+ * loads and decorates the header, mainly the nav
+ * @param {Element} block The header block element
+ */
 export default async function decorate(block) {
-  // Add original root classes to the block
+  // Add root classes from original HTML
   block.classList.add('corp-header-wrapper', 'header-scroll', 'header-scroll-threshold', 'corp-header-block', 'header-wrapper', 'sticky', 'show');
 
+  // load nav as fragment
   const navMeta = getMetadata('nav');
   const navPath = navMeta ? new URL(navMeta, window.location).pathname : '/nav';
   const fragment = await loadFragment(navPath);
 
-  if (!fragment) {
-    block.innerHTML = '';
-    return;
-  }
+  // decorate nav DOM
+  block.textContent = '';
+  nav = createAndAppend(block, 'nav', ['navbar', 'navbar-arena', 'g-container'], { id: 'nav' });
 
-  const navFragment = document.createElement('nav');
-  navFragment.id = 'nav';
-  navFragment.setAttribute('aria-expanded', 'false');
+  const fragmentChildren = Array.from(fragment.children).filter(child => child.nodeType === Node.ELEMENT_NODE);
 
-  const navWrapper = document.createElement('div');
-  navWrapper.classList.add('navbar', 'navbar-arena', 'g-container');
+  const brandSection = fragmentChildren[0];
+  const navFragmentSection = fragmentChildren[1]; // Renamed to avoid conflict
+  const toolsSection = fragmentChildren[2];
 
-  const sections = Array.from(fragment.children);
-  const brandSection = sections[0];
-  const navSection = sections[1];
-  const toolsSection = sections[2];
+  // Hamburger for mobile
+  const hamburger = createAndAppend(nav, 'div', ['nav-hamburger']);
+  hamburger.innerHTML = '<button type="button" aria-controls="nav" aria-label="Open navigation" aria-expanded="false"><span class="nav-hamburger-icon"></span></button>';
 
-  // Section 1: Brand Logo
+  // Section 1: Brand
   if (brandSection) {
-    const logoWrapper = document.createElement('div');
-    logoWrapper.classList.add('logo-wrapper');
-    const logoBlock = document.createElement('div');
-    logoBlock.classList.add('logo', 'block');
-    moveInstrumentation(brandSection, logoBlock); // Move instrumentation from the section itself
+    const logoWrapper = createAndAppend(nav, 'div', ['logo-wrapper']);
+    const logoBlock = createAndAppend(logoWrapper, 'div', ['logo', 'block']);
+    moveInstrumentation(brandSection, logoBlock);
 
-    const logoLinkEl = brandSection.querySelector('a');
-    if (logoLinkEl) {
-      const a = document.createElement('a');
-      a.classList.add('logo__picture');
-      a.href = logoLinkEl.href;
-      a.setAttribute('data-logo-name', logoLinkEl.textContent.trim() || 'Arena');
-
-      const picture = logoLinkEl.querySelector('picture');
-      if (picture) {
-        a.append(picture);
-      } else {
-        // Fallback if no picture, just append the link content
-        a.innerHTML = logoLinkEl.innerHTML;
-      }
-      logoBlock.append(a);
-    } else {
-      // If no link, still try to get a picture or content
-      const picture = brandSection.querySelector('picture');
-      if (picture) {
-        const a = document.createElement('a');
-        a.classList.add('logo__picture');
-        a.href = '/'; // Default home link
-        a.setAttribute('data-logo-name', 'Arena');
-        a.append(picture);
-        logoBlock.append(a);
-      } else {
-        // If no picture or link, append whatever is in the brand section
-        logoBlock.innerHTML = brandSection.innerHTML;
+    const p = brandSection.querySelector(':scope > div > p'); // Adjusted selector for the fragment structure
+    if (p) {
+      const picture = p.querySelector(':scope > picture');
+      const img = picture ? picture.querySelector(':scope > img') : null;
+      if (img) {
+        const span = createAndAppend(logoBlock, 'span', ['arena']);
+        const a = createAndAppend(span, 'a', ['logo__picture'], { href: '/', 'data-logo-name': img.alt || 'Logo' });
+        a.append(picture.cloneNode(true));
       }
     }
-    logoWrapper.append(logoBlock);
-    navWrapper.append(logoWrapper);
   }
 
-  // Hamburger menu for mobile
-  const hamburger = document.createElement('div');
-  hamburger.classList.add('nav-hamburger');
-  const hamburgerButton = document.createElement('button');
-  hamburgerButton.type = 'button';
-  hamburgerButton.setAttribute('aria-controls', 'nav');
-  hamburgerButton.setAttribute('aria-label', 'Open navigation');
-  hamburgerButton.setAttribute('aria-expanded', 'false');
-  const hamburgerIcon = document.createElement('span');
-  hamburgerIcon.classList.add('nav-hamburger-icon');
-  hamburgerButton.append(hamburgerIcon);
-  hamburger.append(hamburgerButton);
-  navWrapper.prepend(hamburger);
+  // Section 2: Nav Links
+  navSections = createAndAppend(nav, 'div', ['links']);
+  desktopPanelContainer = createAndAppend(nav, 'div', ['desktop-panel-container']); // Container for all desktop panels
 
-  // Section 2: Main Navigation
-  const navLinksContainer = document.createElement('div');
-  navLinksContainer.classList.add('links');
-
-  const desktopPanelsFragment = new DocumentFragment();
-  const mobileMenuList = document.createElement('ul');
-  mobileMenuList.classList.add('menu-list');
-
-  if (navSection) {
+  if (navFragmentSection) {
+    const navUl = createAndAppend(navSections, 'ul'); // Wrapper for link-title elements
+    let el = navFragmentSection.firstElementChild;
     let navItemIndex = 0;
-    const navItems = [];
-    let currentElement = navSection.firstElementChild;
 
-    while (currentElement) {
-      if (currentElement.nodeType === Node.COMMENT_NODE) {
-        currentElement = currentElement.nextElementSibling;
-        continue;
-      }
+    while (el) {
+      if (el.nodeType === Node.ELEMENT_NODE) {
+        if (el.tagName === 'P') {
+          const li = createAndAppend(navUl, 'li'); // Each link-title is an LI for desktop
+          const linkTitle = createAndAppend(li, 'div', ['link-title']);
+          const span = createAndAppend(linkTitle, 'span');
+          const anchor = el.querySelector(':scope > a');
+          const strong = el.querySelector(':scope > strong');
+          let titleText = '';
 
-      if (currentElement.tagName === 'P') {
-        const pElement = currentElement;
-        const link = pElement.querySelector('a');
-        const strong = pElement.querySelector('strong');
-        let title = '';
-        let href = null;
-        let description = null;
-
-        if (link) {
-          title = link.textContent.trim();
-          href = link.href;
-          const nextP = pElement.nextElementSibling;
-          if (nextP && nextP.tagName === 'P' && !nextP.querySelector('a')) {
-            description = nextP.textContent.trim();
-          }
-        } else if (strong) {
-          title = strong.textContent.trim();
-        } else {
-          title = extractTextContent(pElement);
-        }
-
-        const navItem = { title, href, description, children: [] };
-
-        let nextSibling = pElement.nextElementSibling;
-        while (nextSibling && nextSibling.nodeType === Node.COMMENT_NODE) {
-          nextSibling = nextSibling.nextElementSibling;
-        }
-
-        if (nextSibling && nextSibling.tagName === 'UL') {
-          navItem.children = parseNavTree(nextSibling);
-          currentElement = nextSibling.nextElementSibling;
-        } else if (description) { // If there was a description P, skip it
-          currentElement = pElement.nextElementSibling.nextElementSibling;
-        } else {
-          currentElement = pElement.nextElementSibling;
-        }
-        navItems.push(navItem);
-      } else if (currentElement.tagName === 'UL') {
-        // Handle orphaned ULs or ULs that are meant to be top-level items
-        const topLevelItems = parseNavTree(currentElement);
-        topLevelItems.forEach(item => navItems.push(item));
-        currentElement = currentElement.nextElementSibling;
-      } else {
-        currentElement = currentElement.nextElementSibling;
-      }
-    }
-
-    navItems.forEach((item) => {
-      const desktopLinkTitle = document.createElement('div');
-      desktopLinkTitle.classList.add('link-title');
-      const span = document.createElement('span');
-      if (item.href) {
-        const a = document.createElement('a');
-        a.href = item.href;
-        a.textContent = item.title;
-        if (item.title.toLowerCase() === 'home' || item.title.toLowerCase() === 'service' || item.title.toLowerCase() === 'important customer info') {
-          a.classList.add('button'); // Add button class for specific links
-        }
-        span.append(a);
-      } else {
-        span.textContent = item.title;
-      }
-      desktopLinkTitle.append(span);
-      navLinksContainer.append(desktopLinkTitle);
-
-      const mobileListItem = document.createElement('li');
-      mobileListItem.id = `menu-item-${navItemIndex}`;
-      mobileListItem.classList.add('nav-link');
-      const sanitizedTitle = sanitizeClassName(item.title);
-      if (sanitizedTitle) mobileListItem.classList.add(sanitizedTitle);
-      const mobileSpan = document.createElement('span');
-      mobileSpan.classList.add('menu-title');
-      if (item.href) {
-        const a = document.createElement('a');
-        a.href = item.href;
-        a.textContent = item.title;
-        if (item.title.toLowerCase() === 'home' || item.title.toLowerCase() === 'service' || item.title.toLowerCase() === 'important customer info') {
-          a.classList.add('button');
-        }
-        mobileSpan.append(a);
-      } else {
-        mobileSpan.textContent = item.title;
-      }
-      mobileListItem.append(mobileSpan);
-
-      if (item.children && item.children.length > 0) {
-        mobileListItem.classList.add('accordion');
-        const desktopPanel = document.createElement('div');
-        desktopPanel.classList.add('desktop-panel', 'panel', sanitizedTitle);
-        const linkGridBlock = document.createElement('div');
-        linkGridBlock.classList.add('link-grid', 'block');
-        const linkContainerSection = document.createElement('div');
-        linkContainerSection.classList.add('link-container-section');
-
-        const linkGridColumn = document.createElement('div');
-        linkGridColumn.classList.add('link-grid-column', 'link-column-vertical');
-        const ul = document.createElement('ul');
-        ul.classList.add('content', 'links-container', 'accordian-content');
-
-        item.children.forEach((child) => {
-          const li = document.createElement('li');
-          if (child.href) {
-            const a = document.createElement('a');
-            a.href = child.href;
-            a.textContent = child.title;
-            if (child.target) a.target = child.target;
-            if (child.rel) a.rel = child.rel;
-            li.append(a);
+          if (anchor) {
+            span.append(anchor.cloneNode(true));
+            titleText = anchor.textContent.trim();
+          } else if (strong) {
+            span.append(strong.cloneNode(true));
+            titleText = strong.textContent.trim();
           } else {
-            li.textContent = child.title;
+            titleText = getDirectTextContent(el);
+            span.textContent = titleText;
           }
-          if (child.description) {
-            const p = document.createElement('p');
-            p.textContent = child.description;
-            li.append(p);
-          }
-          if (child.children && child.children.length > 0) {
-            const nestedUl = document.createElement('ul');
-            child.children.forEach((grandchild) => {
-              const nestedLi = document.createElement('li');
-              if (grandchild.href) {
-                const nestedA = document.createElement('a');
-                nestedA.href = grandchild.href;
-                nestedA.textContent = grandchild.title;
-                if (grandchild.target) nestedA.target = grandchild.target;
-                if (grandchild.rel) nestedA.rel = grandchild.rel;
-                nestedLi.append(nestedA);
-              } else {
-                nestedLi.textContent = grandchild.title;
-              }
-              nestedUl.append(nestedLi);
-            });
-            li.append(nestedUl);
-          }
-          ul.append(li);
-        });
-        linkGridColumn.append(ul);
-        linkContainerSection.append(linkGridColumn);
-        linkGridBlock.append(linkContainerSection);
-        desktopPanel.append(linkGridBlock);
-        desktopPanelsFragment.append(desktopPanel);
 
-        const mobilePanel = desktopPanel.cloneNode(true);
-        mobilePanel.classList.remove('desktop-panel');
-        mobilePanel.style.maxHeight = '0';
-        mobilePanel.setAttribute('aria-hidden', 'true');
-        mobileMenuList.append(mobileListItem);
-        mobileMenuList.append(mobilePanel);
-      } else {
-        mobileMenuList.append(mobileListItem);
+          const nextSibling = el.nextElementSibling;
+          if (nextSibling && nextSibling.tagName === 'UL') {
+            li.classList.add('nav-drop'); // Mark as dropdown trigger
+            li.setAttribute('aria-haspopup', 'true');
+            li.setAttribute('aria-expanded', 'false'); // Default collapsed
+
+            const panel = createAndAppend(li, 'div', ['desktop-panel', 'panel', sanitizeClassName(titleText)]);
+            panel.style.display = 'none'; // Hidden by default
+            const linkGridBlock = createAndAppend(panel, 'div', ['link-grid', 'block']);
+            moveInstrumentation(navFragmentSection, linkGridBlock); // Instrumentation from parent section
+
+            const linkContainerSection = createAndAppend(linkGridBlock, 'div', ['link-container-section']);
+
+            // Check for horizontal layout for 'Sales'
+            if (sanitizeClassName(titleText) === 'sales') {
+              const linkGridColumn = createAndAppend(linkContainerSection, 'div', ['link-grid-column', 'link-column-horizontal']);
+              parseList(nextSibling, linkGridColumn);
+            } else {
+              parseList(nextSibling, linkContainerSection);
+            }
+
+            // Skip the UL as it's already processed
+            el = nextSibling.nextElementSibling;
+            continue;
+          }
+        }
       }
-      navItemIndex += 1;
-    });
+      el = el.nextElementSibling;
+    }
   }
-  navLinksContainer.append(desktopPanelsFragment);
-  navWrapper.append(navLinksContainer);
 
   // Section 3: Tools
-  const rightSection = document.createElement('div');
-  rightSection.classList.add('right');
-  rightSection.id = 'nav-right';
+  navRight = createAndAppend(nav, 'div', ['right'], { id: 'nav-right' });
 
   if (toolsSection) {
-    const toolUls = toolsSection.querySelectorAll('ul');
+    let currentToolEl = toolsSection.firstElementChild;
+    while (currentToolEl) {
+      if (currentToolEl.nodeType === Node.ELEMENT_NODE) {
+        if (currentToolEl.tagName === 'UL') {
+          const toolGroup = createAndAppend(navRight, 'div', ['tool-group']);
 
-    if (toolUls.length > 0) {
-      const contactWrapper = document.createElement('div');
-      contactWrapper.classList.add('contact-wrapper');
-      const contactBlock = document.createElement('div');
-      contactBlock.classList.add('contact', 'block');
-      moveInstrumentation(toolsSection, contactBlock);
+          const firstLink = currentToolEl.querySelector(':scope > li > a');
+          const firstText = getDirectTextContent(currentToolEl.querySelector(':scope > li'));
 
-      const contactDiv = document.createElement('div');
-      contactDiv.classList.add('contact_wrp_arena', 'user__contact', 'header');
-
-      const contactTitle = document.createElement('h4');
-      contactTitle.classList.add('user__contact-title');
-      contactTitle.textContent = 'Contact Us';
-      contactDiv.append(contactTitle);
-
-      const phoneIcon = document.createElement('span');
-      phoneIcon.classList.add('user__contact-title', 'icon-phone');
-      phoneIcon.setAttribute('aria-label', 'Contact Us');
-      contactDiv.append(phoneIcon);
-
-      const userContactIcons = document.createElement('div');
-      userContactIcons.classList.add('user__contact__icons', HIDDEN_CLASS);
-
-      const contactToggleBox = document.createElement('div');
-      contactToggleBox.classList.add(HIDDEN_CLASS, 'contact-toggle-box');
-      const callContainer = document.createElement('div');
-      callContainer.classList.add('user__contact__icon-call_container');
-
-      toolUls.forEach((ul) => {
-        Array.from(ul.children).forEach((li) => {
-          const link = li.querySelector('a');
-          const textContent = li.textContent.trim();
-
-          if (link) {
-            const iconLink = document.createElement('a');
-            iconLink.href = link.href;
-            if (link.target) iconLink.target = link.target;
-            if (link.rel) iconLink.rel = link.rel;
-
-            const srOnlySpan = document.createElement('span');
-            srOnlySpan.classList.add('sr-only');
-            srOnlySpan.textContent = link.title || textContent || 'icon';
-            iconLink.append(srOnlySpan);
-
-            const img = link.querySelector('img');
-            if (img) {
-              iconLink.append(img.cloneNode(true));
-            } else {
-              const iconSpan = document.createElement('span');
-              iconLink.append(iconSpan);
-            }
-
-            if (link.href.includes('whatsapp')) {
-              iconLink.classList.add('user__contact--icon', 'whatsapp');
-              userContactIcons.append(iconLink);
-            } else if (link.href.startsWith('mailto:')) {
-              iconLink.classList.add('user__contact--icon', 'email');
-              userContactIcons.append(iconLink);
-            } else if (link.href.startsWith('tel:')) {
-              const telLink = document.createElement('a');
-              telLink.href = link.href;
-              telLink.classList.add('primary-telephone');
-              telLink.textContent = textContent;
-              callContainer.append(telLink);
-            }
+          // Social Links
+          if (firstLink && (firstLink.href.includes('whatsapp') || firstLink.href.includes('facebook') || firstLink.href.includes('twitter'))) {
+            toolGroup.classList.add('social-links');
+            const ul = createAndAppend(toolGroup, 'ul', ['user__contact__icons']);
+            Array.from(currentToolEl.children).forEach(li => {
+              const anchor = li.querySelector(':scope > a');
+              if (anchor) {
+                const liEl = createAndAppend(ul, 'li');
+                const clonedAnchor = anchor.cloneNode(true);
+                const iconSpan = createAndAppend(clonedAnchor, 'span', ['sr-only']);
+                iconSpan.textContent = anchor.title || anchor.textContent.trim();
+                // Add specific icon class if needed, based on href or title
+                if (clonedAnchor.title.toLowerCase().includes('whatsapp')) clonedAnchor.classList.add('user__contact--icon', 'whatsapp');
+                if (clonedAnchor.title.toLowerCase().includes('facebook')) clonedAnchor.classList.add('user__contact--icon', 'facebook');
+                if (clonedAnchor.title.toLowerCase().includes('twitter')) clonedAnchor.classList.add('user__contact--icon', 'twitter');
+                liEl.append(clonedAnchor);
+              }
+            });
           }
-        });
-      });
+          // Contact/Sign-in Group
+          else if (firstLink && (firstLink.href.startsWith('tel:') || firstLink.href.startsWith('mailto:')) || firstText.toLowerCase().includes('sign in')) {
+            const contactWrapper = createAndAppend(navRight, 'div', ['contact-wrapper']);
+            const contactBlock = createAndAppend(contactWrapper, 'div', ['contact', 'block']);
+            moveInstrumentation(toolsSection, contactBlock); // Instrumentation from parent section
 
-      contactToggleBox.append(callContainer);
-      contactDiv.append(userContactIcons);
-      contactDiv.append(contactToggleBox);
-      contactBlock.append(contactDiv);
-      contactWrapper.append(contactBlock);
-      rightSection.append(contactWrapper);
+            const contactWrpArena = createAndAppend(contactBlock, 'div', ['contact_wrp_arena', 'user__contact', 'header']);
 
-      const contactTitleToggle = contactDiv.querySelector('.user__contact-title.icon-phone');
-      if (contactTitleToggle) {
-        contactTitleToggle.addEventListener('click', (event) => {
-          event.preventDefault();
-          userContactIcons.classList.toggle(HIDDEN_CLASS);
-          contactToggleBox.classList.toggle(HIDDEN_CLASS);
-        });
+            const contactTitle = createAndAppend(contactWrpArena, 'h4', ['user__contact-title']);
+            contactTitle.textContent = 'Contact Us'; // Default label
+
+            const phoneIconSpan = createAndAppend(contactWrpArena, 'span', ['user__contact-title', 'icon-phone'], { 'aria-label': 'Contact Us' });
+
+            const userContactIcons = createAndAppend(contactWrpArena, 'div', ['user__contact__icons', 'hidden']);
+
+            const contactToggleBox = createAndAppend(contactWrpArena, 'div', ['hidden', 'contact-toggle-box']);
+            const callContainer = createAndAppend(contactToggleBox, 'div', ['user__contact__icon-call_container']);
+
+            let primaryPhoneLink = null;
+            let secondaryPhoneLink = null;
+
+            Array.from(currentToolEl.children).forEach(li => {
+              const anchor = li.querySelector(':scope > a');
+              const text = getDirectTextContent(li);
+
+              if (anchor && anchor.href.startsWith('tel:')) {
+                if (!primaryPhoneLink) {
+                  primaryPhoneLink = anchor.cloneNode(true);
+                  primaryPhoneLink.classList.add('primary-telephone');
+                } else if (!secondaryPhoneLink) {
+                  secondaryPhoneLink = anchor.cloneNode(true);
+                  secondaryPhoneLink.classList.add('secondary-telephone');
+                }
+                const phoneIcon = createAndAppend(userContactIcons, 'a', ['user__contact--icon', 'phone'], { href: '#' });
+                phoneIcon.onclick = (event) => {
+                  event.preventDefault();
+                  contactToggleBox.classList.toggle('hidden');
+                };
+                phoneIcon.innerHTML = '<span class="sr-only">phone</span><img src="https://www.marutisuzuki.com/adobe/assets/urn:aaid:aem:5b948ce6-b05d-4b51-ad62-c8763b2489ef/as/phone-blue.svg" alt="phone" loading="lazy">';
+              } else if (anchor && anchor.href.includes('wa.me')) {
+                const whatsappIcon = createAndAppend(userContactIcons, 'a', ['user__contact--icon', 'whatsapp'], { href: anchor.href, target: '_blank', rel: 'noopener noreferrer' });
+                whatsappIcon.innerHTML = '<span class="sr-only">whatsapp</span><img src="https://www.marutisuzuki.com/adobe/assets/urn:aaid:aem:8b7e1a58-e51b-4076-8d71-74415f808bb5/as/whatsapp-blue.svg" alt="whatsapp" loading="lazy">';
+              } else if (anchor && anchor.href.startsWith('mailto:')) {
+                const emailIcon = createAndAppend(userContactIcons, 'a', ['user__contact--icon', 'email'], { href: anchor.href });
+                emailIcon.innerHTML = '<span class="sr-only">email</span><img src="https://www.marutisuzuki.com/adobe/assets/urn:aaid:aem:486b1069-8798-47ae-ac0b-d557f2185041/as/mail-blue.svg" alt="email" loading="lazy">';
+              } else if (text.toLowerCase().includes('sign in')) {
+                // This is the sign-in trigger, the actual sign-in dropdown is handled below
+              }
+            });
+
+            if (primaryPhoneLink) callContainer.append(primaryPhoneLink);
+            if (secondaryPhoneLink) callContainer.append(secondaryPhoneLink);
+
+            // Handle sign-in dropdown separately
+            const signInUl = Array.from(currentToolEl.children).find(li => getDirectTextContent(li).toLowerCase().includes('sign in'))?.parentElement;
+            if (signInUl) {
+              const signInWrapper = createAndAppend(navRight, 'div', ['sign-in-wrapper', 'hidden']);
+              const signInBlock = createAndAppend(signInWrapper, 'div', ['sign-in', 'block']);
+              moveInstrumentation(toolsSection, signInBlock);
+
+              const userDropdown = createAndAppend(signInBlock, 'div', ['user__dropdown']);
+              const userAccount = createAndAppend(userDropdown, 'div', ['user__account']);
+
+              Array.from(signInUl.children).forEach(li => {
+                const anchor = li.querySelector(':scope > a');
+                if (anchor && !getDirectTextContent(li).toLowerCase().includes('sign in')) { // Exclude the sign-in trigger itself
+                  const accountLink = createAndAppend(userAccount, 'a', ['user__account--link', sanitizeClassName(anchor.textContent)], { href: anchor.href, target: anchor.target });
+                  accountLink.innerHTML = `<span class="user__account__list-icon"><img src="${anchor.querySelector('img')?.src || ''}" loading="lazy" alt="${anchor.textContent}"></span>${anchor.textContent}`;
+                } else if (getDirectTextContent(li).toLowerCase().includes('sign in')) {
+                  const signInBtnDiv = createAndAppend(userAccount, 'div', ['user__account--link', 'sign-in-btn']);
+                  signInBtnDiv.innerHTML = `<span class="user__account__list-icon"><img src="https://www.marutisuzuki.com/adobe/assets/urn:aaid:aem:3c13f70a-cefc-4aeb-83f2-53cd72a175d1/as/world-blue.svg" loading="lazy" alt="Sign-in"></span><button type="button" data-sign-out-text="Sign Out">${getDirectTextContent(li)}</button>`;
+                }
+              });
+            }
+          } else {
+            // Generic UL for other tools (e.g., app store links)
+            toolGroup.append(currentToolEl.cloneNode(true));
+          }
+        } else if (currentToolEl.tagName === 'P' && currentToolEl.textContent.trim().toLowerCase() === 'en') {
+          const languageDiv = createAndAppend(navRight, 'div', ['language']);
+          languageDiv.textContent = 'EN';
+        }
       }
+      currentToolEl = currentToolEl.nextElementSibling;
+    }
+  }
+
+  // Mobile menu structure
+  mobileMenu = createAndAppend(block, 'div', ['menu', 'hidden', 'menu-arena'], { id: 'menu' });
+
+  const menuHeader = createAndAppend(mobileMenu, 'div', ['menu-header']);
+  menuHeader.innerHTML = '<div class="back-arrow"></div><span class="menu-title">Menu</span><span class="close-icon"></span>';
+
+  menuList = createAndAppend(mobileMenu, 'ul', ['menu-list']);
+
+  // Populate mobile menu from navSections structure
+  navSections.querySelectorAll('.link-title').forEach((linkTitle, index) => {
+    const li = createAndAppend(menuList, 'li', ['nav-link'], { id: `menu-item-${index}` });
+
+    const span = createAndAppend(li, 'span', ['menu-title']);
+    const anchor = linkTitle.querySelector(':scope > span > a');
+    if (anchor) {
+      span.append(anchor.cloneNode(true));
+      li.classList.add(sanitizeClassName(anchor.textContent));
+    } else {
+      span.textContent = linkTitle.textContent.trim();
+      li.classList.add(sanitizeClassName(linkTitle.textContent));
     }
 
-    const languageDiv = document.createElement('div');
-    languageDiv.classList.add('language');
-    languageDiv.textContent = 'EN';
-    rightSection.append(languageDiv);
+    // Find the corresponding desktop panel content
+    const desktopPanelForThisItem = linkTitle.closest('li.nav-drop')?.querySelector('.desktop-panel');
+    if (desktopPanelForThisItem) {
+      li.classList.add('accordion');
+      const panelDiv = createAndAppend(menuList, 'div', ['panel']);
+      // Clone the link-container-section for mobile accordion
+      const linkContainerSection = desktopPanelForThisItem.querySelector('.link-container-section');
+      if (linkContainerSection) {
+        panelDiv.append(linkContainerSection.cloneNode(true));
+      }
+    }
+  });
 
-    const signInWrapper = document.createElement('div');
-    signInWrapper.classList.add('sign-in-wrapper', HIDDEN_CLASS);
-    const signInBlock = document.createElement('div');
-    signInBlock.classList.add('sign-in', 'block');
-    moveInstrumentation(toolsSection, signInBlock);
+  // Add sign-in/profile links to mobile menu
+  const signInWrapper = navRight.querySelector('.sign-in-wrapper');
+  if (signInWrapper) {
+    const userAccount = signInWrapper.querySelector('.user__account');
+    if (userAccount) {
+      Array.from(userAccount.children).forEach(accountLinkOrBtn => {
+        const li = createAndAppend(menuList, 'li');
+        li.append(accountLinkOrBtn.cloneNode(true));
+      });
+    }
+  }
 
-    const userDropdown = document.createElement('div');
-    userDropdown.classList.add('user__dropdown');
-    const userAccount = document.createElement('div');
-    userAccount.classList.add('user__account');
+  // Add event listeners for mobile menu
+  hamburger.addEventListener('click', () => {
+    mobileMenu.classList.toggle('hidden');
+    document.body.classList.toggle('menu-open');
+    nav.setAttribute('aria-expanded', mobileMenu.classList.contains('hidden') ? 'false' : 'true');
+  });
 
-    const signInUl = toolsSection.querySelector('ul:last-of-type');
-    if (signInUl) {
-      Array.from(signInUl.children).forEach((li) => {
-        const link = li.querySelector('a');
-        const textContent = li.textContent.trim();
+  menuHeader.querySelector('.close-icon').addEventListener('click', () => {
+    mobileMenu.classList.add('hidden');
+    document.body.classList.remove('menu-open');
+    nav.setAttribute('aria-expanded', 'false');
+  });
 
-        if (link && link.classList.contains('user__account--link')) {
-          const clonedLink = link.cloneNode(true);
-          userAccount.append(clonedLink);
-        } else if (textContent === 'Sign In' || (link && link.textContent.trim() === 'Sign In')) {
-          const signInBtnDiv = document.createElement('div');
-          signInBtnDiv.classList.add('user__account--link', 'sign-in-btn');
-          const iconSpan = document.createElement('span');
-          iconSpan.classList.add('user__account__list-icon');
-          const iconImg = document.createElement('img');
-          iconImg.src = 'https://www.marutisuzuki.com/adobe/assets/urn:aaid:aem:3c13f70a-cefc-4aeb-83f2-53cd72a175d1/as/world-blue.svg';
-          iconImg.loading = 'lazy';
-          iconImg.alt = 'Sign-in';
-          iconSpan.append(iconImg);
-          const button = document.createElement('button');
-          button.type = 'button';
-          button.setAttribute('data-sign-out-text', 'Sign Out');
-          button.textContent = 'Sign In';
-          signInBtnDiv.append(iconSpan);
-          signInBtnDiv.append(button);
-          userAccount.append(signInBtnDiv);
+  menuHeader.querySelector('.back-arrow').addEventListener('click', () => {
+    // For now, simply close the menu
+    mobileMenu.classList.add('hidden');
+    document.body.classList.remove('menu-open');
+    nav.setAttribute('aria-expanded', 'false');
+  });
+
+  menuList.querySelectorAll('.accordion').forEach(accordion => {
+    accordion.addEventListener('click', () => {
+      accordion.classList.toggle('active');
+      const panel = accordion.nextElementSibling;
+      if (panel && panel.classList.contains('panel')) {
+        if (panel.style.maxHeight) {
+          panel.style.maxHeight = null;
+        } else {
+          panel.style.maxHeight = `${panel.scrollHeight}px`;
+        }
+      }
+    });
+  });
+
+  // Car filter menu (if present in original HTML)
+  carFilterMenu = createAndAppend(block, 'div', ['car-filter-menu', 'hidden', 'car-filter-arena'], { id: 'carFilterMenu' });
+  const carPanelHeader = createAndAppend(carFilterMenu, 'div', ['car-panel-header']);
+  createAndAppend(carPanelHeader, 'div'); // Empty div
+  createAndAppend(carPanelHeader, 'span', ['car-text']).textContent = 'Cars';
+  createAndAppend(carPanelHeader, 'span', ['car-filter-close']).innerHTML = '<img src="/icons/close.svg" alt="close">';
+
+  // Add content to carFilterMenu if it existed in the fragment
+  const carFilterFragmentContent = fragmentChildren[3]; // Assuming it's the 4th section if present
+  if (carFilterFragmentContent) {
+    const searchHeaderBlock = createAndAppend(carFilterMenu, 'div', ['search-header', 'block']);
+    moveInstrumentation(carFilterFragmentContent, searchHeaderBlock);
+
+    const linkContainerSection = createAndAppend(searchHeaderBlock, 'div', ['link-container-section']);
+    const ulElement = carFilterFragmentContent.querySelector(':scope > div > ul'); // Assuming UL is directly under a div
+    if (ulElement) {
+      // The car filter menu has multiple columns, so iterate through them
+      Array.from(carFilterFragmentContent.children).forEach(child => {
+        if (child.tagName === 'DIV' && child.querySelector(':scope > ul')) {
+          parseList(child.querySelector(':scope > ul'), linkContainerSection);
         }
       });
     }
-
-    userDropdown.append(userAccount);
-    signInBlock.append(userDropdown);
-    signInWrapper.append(signInBlock);
-    rightSection.append(signInWrapper);
   }
-  navWrapper.append(rightSection);
-  navFragment.append(navWrapper);
 
-  // Mobile menu container
-  const mobileMenuContainer = document.createElement('div');
-  mobileMenuContainer.id = 'menu';
-  mobileMenuContainer.classList.add('menu', HIDDEN_CLASS, 'menu-arena');
-
-  const menuHeader = document.createElement('div');
-  menuHeader.classList.add('menu-header');
-  const backArrow = document.createElement('div');
-  backArrow.classList.add('back-arrow');
-  const menuTitle = document.createElement('span');
-  menuTitle.classList.add('menu-title');
-  menuTitle.textContent = 'Menu';
-  const closeIcon = document.createElement('span');
-  closeIcon.classList.add('close-icon');
-  menuHeader.append(backArrow);
-  menuHeader.append(menuTitle);
-  menuHeader.append(closeIcon);
-  mobileMenuContainer.append(menuHeader);
-  mobileMenuContainer.append(mobileMenuList);
-
-  // Append sign-in links to mobile menu
-  const mobileSignInLinks = userAccount.cloneNode(true);
-  Array.from(mobileSignInLinks.children).forEach((child) => {
-    if (child.tagName === 'A' || (child.tagName === 'DIV' && child.classList.contains('sign-in-btn'))) {
-      const li = document.createElement('li');
-      li.append(child);
-      mobileMenuList.append(li);
-    }
-  });
-
-  navFragment.append(mobileMenuContainer);
-
-  block.append(navFragment);
-
-  // Event Listeners
-  hamburgerButton.addEventListener('click', () => toggleMenu(navFragment));
-  closeIcon.addEventListener('click', () => toggleMenu(navFragment));
-  backArrow.addEventListener('click', () => {
-    // This logic needs to be more sophisticated for nested mobile menus
-    // For now, it just closes the main mobile menu
-    toggleMenu(navFragment, false);
-  });
-
-  setupMobileNav(navFragment, mobileMenuList);
-  setupDesktopNav(navFragment);
-
-  // Initial state and resize handling
-  isDesktop.addEventListener('change', () => toggleMenu(navFragment, isDesktop.matches));
-  toggleMenu(navFragment, isDesktop.matches); // Set initial state
+  // Initial toggle for desktop/mobile state
+  toggleMenu(nav, navSections, isDesktop.matches);
+  isDesktop.addEventListener('change', () => toggleMenu(nav, navSections, isDesktop.matches));
 }
