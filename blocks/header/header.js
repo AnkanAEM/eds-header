@@ -237,7 +237,9 @@ function sanitizeClassName(text) {
 export default async function decorate(block) {
   block.classList.add('main-header', 'with-marquee', 'solid', 'nav-up'); // Add root classes from original HTML
 
-  const fragment = await loadFragment('/fragments/header');
+  const navMeta = getMetadata('nav');
+  const navPath = navMeta ? new URL(navMeta, window.location).pathname : '/nav';
+  const fragment = await loadFragment(navPath);
   if (!fragment) {
     block.innerHTML = 'Header fragment not found.';
     return;
