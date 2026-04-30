@@ -12,6 +12,7 @@ let carFilterMenu = null;
 let contactToggleBox = null;
 let userAccountDropdown = null;
 let navHamburgerButton = null;
+let contactBlock = null;
 
 function closeOnEscape(e) {
   if (e.code === 'Escape') {
@@ -409,7 +410,7 @@ export default async function decorate(block) {
 
     const contactWrapper = document.createElement('div');
     contactWrapper.classList.add('contact-wrapper');
-    const contactBlock = document.createElement('div');
+    contactBlock = document.createElement('div');
     contactBlock.classList.add('contact', 'block');
     moveInstrumentation(navTools, contactBlock); // Instrumentation for the nav-tools div
 
