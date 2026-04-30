@@ -1,0 +1,65 @@
+@media (min-width:768px) { .we-mega-menu-submenu { min-height:400px !important; overflow:hidden !important; } }
+
+.tetley-news .block-block-content > .content > div:last-child > p:last-child, .tetley-news .block-block-content > .content > div:last-child > p:nth-child(3) { 
+    font-family: 'Muli Bold';
+    font-size: .75rem;
+    line-height: 1.625rem;
+    display: flex;
+    cursor: pointer;
+    letter-spacing: .5px;
+    color: #231f20;
+    align-items: center;
+    justify-content: flex-start;
+ }
+
+.tetley-news .block-block-content > .content > div:last-child > p:last-child a, .tetley-news .block-block-content > .content > div:last-child > p:nth-child(3) a { 
+    display: flex;
+    align-items: center;
+ }
+
+.tetley-news .block-block-content > .content > div:last-child > p:last-child a::before, .tetley-news .block-block-content > .content > div:last-child > p:nth-child(3) a::before { 
+    display: inline-block;
+    width: 30px;
+    height: 30px;
+    margin-right: 10px;
+    padding: 2px 5px;
+    content: '';
+    background-image: url(/themes/custom/tcpl/css/../images/arrow-icon.svg);
+    background-repeat: no-repeat;
+    background-repeat: no-repeat;
+    background-position: left;
+    background-size: contain;
+ }
+
+[inert] { 
+	pointer-events: none;
+	cursor: default;
+ }
+
+[inert], [inert] * {
+	user-select: none;
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+}
+
+/*<!]]]]><![CDATA[>*/
+
+/*<!]]>*/
+
+
+
+/*<![CDATA[/* >*/
+
+/*<![CDATA[/* >*/
+@media (min-width: 992px) { 
+    .tetley-news .block-block-content > .content > div img {width:auto} }
+
+/*<!]]]]><![CDATA[>*/
+
+/*<!]]>*/
+
+
+
+/*<![CDATA[/* >*/
+.container { max-width: 90%;margin: 0 auto;padding: 0; }
