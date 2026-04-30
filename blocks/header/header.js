@@ -1,619 +1,679 @@
 import { getMetadata } from '../../scripts/aem.js';
 import { loadFragment } from '../fragment/fragment.js';
 
-const isDesktop = window.matchMedia('(min-width: 992px)');
+const isDesktop = window.matchMedia('(min-width: 1200px)');
+const EXPANDED_CLASS = 'active';
+const VISIBLE_CLASS = 'is-visible';
+const HIDDEN_CLASS = 'hidden';
 
-/**
- * Moves instrumentation attributes (like data-once, data-cq-decorated) from a source element to a target element.
- * @param {HTMLElement} sourceElement The element to read attributes from.
- * @param {HTMLElement} targetElement The element to write attributes to.
- */
-function moveInstrumentation(sourceElement, targetElement) {
-  if (sourceElement && targetElement) {
-    const attributesToMove = ['data-once', 'data-cq-decorated'];
-    attributesToMove.forEach((attr) => {
-      const value = sourceElement.getAttribute(attr);
-      if (value) {
-        targetElement.setAttribute(attr, value);
+function sanitizeClassName(name) {
+  if (!name) return '';
+  return name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-');
+}
+
+function moveInstrumentation(sourceEl, targetEl) {
+  if (sourceEl && targetEl) {
+    const blockStatus = sourceEl.dataset.blockStatus;
+    if (blockStatus) {
+      targetEl.dataset.blockStatus = blockStatus;
+    }
+    const blockName = sourceEl.dataset.blockName;
+    if (blockName) {
+      targetEl.dataset.blockName = blockName;
+    }
+  }
+}
+
+function extractTextContent(element) {
+  if (!element) return '';
+  const a = element.querySelector('a');
+  if (a) return a.textContent.trim();
+  const strong = element.querySelector('strong');
+  if (strong) return strong.textContent.trim();
+
+  return Array.from(element.childNodes)
+    .filter((node) => node.nodeType === Node.TEXT_NODE)
+    .map((node) => node.textContent.trim())
+    .join('');
+}
+
+function parseNavTree(ulElement) {
+  if (!ulElement || ulElement.tagName !== 'UL') return [];
+
+  const children = [];
+  Array.from(ulElement.children).forEach((li) => {
+    if (li.tagName !== 'LI') return;
+
+    const link = li.querySelector('a');
+    const strong = li.querySelector('strong');
+    let title = '';
+    let href = null;
+    let description = null;
+
+    if (link) {
+      title = link.textContent.trim();
+      href = link.href;
+      const p = li.querySelector('p');
+      if (p) {
+        description = p.textContent.trim();
       }
+    } else if (strong) {
+      title = strong.textContent.trim();
+    } else {
+      title = extractTextContent(li);
+    }
+
+    const item = { title, href, description, children: [] };
+    const nestedUl = li.querySelector(':scope > ul');
+    if (nestedUl) {
+      item.children = parseNavTree(nestedUl);
+    }
+    children.push(item);
+  });
+  return children;
+}
+
+function toggleMenu(nav, forceExpanded = null) {
+  if (!nav) return;
+
+  const expanded = forceExpanded !== null ? !forceExpanded : nav.getAttribute('aria-expanded') === 'true';
+  const navHamburger = nav.querySelector('.nav-hamburger');
+  const button = navHamburger ? navHamburger.querySelector('button') : null;
+
+  if (button) {
+    button.setAttribute('aria-label', expanded ? 'Open navigation' : 'Close navigation');
+  }
+
+  document.body.style.overflowY = (expanded || isDesktop.matches) ? '' : 'hidden';
+  nav.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+
+  const mobileMenu = nav.querySelector('.menu');
+  if (mobileMenu) {
+    if (expanded) {
+      mobileMenu.classList.remove(VISIBLE_CLASS);
+      mobileMenu.classList.add(HIDDEN_CLASS);
+    } else {
+      mobileMenu.classList.add(VISIBLE_CLASS);
+      mobileMenu.classList.remove(HIDDEN_CLASS);
+    }
+  }
+
+  // Reset desktop panels when mobile menu is closed
+  if (expanded && !isDesktop.matches) {
+    nav.querySelectorAll('.desktop-panel').forEach((panel) => {
+      panel.classList.remove(VISIBLE_CLASS);
+    });
+    nav.querySelectorAll('.link-title').forEach((title) => {
+      title.classList.remove(EXPANDED_CLASS);
     });
   }
 }
 
-/**
- * Parses a UL element and its children into a nested data structure.
- * @param {HTMLUListElement} ulElement The UL element to parse.
- * @returns {Array<Object>} An array of menu item objects.
- */
-function parseNestedMenu(ulElement) {
-  const items = [];
-  if (!ulElement) return items;
-
-  Array.from(ulElement.children).forEach((li) => {
-    if (li.nodeName === 'LI') {
-      const item = { title: '', href: null, children: [], content: [] };
-      const anchor = li.querySelector('a');
-      const strong = li.querySelector('strong');
-
-      if (anchor) {
-        item.title = anchor.textContent.trim();
-        item.href = anchor.href;
-        // Move instrumentation from anchor to item representation
-        moveInstrumentation(anchor, item);
-      } else if (strong) {
-        item.title = strong.textContent.trim();
-      } else {
-        // Fallback to direct text content of LI, ignoring nested ULs
-        const directText = Array.from(li.childNodes)
-          .filter((node) => node.nodeType === Node.TEXT_NODE && node.textContent.trim().length > 0)
-          .map((node) => node.textContent.trim())
-          .join(' ');
-        item.title = directText;
-      }
-
-      // Capture all direct children of LI that are not ULs
-      Array.from(li.children).forEach((child) => {
-        if (child.nodeName !== 'UL') {
-          item.content.push(child.cloneNode(true));
-        }
-      });
-
-      const nestedUl = li.querySelector(':scope > ul');
-      if (nestedUl) {
-        item.children = parseNestedMenu(nestedUl);
-      }
-      items.push(item);
-    }
-  });
-  return items;
-}
-
-/**
- * Sets up the mobile navigation toggle (hamburger icon).
- * @param {HTMLElement} navElement The main navigation element.
- * @param {HTMLElement} navSections The element containing navigation sections.
- * @param {HTMLElement} wrapDiv The .wrap container.
- */
-function setupMobileNavToggle(navElement, wrapDiv) {
-  if (!navElement || !wrapDiv) return;
-
-  const hamburger = document.createElement('div');
-  hamburger.classList.add('hamburger');
-  hamburger.innerHTML = '<ul><li></li><li></li><li></li></ul>';
-  hamburger.setAttribute('data-once', 'hamburger-click nav-close-search');
-  hamburger.setAttribute('role', 'button');
-  hamburger.setAttribute('aria-label', 'Toggle navigation');
-  hamburger.setAttribute('aria-expanded', 'false');
-
-  wrapDiv.prepend(hamburger);
-
-  const toggleNav = () => {
-    const isExpanded = navElement.classList.contains('active');
-    if (isExpanded) {
-      navElement.classList.remove('active');
-      document.body.classList.remove('nav-open');
-      hamburger.setAttribute('aria-expanded', 'false');
-    } else {
-      navElement.classList.add('active');
-      document.body.classList.add('nav-open');
-      hamburger.setAttribute('aria-expanded', 'true');
-    }
-  };
-
-  hamburger.addEventListener('click', toggleNav);
-
-  // Close nav when clicking outside on mobile
-  document.addEventListener('click', (event) => {
-    if (!isDesktop.matches && navElement.classList.contains('active') && !navElement.contains(event.target) && !hamburger.contains(event.target)) {
-      toggleNav();
-    }
-  });
-
-  // Close nav on Escape key
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && navElement.classList.contains('active')) {
-      toggleNav();
-    }
-  });
-}
-
-/**
- * Sets up the mobile submenu toggles for a given navigation item.
- * @param {HTMLElement} navItem The LI element representing a navigation item.
- */
-function setupMobileSubmenuToggle(navItem) {
-  if (!navItem) return;
-
-  const chevronSpan = navItem.querySelector(':scope > span');
-  if (chevronSpan) {
-    chevronSpan.setAttribute('role', 'button');
-    chevronSpan.setAttribute('aria-label', 'Toggle submenu');
-    chevronSpan.setAttribute('aria-expanded', 'false');
-
-    chevronSpan.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-
-      const megaMenu = navItem.querySelector('.mega-menu');
-      if (megaMenu) {
-        const isExpanded = megaMenu.classList.contains('active');
-        if (isExpanded) {
-          megaMenu.classList.remove('active');
-          navItem.classList.remove('active');
-          chevronSpan.setAttribute('aria-expanded', 'false');
+function setupMobileNav(navFragment, mobileMenuList) {
+  mobileMenuList.querySelectorAll('.accordion').forEach((itemEl) => {
+    const panelEl = itemEl.nextElementSibling;
+    if (panelEl && panelEl.classList.contains('panel')) {
+      const toggleAccordion = () => {
+        const isOpen = itemEl.classList.contains(EXPANDED_CLASS);
+        if (isOpen) {
+          itemEl.classList.remove(EXPANDED_CLASS);
+          panelEl.style.maxHeight = null;
+          itemEl.setAttribute('aria-expanded', 'false');
+          panelEl.setAttribute('aria-hidden', 'true');
         } else {
-          // Close other open sub-menus at the same level
-          Array.from(navItem.parentNode.children).forEach((sibling) => {
-            if (sibling !== navItem && sibling.classList.contains('has-child')) {
-              sibling.classList.remove('active');
-              const siblingMegaMenu = sibling.querySelector('.mega-menu');
-              if (siblingMegaMenu) siblingMegaMenu.classList.remove('active');
-              const siblingChevron = sibling.querySelector(':scope > span');
-              if (siblingChevron) siblingChevron.setAttribute('aria-expanded', 'false');
+          itemEl.classList.add(EXPANDED_CLASS);
+          panelEl.style.maxHeight = `${panelEl.scrollHeight}px`;
+          itemEl.setAttribute('aria-expanded', 'true');
+          panelEl.setAttribute('aria-hidden', 'false');
+        }
+      };
+      itemEl.addEventListener('click', toggleAccordion);
+      itemEl.setAttribute('aria-expanded', 'false');
+      panelEl.setAttribute('aria-hidden', 'true');
+    }
+  });
+
+  // Escape key listener for mobile menu
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && navFragment.getAttribute('aria-expanded') === 'true') {
+      toggleMenu(navFragment, false);
+    }
+  });
+}
+
+function setupDesktopNav(navFragment) {
+  const navLinksContainer = navFragment.querySelector('.links');
+  if (!navLinksContainer) return;
+
+  navLinksContainer.querySelectorAll('.link-title').forEach((linkTitle) => {
+    const desktopPanel = linkTitle.nextElementSibling;
+    if (desktopPanel && desktopPanel.classList.contains('desktop-panel')) {
+      let timeout;
+
+      const openPanel = () => {
+        if (isDesktop.matches) {
+          clearTimeout(timeout);
+          navLinksContainer.querySelectorAll('.link-title').forEach((otherLink) => {
+            otherLink.classList.remove(EXPANDED_CLASS);
+            const otherPanel = otherLink.nextElementSibling;
+            if (otherPanel && otherPanel.classList.contains('desktop-panel')) {
+              otherPanel.classList.remove(VISIBLE_CLASS);
             }
           });
-          megaMenu.classList.add('active');
-          navItem.classList.add('active');
-          chevronSpan.setAttribute('aria-expanded', 'true');
+          linkTitle.classList.add(EXPANDED_CLASS);
+          desktopPanel.classList.add(VISIBLE_CLASS);
+          linkTitle.setAttribute('aria-expanded', 'true');
+          desktopPanel.setAttribute('aria-hidden', 'false');
         }
-      }
-    });
-  }
+      };
 
-  // Handle nested sub-menus (L2, L3, etc.)
-  navItem.querySelectorAll('.has-sub-child > ul > li, .has-inner-sub-child > ul > li').forEach((subMenuItem) => {
-    const subMenuChevronSpan = subMenuItem.querySelector(':scope > span');
-    if (subMenuChevronSpan) {
-      subMenuChevronSpan.setAttribute('role', 'button');
-      subMenuChevronSpan.setAttribute('aria-label', 'Toggle nested submenu');
-      subMenuChevronSpan.setAttribute('aria-expanded', 'false');
-
-      subMenuChevronSpan.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        const nestedMenuContainer = subMenuItem.querySelector('.has-sub-child, .has-inner-sub-child');
-        if (nestedMenuContainer) {
-          const isExpanded = nestedMenuContainer.classList.contains('active') || nestedMenuContainer.classList.contains('active-child');
-          if (isExpanded) {
-            nestedMenuContainer.classList.remove('active', 'active-child');
-            subMenuItem.classList.remove('active');
-            subMenuChevronSpan.setAttribute('aria-expanded', 'false');
-          } else {
-            // Close other open sub-menus at the same level
-            Array.from(subMenuItem.parentNode.children).forEach((sibling) => {
-              if (sibling !== subMenuItem) {
-                const siblingNestedMenu = sibling.querySelector('.has-sub-child, .has-inner-sub-child');
-                if (siblingNestedMenu) {
-                  siblingNestedMenu.classList.remove('active', 'active-child');
-                  sibling.classList.remove('active');
-                  const siblingSubMenuChevron = sibling.querySelector(':scope > span');
-                  if (siblingSubMenuChevron) siblingSubMenuChevron.setAttribute('aria-expanded', 'false');
-                }
-              }
-            });
-            nestedMenuContainer.classList.add(nestedMenuContainer.classList.contains('has-sub-child') ? 'active' : 'active-child');
-            subMenuItem.classList.add('active');
-            subMenuChevronSpan.setAttribute('aria-expanded', 'true');
-          }
+      const closePanel = () => {
+        if (isDesktop.matches) {
+          timeout = setTimeout(() => {
+            linkTitle.classList.remove(EXPANDED_CLASS);
+            desktopPanel.classList.remove(VISIBLE_CLASS);
+            linkTitle.setAttribute('aria-expanded', 'false');
+            desktopPanel.setAttribute('aria-hidden', 'true');
+          }, 50); // Small delay to allow moving between linkTitle and desktopPanel
         }
-      });
+      };
+
+      linkTitle.addEventListener('mouseenter', openPanel);
+      desktopPanel.addEventListener('mouseenter', () => clearTimeout(timeout));
+      linkTitle.addEventListener('mouseleave', closePanel);
+      desktopPanel.addEventListener('mouseleave', closePanel);
+
+      linkTitle.setAttribute('aria-haspopup', 'true');
+      linkTitle.setAttribute('aria-expanded', 'false');
+      desktopPanel.setAttribute('aria-hidden', 'true');
     }
   });
-}
 
-/**
- * Creates a navigation item (LI) for the main navigation.
- * @param {Object} itemData The data for the navigation item.
- * @param {HTMLElement} originalElement The original P element from the fragment.
- * @returns {HTMLElement} The created LI element.
- */
-function createMainNavItem(itemData, originalElement) {
-  const navItemLi = document.createElement('li');
-  navItemLi.classList.add('has-child', 'hover-red');
-  navItemLi.setAttribute('itemprop', 'name');
-  navItemLi.setAttribute('data-once', 'nav-close-search');
-
-  const linkOrSpan = itemData.href ? document.createElement('a') : document.createElement('span');
-  linkOrSpan.textContent = itemData.title;
-  if (itemData.href) {
-    linkOrSpan.href = itemData.href;
-    linkOrSpan.setAttribute('itemprop', 'url');
-  }
-  navItemLi.append(linkOrSpan);
-  moveInstrumentation(originalElement.querySelector('a') || originalElement.querySelector('strong') || originalElement, linkOrSpan);
-
-  const chevronSpan = document.createElement('span');
-  chevronSpan.innerHTML = '<svg viewBox="-23.5 -23.5 122.80 122.80" fill="#000000" stroke="#000000" stroke-width="4.851456000000001"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round" stroke="#CCCCCC" stroke-width="0.30321600000000004"></g><g id="SVGRepo_iconCarrier"> <g id="Group_65" data-name="Group 65" transform="translate(-831.568 -384.448)"> <path id="Path_57" data-name="Path 57" d="M833.068,460.252a1.5,1.5,0,0,1-1.061-2.561l33.557-33.56a2.53,2.53,0,0,0,0-3.564l-33.557-33.558a1.5,1.5,0,0,1,2.122-2.121l33.556,33.558a5.53,5.53,0,0,1,0,7.807l-33.557,33.56A1.5,1.5,0,0,1,833.068,460.252Z" fill="#030408"></path> </g> </g></svg>';
-  navItemLi.append(chevronSpan);
-
-  return navItemLi;
-}
-
-/**
- * Builds the HTML for a nested submenu.
- * @param {Array<Object>} items The menu item data.
- * @param {HTMLElement} [parentUl=null] The parent UL element to append to.
- * @param {number} [level=0] The current nesting level.
- * @returns {HTMLElement} The constructed UL element.
- */
-function buildSubmenuHtml(items, parentUl = null, level = 0) {
-  const ul = parentUl || document.createElement('ul');
-  items.forEach((subItem) => {
-    const li = document.createElement('li');
-
-    const linkOrSpan = subItem.href ? document.createElement('a') : document.createElement('span');
-    linkOrSpan.textContent = subItem.title;
-    if (subItem.href) {
-      linkOrSpan.href = subItem.href;
-    }
-    li.append(linkOrSpan);
-
-    if (subItem.children.length > 0) {
-      const subChevronSpan = document.createElement('span');
-      subChevronSpan.innerHTML = '<svg viewBox="-23.5 -23.5 122.80 122.80" fill="#000000" stroke="#000000" stroke-width="4.851456000000001"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round" stroke="#CCCCCC" stroke-width="0.30321600000000004"></g><g id="SVGRepo_iconCarrier"> <g id="Group_65" data-name="Group 65" transform="translate(-831.568 -384.448)"> <path id="Path_57" data-name="Path 57" d="M833.068,460.252a1.5,1.5,0,0,1-1.061-2.561l33.557-33.56a2.53,2.53,0,0,0,0-3.564l-33.557-33.558a1.5,1.5,0,0,1,2.122-2.121l33.556,33.558a5.53,5.53,0,0,1,0,7.807l-33.557,33.56A1.5,1.5,0,0,1,833.068,460.252Z" fill="#030408"></path> </g> </g></svg>';
-      li.append(subChevronSpan);
-
-      const nestedDiv = document.createElement('div');
-      nestedDiv.classList.add(level === 0 ? 'has-sub-child' : 'has-inner-sub-child');
-      const nestedUl = document.createElement('ul');
-      nestedDiv.append(buildSubmenuHtml(subItem.children, nestedUl, level + 1));
-      li.append(nestedDiv);
-    }
-    ul.append(li);
-  });
-  return ul;
-}
-
-/**
- * Renders the main navigation structure.
- * @param {HTMLElement} navSection The fragment section containing navigation content.
- * @returns {HTMLElement} The constructed nav element.
- */
-function renderMainNav(navSection) {
-  const navElement = document.createElement('nav');
-  navElement.classList.add('main-nav');
-  navElement.setAttribute('data-once', 'initSubChildToggle');
-  const mainUl = document.createElement('ul');
-  mainUl.setAttribute('itemscope', '');
-  mainUl.setAttribute('itemtype', 'http://www.schema.org/SiteNavigationElement');
-  navElement.append(mainUl);
-
-  if (!navSection) return navElement;
-
-  let currentElement = navSection.firstElementChild;
-  let contentBuffer = [];
-
-  while (currentElement) {
-    if (currentElement.nodeType === Node.COMMENT_NODE) {
-      currentElement = currentElement.nextElementSibling;
-      continue;
-    }
-
-    if (currentElement.nodeName === 'P') {
-      const itemData = { title: '', href: null };
-      const anchor = currentElement.querySelector('a');
-      if (anchor) {
-        itemData.title = anchor.textContent.trim();
-        itemData.href = anchor.href;
-      } else {
-        const strong = currentElement.querySelector('strong');
-        itemData.title = strong ? strong.textContent.trim() : currentElement.textContent.trim();
-      }
-
-      const navItemLi = createMainNavItem(itemData, currentElement);
-
-      const megaMenuDiv = document.createElement('div');
-      megaMenuDiv.classList.add('mega-menu');
-      const megaMenuWrap = document.createElement('div');
-      megaMenuWrap.classList.add('wrap', 'container');
-      const centerDiv = document.createElement('div');
-      centerDiv.classList.add('center-div');
-
-      if (contentBuffer.length > 0) {
-        const leftDiv = document.createElement('div');
-        leftDiv.classList.add('left-div');
-        if (anchor) {
-          const sanitizedTitle = anchor.textContent.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-');
-          if (sanitizedTitle) {
-            leftDiv.classList.add(`${sanitizedTitle}-left-div`);
-          }
-        }
-        contentBuffer.forEach((node) => leftDiv.append(node));
-        centerDiv.append(leftDiv);
-        contentBuffer = [];
-      }
-
-      let nextSibling = currentElement.nextElementSibling;
-      while (nextSibling && nextSibling.nodeType === Node.COMMENT_NODE) {
-        nextSibling = nextSibling.nextElementSibling;
-      }
-
-      if (nextSibling && nextSibling.nodeName === 'UL') {
-        const subNavWrap = document.createElement('div');
-        subNavWrap.classList.add('sub-nav-wrap');
-        const parsedSubmenu = parseNestedMenu(nextSibling);
-        subNavWrap.append(buildSubmenuHtml(parsedSubmenu));
-        centerDiv.append(subNavWrap);
-        moveInstrumentation(nextSibling, subNavWrap);
-        currentElement = nextSibling.nextElementSibling;
-      } else {
-        currentElement = currentElement.nextElementSibling;
-      }
-
-      megaMenuWrap.append(centerDiv);
-      megaMenuDiv.append(megaMenuWrap);
-      navItemLi.append(megaMenuDiv);
-      mainUl.append(navItemLi);
-      moveInstrumentation(currentElement ? currentElement.previousElementSibling : navSection.lastElementChild, navItemLi);
-    } else {
-      contentBuffer.push(currentElement.cloneNode(true));
-      currentElement = currentElement.nextElementSibling;
-    }
-  }
-  return navElement;
-}
-
-/**
- * Renders the tools section (contact us, search icons).
- * @param {HTMLElement} toolsSection The fragment section containing tools content.
- * @param {HTMLElement} navElement The main nav element to append mobile icon nav to.
- * @param {HTMLElement} wrapDiv The .wrap container to append desktop icon nav to.
- */
-function renderToolsSection(toolsSection, navElement, wrapDiv) {
-  if (!toolsSection) return;
-
-  const mobileIconNav = document.createElement('div');
-  mobileIconNav.classList.add('icon-nav', 'mobile-menus-icon');
-  const desktopIconNav = document.createElement('div');
-  desktopIconNav.classList.add('icon-nav', 'desktop-menus-icon');
-
-  Array.from(toolsSection.children).forEach((ulElement) => {
-    if (ulElement.nodeName === 'UL') {
-      const mobileUl = document.createElement('ul');
-      const desktopUl = document.createElement('ul');
-
-      Array.from(ulElement.children).forEach((li) => {
-        if (li.nodeName === 'LI') {
-          const anchor = li.querySelector('a');
-          if (anchor) {
-            const mobileLi = document.createElement('li');
-            const desktopLi = document.createElement('li');
-
-            const mobileLink = document.createElement('a');
-            mobileLink.href = anchor.href;
-            mobileLink.textContent = anchor.textContent.trim();
-            mobileLi.append(mobileLink);
-            moveInstrumentation(anchor, mobileLink);
-
-            const desktopLink = document.createElement('a');
-            desktopLink.href = anchor.href;
-            moveInstrumentation(anchor, desktopLink);
-
-            const iconText = anchor.textContent.trim().toLowerCase();
-            const originalLinkContent = anchor.innerHTML; // Get original content including SVGs
-
-            if (iconText === 'contact us') {
-              mobileLink.innerHTML = originalLinkContent;
-              desktopLink.innerHTML = originalLinkContent;
-              mobileLi.classList.add('mail');
-              desktopLi.classList.add('mail');
-            } else if (iconText === 'search') {
-              mobileLink.innerHTML = originalLinkContent;
-              desktopLink.innerHTML = originalLinkContent;
-              mobileLi.classList.add('search');
-              desktopLi.classList.add('search');
-
-              // Find the search screen wrap within the original LI
-              const searchScreenWrap = li.querySelector('.search-screen-wrap');
-              if (searchScreenWrap) {
-                desktopLi.append(searchScreenWrap.cloneNode(true));
-                mobileLi.append(searchScreenWrap.cloneNode(true)); // Add to mobile as well
-              }
-            } else {
-              desktopLink.textContent = anchor.textContent.trim();
-            }
-            desktopLi.append(desktopLink);
-            moveInstrumentation(li, mobileLi);
-            moveInstrumentation(li, desktopLi);
-
-            mobileUl.append(mobileLi);
-            desktopUl.append(desktopLi);
-          }
-        }
-      });
-      if (mobileUl.children.length > 0) mobileIconNav.append(mobileUl);
-      if (desktopUl.children.length > 0) desktopIconNav.append(desktopUl);
-      moveInstrumentation(ulElement, mobileUl);
-      moveInstrumentation(ulElement, desktopUl);
-    }
-  });
-  if (mobileIconNav.children.length > 0) navElement.append(mobileIconNav);
-  if (desktopIconNav.children.length > 0) wrapDiv.append(desktopIconNav);
-  moveInstrumentation(toolsSection, mobileIconNav);
-  moveInstrumentation(toolsSection, desktopIconNav);
-}
-
-/**
- * Sets up search functionality and event listeners.
- * @param {HTMLElement} block The main header block.
- */
-function setupSearchFunctionality(block) {
-  const searchIconDesktop = block.querySelector('.desktop-menus-icon .search > a');
-  const searchScreenDesktop = block.querySelector('.desktop-menus-icon .search-screen-wrap');
-  const searchIconMobile = block.querySelector('.mobile-menus-icon .search > a');
-  const searchScreenMobile = block.querySelector('.mobile-menus-icon .search-screen-wrap');
-
-  const toggleSearch = (icon, screen) => {
-    if (!icon || !screen) return;
-    const isSearchOpen = screen.classList.contains('active');
-    if (isSearchOpen) {
-      screen.classList.remove('active');
-      icon.querySelector('.lens').style.display = 'block';
-      icon.querySelector('.close').style.display = 'none';
-      document.body.classList.remove('search-open');
-      icon.setAttribute('aria-expanded', 'false');
-    } else {
-      screen.classList.add('active');
-      icon.querySelector('.lens').style.display = 'none';
-      icon.querySelector('.close').style.display = 'block';
-      document.body.classList.add('search-open');
-      icon.setAttribute('aria-expanded', 'true');
-      const searchInput = screen.querySelector('.input-text.searchtext');
-      if (searchInput) searchInput.focus();
-    }
-  };
-
-  if (searchIconDesktop && searchScreenDesktop) {
-    searchIconDesktop.setAttribute('role', 'button');
-    searchIconDesktop.setAttribute('aria-label', 'Toggle search');
-    searchIconDesktop.setAttribute('aria-expanded', 'false');
-    searchIconDesktop.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      toggleSearch(searchIconDesktop, searchScreenDesktop);
-    });
-    searchScreenDesktop.addEventListener('click', (e) => e.stopPropagation());
-  }
-
-  if (searchIconMobile && searchScreenMobile) {
-    searchIconMobile.setAttribute('role', 'button');
-    searchIconMobile.setAttribute('aria-label', 'Toggle search');
-    searchIconMobile.setAttribute('aria-expanded', 'false');
-    searchIconMobile.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      toggleSearch(searchIconMobile, searchScreenMobile);
-    });
-    searchScreenMobile.addEventListener('click', (e) => e.stopPropagation());
-  }
-
-  // Close search when clicking outside
+  // Close desktop panels when clicking outside
   document.addEventListener('click', (event) => {
-    if (searchScreenDesktop && searchScreenDesktop.classList.contains('active') && !searchScreenDesktop.contains(event.target) && !searchIconDesktop.contains(event.target)) {
-      toggleSearch(searchIconDesktop, searchScreenDesktop);
-    }
-    if (searchScreenMobile && searchScreenMobile.classList.contains('active') && !searchScreenMobile.contains(event.target) && !searchIconMobile.contains(event.target)) {
-      toggleSearch(searchIconMobile, searchScreenMobile);
+    if (isDesktop.matches && !navLinksContainer.contains(event.target) && !event.target.closest('.desktop-panel')) {
+      navLinksContainer.querySelectorAll('.link-title').forEach((linkTitle) => {
+        linkTitle.classList.remove(EXPANDED_CLASS);
+        linkTitle.setAttribute('aria-expanded', 'false');
+        const desktopPanel = linkTitle.nextElementSibling;
+        if (desktopPanel && desktopPanel.classList.contains('desktop-panel')) {
+          desktopPanel.classList.remove(VISIBLE_CLASS);
+          desktopPanel.setAttribute('aria-hidden', 'true');
+        }
+      });
     }
   });
 
-  // Close search on Escape key
+  // Escape key listener for desktop panels
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
-      if (searchScreenDesktop && searchScreenDesktop.classList.contains('active')) {
-        toggleSearch(searchIconDesktop, searchScreenDesktop);
-      }
-      if (searchScreenMobile && searchScreenMobile.classList.contains('active')) {
-        toggleSearch(searchIconMobile, searchScreenMobile);
-      }
+      navLinksContainer.querySelectorAll('.link-title').forEach((linkTitle) => {
+        if (linkTitle.classList.contains(EXPANDED_CLASS)) {
+          linkTitle.classList.remove(EXPANDED_CLASS);
+          linkTitle.setAttribute('aria-expanded', 'false');
+          const desktopPanel = linkTitle.nextElementSibling;
+          if (desktopPanel && desktopPanel.classList.contains('desktop-panel')) {
+            desktopPanel.classList.remove(VISIBLE_CLASS);
+            desktopPanel.setAttribute('aria-hidden', 'true');
+          }
+        }
+      });
     }
   });
 }
 
 export default async function decorate(block) {
+  // Add original root classes to the block
+  block.classList.add('corp-header-wrapper', 'header-scroll', 'header-scroll-threshold', 'corp-header-block', 'header-wrapper', 'sticky', 'show');
+
   const navMeta = getMetadata('nav');
   const navPath = navMeta ? new URL(navMeta, window.location).pathname : '/nav';
   const fragment = await loadFragment(navPath);
 
-  // Apply root classes from original HTML
-  block.classList.add('main-header', 'with-marquee', 'solid', 'nav-up');
-  block.setAttribute('data-once', 'header-hover');
-
-  const containerDiv = document.createElement('div');
-  containerDiv.classList.add('container');
-  const wrapDiv = document.createElement('div');
-  wrapDiv.classList.add('wrap');
-
-  // Section 1: Brand (Logo)
-  const brandSection = fragment.children[0];
-  if (brandSection) {
-    const logoDiv = document.createElement('div');
-    logoDiv.classList.add('logo');
-    const brandLink = brandSection.querySelector('p > a');
-    if (brandLink) {
-      const logoAnchor = document.createElement('a');
-      logoAnchor.href = brandLink.href;
-      moveInstrumentation(brandLink, logoAnchor);
-
-      const picture = brandLink.querySelector('picture');
-      if (picture) {
-        const img = picture.querySelector('img');
-        if (img) {
-          const logoImg = document.createElement('img');
-          logoImg.src = img.src;
-          logoImg.alt = img.alt || 'Mahindra Brand Logo White';
-          logoImg.title = img.title || 'Mahindra Brand Logo White Image';
-          logoImg.loading = 'lazy';
-          logoImg.classList.add('hiddenlogo1');
-          logoAnchor.append(logoImg);
-          moveInstrumentation(img, logoImg);
-        }
-      }
-      if (logoAnchor.children.length > 0) { // Only append if logoAnchor has content
-        logoDiv.append(logoAnchor);
-      }
-      moveInstrumentation(brandSection.querySelector('p'), logoDiv);
-    }
-    if (logoDiv.children.length > 0) { // Only append if logoDiv has content
-      wrapDiv.append(logoDiv);
-    }
-    moveInstrumentation(brandSection, logoDiv);
+  if (!fragment) {
+    block.innerHTML = '';
+    return;
   }
 
-  // Section 2: Nav
-  const navSection = fragment.children[1];
-  const navElement = renderMainNav(navSection);
-  wrapDiv.append(navElement);
+  const navFragment = document.createElement('nav');
+  navFragment.id = 'nav';
+  navFragment.setAttribute('aria-expanded', 'false');
 
-  // Section 3: Tools
-  const toolsSection = fragment.children[2];
-  renderToolsSection(toolsSection, navElement, wrapDiv);
+  const navWrapper = document.createElement('div');
+  navWrapper.classList.add('navbar', 'navbar-arena', 'g-container');
 
-  // Append the 80th year logo from the original HTML
-  const year80LogoDiv = document.createElement('div');
-  year80LogoDiv.classList.add('logo', 'year-80-logo');
-  year80LogoDiv.innerHTML = `
-    <a href="https://www.mahindra.com/">
-      <img src="https://www.mahindra.com/sites/default/files/2026-03/80thYearLogo_Gold_com.webp" alt="80th Year Logo Gold" title="80thYearLogo_Gold" class="hiddenlogo1 years-80" loading="lazy">
-    </a>
-  `;
-  wrapDiv.append(year80LogoDiv);
+  const sections = Array.from(fragment.children);
+  const brandSection = sections[0];
+  const navSection = sections[1];
+  const toolsSection = sections[2];
 
-  containerDiv.append(wrapDiv);
-  block.append(containerDiv);
+  // Section 1: Brand Logo
+  if (brandSection) {
+    const logoWrapper = document.createElement('div');
+    logoWrapper.classList.add('logo-wrapper');
+    const logoBlock = document.createElement('div');
+    logoBlock.classList.add('logo', 'block');
+    moveInstrumentation(brandSection, logoBlock); // Move instrumentation from the section itself
 
-  // Add event listeners for mobile navigation toggles
-  setupMobileNavToggle(navElement, wrapDiv);
+    const logoLinkEl = brandSection.querySelector('a');
+    if (logoLinkEl) {
+      const a = document.createElement('a');
+      a.classList.add('logo__picture');
+      a.href = logoLinkEl.href;
+      a.setAttribute('data-logo-name', logoLinkEl.textContent.trim() || 'Arena');
 
-  // Setup mobile submenu toggles for all levels
-  navElement.querySelectorAll('.main-nav > ul > li.has-child').forEach((navItem) => {
-    setupMobileSubmenuToggle(navItem);
-  });
-
-  // Search functionality
-  setupSearchFunctionality(block);
-
-  // Desktop hover behavior for main nav items
-  const mainUl = navElement.querySelector('ul');
-  if (mainUl) {
-    mainUl.querySelectorAll('li.has-child').forEach((navItem) => {
-      if (isDesktop.matches) {
-        navItem.addEventListener('mouseenter', () => {
-          navItem.classList.add('active');
-          const megaMenu = navItem.querySelector('.mega-menu');
-          if (megaMenu) megaMenu.classList.add('active');
-          const chevron = navItem.querySelector(':scope > span');
-          if (chevron) chevron.setAttribute('aria-expanded', 'true');
-        });
-        navItem.addEventListener('mouseleave', () => {
-          navItem.classList.remove('active');
-          const megaMenu = navItem.querySelector('.mega-menu');
-          if (megaMenu) megaMenu.classList.remove('active');
-          const chevron = navItem.querySelector(':scope > span');
-          if (chevron) chevron.setAttribute('aria-expanded', 'false');
-        });
+      const picture = logoLinkEl.querySelector('picture');
+      if (picture) {
+        a.append(picture);
+      } else {
+        // Fallback if no picture, just append the link content
+        a.innerHTML = logoLinkEl.innerHTML;
       }
+      logoBlock.append(a);
+    } else {
+      // If no link, still try to get a picture or content
+      const picture = brandSection.querySelector('picture');
+      if (picture) {
+        const a = document.createElement('a');
+        a.classList.add('logo__picture');
+        a.href = '/'; // Default home link
+        a.setAttribute('data-logo-name', 'Arena');
+        a.append(picture);
+        logoBlock.append(a);
+      } else {
+        // If no picture or link, append whatever is in the brand section
+        logoBlock.innerHTML = brandSection.innerHTML;
+      }
+    }
+    logoWrapper.append(logoBlock);
+    navWrapper.append(logoWrapper);
+  }
+
+  // Hamburger menu for mobile
+  const hamburger = document.createElement('div');
+  hamburger.classList.add('nav-hamburger');
+  const hamburgerButton = document.createElement('button');
+  hamburgerButton.type = 'button';
+  hamburgerButton.setAttribute('aria-controls', 'nav');
+  hamburgerButton.setAttribute('aria-label', 'Open navigation');
+  hamburgerButton.setAttribute('aria-expanded', 'false');
+  const hamburgerIcon = document.createElement('span');
+  hamburgerIcon.classList.add('nav-hamburger-icon');
+  hamburgerButton.append(hamburgerIcon);
+  hamburger.append(hamburgerButton);
+  navWrapper.prepend(hamburger);
+
+  // Section 2: Main Navigation
+  const navLinksContainer = document.createElement('div');
+  navLinksContainer.classList.add('links');
+
+  const desktopPanelsFragment = new DocumentFragment();
+  const mobileMenuList = document.createElement('ul');
+  mobileMenuList.classList.add('menu-list');
+
+  if (navSection) {
+    let navItemIndex = 0;
+    const navItems = [];
+    let currentElement = navSection.firstElementChild;
+
+    while (currentElement) {
+      if (currentElement.nodeType === Node.COMMENT_NODE) {
+        currentElement = currentElement.nextElementSibling;
+        continue;
+      }
+
+      if (currentElement.tagName === 'P') {
+        const pElement = currentElement;
+        const link = pElement.querySelector('a');
+        const strong = pElement.querySelector('strong');
+        let title = '';
+        let href = null;
+        let description = null;
+
+        if (link) {
+          title = link.textContent.trim();
+          href = link.href;
+          const nextP = pElement.nextElementSibling;
+          if (nextP && nextP.tagName === 'P' && !nextP.querySelector('a')) {
+            description = nextP.textContent.trim();
+          }
+        } else if (strong) {
+          title = strong.textContent.trim();
+        } else {
+          title = extractTextContent(pElement);
+        }
+
+        const navItem = { title, href, description, children: [] };
+
+        let nextSibling = pElement.nextElementSibling;
+        while (nextSibling && nextSibling.nodeType === Node.COMMENT_NODE) {
+          nextSibling = nextSibling.nextElementSibling;
+        }
+
+        if (nextSibling && nextSibling.tagName === 'UL') {
+          navItem.children = parseNavTree(nextSibling);
+          currentElement = nextSibling.nextElementSibling;
+        } else if (description) { // If there was a description P, skip it
+          currentElement = pElement.nextElementSibling.nextElementSibling;
+        } else {
+          currentElement = pElement.nextElementSibling;
+        }
+        navItems.push(navItem);
+      } else if (currentElement.tagName === 'UL') {
+        // Handle orphaned ULs or ULs that are meant to be top-level items
+        const topLevelItems = parseNavTree(currentElement);
+        topLevelItems.forEach(item => navItems.push(item));
+        currentElement = currentElement.nextElementSibling;
+      } else {
+        currentElement = currentElement.nextElementSibling;
+      }
+    }
+
+    navItems.forEach((item) => {
+      const desktopLinkTitle = document.createElement('div');
+      desktopLinkTitle.classList.add('link-title');
+      const span = document.createElement('span');
+      if (item.href) {
+        const a = document.createElement('a');
+        a.href = item.href;
+        a.textContent = item.title;
+        if (item.title.toLowerCase() === 'home' || item.title.toLowerCase() === 'service' || item.title.toLowerCase() === 'important customer info') {
+          a.classList.add('button'); // Add button class for specific links
+        }
+        span.append(a);
+      } else {
+        span.textContent = item.title;
+      }
+      desktopLinkTitle.append(span);
+      navLinksContainer.append(desktopLinkTitle);
+
+      const mobileListItem = document.createElement('li');
+      mobileListItem.id = `menu-item-${navItemIndex}`;
+      mobileListItem.classList.add('nav-link');
+      const sanitizedTitle = sanitizeClassName(item.title);
+      if (sanitizedTitle) mobileListItem.classList.add(sanitizedTitle);
+      const mobileSpan = document.createElement('span');
+      mobileSpan.classList.add('menu-title');
+      if (item.href) {
+        const a = document.createElement('a');
+        a.href = item.href;
+        a.textContent = item.title;
+        if (item.title.toLowerCase() === 'home' || item.title.toLowerCase() === 'service' || item.title.toLowerCase() === 'important customer info') {
+          a.classList.add('button');
+        }
+        mobileSpan.append(a);
+      } else {
+        mobileSpan.textContent = item.title;
+      }
+      mobileListItem.append(mobileSpan);
+
+      if (item.children && item.children.length > 0) {
+        mobileListItem.classList.add('accordion');
+        const desktopPanel = document.createElement('div');
+        desktopPanel.classList.add('desktop-panel', 'panel', sanitizedTitle);
+        const linkGridBlock = document.createElement('div');
+        linkGridBlock.classList.add('link-grid', 'block');
+        const linkContainerSection = document.createElement('div');
+        linkContainerSection.classList.add('link-container-section');
+
+        const linkGridColumn = document.createElement('div');
+        linkGridColumn.classList.add('link-grid-column', 'link-column-vertical');
+        const ul = document.createElement('ul');
+        ul.classList.add('content', 'links-container', 'accordian-content');
+
+        item.children.forEach((child) => {
+          const li = document.createElement('li');
+          if (child.href) {
+            const a = document.createElement('a');
+            a.href = child.href;
+            a.textContent = child.title;
+            if (child.target) a.target = child.target;
+            if (child.rel) a.rel = child.rel;
+            li.append(a);
+          } else {
+            li.textContent = child.title;
+          }
+          if (child.description) {
+            const p = document.createElement('p');
+            p.textContent = child.description;
+            li.append(p);
+          }
+          if (child.children && child.children.length > 0) {
+            const nestedUl = document.createElement('ul');
+            child.children.forEach((grandchild) => {
+              const nestedLi = document.createElement('li');
+              if (grandchild.href) {
+                const nestedA = document.createElement('a');
+                nestedA.href = grandchild.href;
+                nestedA.textContent = grandchild.title;
+                if (grandchild.target) nestedA.target = grandchild.target;
+                if (grandchild.rel) nestedA.rel = grandchild.rel;
+                nestedLi.append(nestedA);
+              } else {
+                nestedLi.textContent = grandchild.title;
+              }
+              nestedUl.append(nestedLi);
+            });
+            li.append(nestedUl);
+          }
+          ul.append(li);
+        });
+        linkGridColumn.append(ul);
+        linkContainerSection.append(linkGridColumn);
+        linkGridBlock.append(linkContainerSection);
+        desktopPanel.append(linkGridBlock);
+        desktopPanelsFragment.append(desktopPanel);
+
+        const mobilePanel = desktopPanel.cloneNode(true);
+        mobilePanel.classList.remove('desktop-panel');
+        mobilePanel.style.maxHeight = '0';
+        mobilePanel.setAttribute('aria-hidden', 'true');
+        mobileMenuList.append(mobileListItem);
+        mobileMenuList.append(mobilePanel);
+      } else {
+        mobileMenuList.append(mobileListItem);
+      }
+      navItemIndex += 1;
     });
   }
+  navLinksContainer.append(desktopPanelsFragment);
+  navWrapper.append(navLinksContainer);
+
+  // Section 3: Tools
+  const rightSection = document.createElement('div');
+  rightSection.classList.add('right');
+  rightSection.id = 'nav-right';
+
+  if (toolsSection) {
+    const toolUls = toolsSection.querySelectorAll('ul');
+
+    if (toolUls.length > 0) {
+      const contactWrapper = document.createElement('div');
+      contactWrapper.classList.add('contact-wrapper');
+      const contactBlock = document.createElement('div');
+      contactBlock.classList.add('contact', 'block');
+      moveInstrumentation(toolsSection, contactBlock);
+
+      const contactDiv = document.createElement('div');
+      contactDiv.classList.add('contact_wrp_arena', 'user__contact', 'header');
+
+      const contactTitle = document.createElement('h4');
+      contactTitle.classList.add('user__contact-title');
+      contactTitle.textContent = 'Contact Us';
+      contactDiv.append(contactTitle);
+
+      const phoneIcon = document.createElement('span');
+      phoneIcon.classList.add('user__contact-title', 'icon-phone');
+      phoneIcon.setAttribute('aria-label', 'Contact Us');
+      contactDiv.append(phoneIcon);
+
+      const userContactIcons = document.createElement('div');
+      userContactIcons.classList.add('user__contact__icons', HIDDEN_CLASS);
+
+      const contactToggleBox = document.createElement('div');
+      contactToggleBox.classList.add(HIDDEN_CLASS, 'contact-toggle-box');
+      const callContainer = document.createElement('div');
+      callContainer.classList.add('user__contact__icon-call_container');
+
+      toolUls.forEach((ul) => {
+        Array.from(ul.children).forEach((li) => {
+          const link = li.querySelector('a');
+          const textContent = li.textContent.trim();
+
+          if (link) {
+            const iconLink = document.createElement('a');
+            iconLink.href = link.href;
+            if (link.target) iconLink.target = link.target;
+            if (link.rel) iconLink.rel = link.rel;
+
+            const srOnlySpan = document.createElement('span');
+            srOnlySpan.classList.add('sr-only');
+            srOnlySpan.textContent = link.title || textContent || 'icon';
+            iconLink.append(srOnlySpan);
+
+            const img = link.querySelector('img');
+            if (img) {
+              iconLink.append(img.cloneNode(true));
+            } else {
+              const iconSpan = document.createElement('span');
+              iconLink.append(iconSpan);
+            }
+
+            if (link.href.includes('whatsapp')) {
+              iconLink.classList.add('user__contact--icon', 'whatsapp');
+              userContactIcons.append(iconLink);
+            } else if (link.href.startsWith('mailto:')) {
+              iconLink.classList.add('user__contact--icon', 'email');
+              userContactIcons.append(iconLink);
+            } else if (link.href.startsWith('tel:')) {
+              const telLink = document.createElement('a');
+              telLink.href = link.href;
+              telLink.classList.add('primary-telephone');
+              telLink.textContent = textContent;
+              callContainer.append(telLink);
+            }
+          }
+        });
+      });
+
+      contactToggleBox.append(callContainer);
+      contactDiv.append(userContactIcons);
+      contactDiv.append(contactToggleBox);
+      contactBlock.append(contactDiv);
+      contactWrapper.append(contactBlock);
+      rightSection.append(contactWrapper);
+
+      const contactTitleToggle = contactDiv.querySelector('.user__contact-title.icon-phone');
+      if (contactTitleToggle) {
+        contactTitleToggle.addEventListener('click', (event) => {
+          event.preventDefault();
+          userContactIcons.classList.toggle(HIDDEN_CLASS);
+          contactToggleBox.classList.toggle(HIDDEN_CLASS);
+        });
+      }
+    }
+
+    const languageDiv = document.createElement('div');
+    languageDiv.classList.add('language');
+    languageDiv.textContent = 'EN';
+    rightSection.append(languageDiv);
+
+    const signInWrapper = document.createElement('div');
+    signInWrapper.classList.add('sign-in-wrapper', HIDDEN_CLASS);
+    const signInBlock = document.createElement('div');
+    signInBlock.classList.add('sign-in', 'block');
+    moveInstrumentation(toolsSection, signInBlock);
+
+    const userDropdown = document.createElement('div');
+    userDropdown.classList.add('user__dropdown');
+    const userAccount = document.createElement('div');
+    userAccount.classList.add('user__account');
+
+    const signInUl = toolsSection.querySelector('ul:last-of-type');
+    if (signInUl) {
+      Array.from(signInUl.children).forEach((li) => {
+        const link = li.querySelector('a');
+        const textContent = li.textContent.trim();
+
+        if (link && link.classList.contains('user__account--link')) {
+          const clonedLink = link.cloneNode(true);
+          userAccount.append(clonedLink);
+        } else if (textContent === 'Sign In' || (link && link.textContent.trim() === 'Sign In')) {
+          const signInBtnDiv = document.createElement('div');
+          signInBtnDiv.classList.add('user__account--link', 'sign-in-btn');
+          const iconSpan = document.createElement('span');
+          iconSpan.classList.add('user__account__list-icon');
+          const iconImg = document.createElement('img');
+          iconImg.src = 'https://www.marutisuzuki.com/adobe/assets/urn:aaid:aem:3c13f70a-cefc-4aeb-83f2-53cd72a175d1/as/world-blue.svg';
+          iconImg.loading = 'lazy';
+          iconImg.alt = 'Sign-in';
+          iconSpan.append(iconImg);
+          const button = document.createElement('button');
+          button.type = 'button';
+          button.setAttribute('data-sign-out-text', 'Sign Out');
+          button.textContent = 'Sign In';
+          signInBtnDiv.append(iconSpan);
+          signInBtnDiv.append(button);
+          userAccount.append(signInBtnDiv);
+        }
+      });
+    }
+
+    userDropdown.append(userAccount);
+    signInBlock.append(userDropdown);
+    signInWrapper.append(signInBlock);
+    rightSection.append(signInWrapper);
+  }
+  navWrapper.append(rightSection);
+  navFragment.append(navWrapper);
+
+  // Mobile menu container
+  const mobileMenuContainer = document.createElement('div');
+  mobileMenuContainer.id = 'menu';
+  mobileMenuContainer.classList.add('menu', HIDDEN_CLASS, 'menu-arena');
+
+  const menuHeader = document.createElement('div');
+  menuHeader.classList.add('menu-header');
+  const backArrow = document.createElement('div');
+  backArrow.classList.add('back-arrow');
+  const menuTitle = document.createElement('span');
+  menuTitle.classList.add('menu-title');
+  menuTitle.textContent = 'Menu';
+  const closeIcon = document.createElement('span');
+  closeIcon.classList.add('close-icon');
+  menuHeader.append(backArrow);
+  menuHeader.append(menuTitle);
+  menuHeader.append(closeIcon);
+  mobileMenuContainer.append(menuHeader);
+  mobileMenuContainer.append(mobileMenuList);
+
+  // Append sign-in links to mobile menu
+  const mobileSignInLinks = userAccount.cloneNode(true);
+  Array.from(mobileSignInLinks.children).forEach((child) => {
+    if (child.tagName === 'A' || (child.tagName === 'DIV' && child.classList.contains('sign-in-btn'))) {
+      const li = document.createElement('li');
+      li.append(child);
+      mobileMenuList.append(li);
+    }
+  });
+
+  navFragment.append(mobileMenuContainer);
+
+  block.append(navFragment);
+
+  // Event Listeners
+  hamburgerButton.addEventListener('click', () => toggleMenu(navFragment));
+  closeIcon.addEventListener('click', () => toggleMenu(navFragment));
+  backArrow.addEventListener('click', () => {
+    // This logic needs to be more sophisticated for nested mobile menus
+    // For now, it just closes the main mobile menu
+    toggleMenu(navFragment, false);
+  });
+
+  setupMobileNav(navFragment, mobileMenuList);
+  setupDesktopNav(navFragment);
+
+  // Initial state and resize handling
+  isDesktop.addEventListener('change', () => toggleMenu(navFragment, isDesktop.matches));
+  toggleMenu(navFragment, isDesktop.matches); // Set initial state
 }
