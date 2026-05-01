@@ -275,7 +275,7 @@ export default async function decorate(block) {
   const wrapDiv = document.createElement('div');
   wrapDiv.classList.add('wrap');
 
-  const mainElement = fragment.querySelector('main');
+  const mainElement = fragment;
   if (!mainElement) return;
 
   const sections = Array.from(mainElement.children);
