@@ -360,11 +360,21 @@ export default async function decorate(block) {
         }
 
         if (nextSibling && nextSibling.tagName === 'UL') {
-          linkTitle.classList.add('nav-drop', sanitizeClassName(titleText));
+          const cls = sanitizeClassName(titleText);
+          if (cls) {
+            linkTitle.classList.add('nav-drop', cls);
+          } else {
+            linkTitle.classList.add('nav-drop');
+          }
           linkTitle.setAttribute('aria-expanded', 'false');
 
+          const clsPanel = sanitizeClassName(titleText);
           const desktopPanel = document.createElement('div');
-          desktopPanel.classList.add('desktop-panel', 'panel', sanitizeClassName(titleText));
+          if (clsPanel) {
+            desktopPanel.classList.add('desktop-panel', 'panel', clsPanel);
+          } else {
+            desktopPanel.classList.add('desktop-panel', 'panel');
+          }
           desktopPanel.setAttribute('aria-hidden', 'true');
 
           const linkGridBlock = document.createElement('div');
@@ -577,7 +587,12 @@ export default async function decorate(block) {
             } else {
               const link = document.createElement('a');
               link.href = item.href;
-              link.classList.add('user__account--link', sanitizeClassName(item.title));
+              const cls = sanitizeClassName(item.title);
+              if (cls) {
+                link.classList.add('user__account--link', cls);
+              } else {
+                link.classList.add('user__account--link');
+              }
               if (item.target) link.target = item.target;
               if (item.rel) link.rel = item.rel;
 
@@ -685,28 +700,48 @@ export default async function decorate(block) {
           spanTitle.classList.add('menu-title');
           spanTitle.append(anchor.cloneNode(true));
           li.append(spanTitle);
-          li.classList.add('nav-link', sanitizeClassName(anchor.textContent.trim()));
+          const clsAnchor = sanitizeClassName(anchor.textContent.trim());
+          if (clsAnchor) {
+            li.classList.add('nav-link', clsAnchor);
+          } else {
+            li.classList.add('nav-link');
+          }
           titleText = anchor.textContent.trim();
         } else if (strong) {
           const spanTitle = document.createElement('span');
           spanTitle.classList.add('menu-title');
           spanTitle.append(strong.cloneNode(true));
           li.append(spanTitle);
-          li.classList.add('nav-link', sanitizeClassName(strong.textContent.trim()));
+          const clsStrong = sanitizeClassName(strong.textContent.trim());
+          if (clsStrong) {
+            li.classList.add('nav-link', clsStrong);
+          } else {
+            li.classList.add('nav-link');
+          }
           titleText = strong.textContent.trim();
         } else if (img) {
           const spanTitle = document.createElement('span');
           spanTitle.classList.add('menu-title');
           spanTitle.append(img.cloneNode(true));
           li.append(spanTitle);
-          li.classList.add('nav-link', sanitizeClassName(img.alt || 'Image Link'));
+          const clsImg = sanitizeClassName(img.alt || 'Image Link');
+          if (clsImg) {
+            li.classList.add('nav-link', clsImg);
+          } else {
+            li.classList.add('nav-link');
+          }
           titleText = img.alt || 'Image Link';
         } else {
           const spanTitle = document.createElement('span');
           spanTitle.classList.add('menu-title');
           spanTitle.textContent = currentElement.textContent.trim();
           li.append(spanTitle);
-          li.classList.add('nav-link', sanitizeClassName(currentElement.textContent.trim()));
+          const clsText = sanitizeClassName(currentElement.textContent.trim());
+          if (clsText) {
+            li.classList.add('nav-link', clsText);
+          } else {
+            li.classList.add('nav-link');
+          }
           titleText = currentElement.textContent.trim();
         }
 
@@ -796,7 +831,12 @@ export default async function decorate(block) {
             const li = document.createElement('li');
             const link = document.createElement('a');
             link.href = item.href;
-            link.classList.add('user__account--link', sanitizeClassName(item.title));
+            const cls = sanitizeClassName(item.title);
+            if (cls) {
+              link.classList.add('user__account--link', cls);
+            } else {
+              link.classList.add('user__account--link');
+            }
             if (item.target) link.target = item.target;
             if (item.rel) link.rel = item.rel;
 
