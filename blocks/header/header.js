@@ -607,8 +607,3 @@ export default async function decorate(block) {
   setupHeaderInteractions(navElement, hamburgerDiv, searchToggleElement);
 }
 
-/*
-Rule 8 — Mandatory Final Step
-1. SHORT AUDIT: Briefly list 3-5 problems found in the original approach.
-2. BEHAVIORAL JUSTIFICATION: List the specific CSS rules you found that define the interaction model (e.g., "Found .nav-item:hover, using Hover model for Desktop").
-3. REFACTORED JS: The complete, production-ready decorate() function inside a
