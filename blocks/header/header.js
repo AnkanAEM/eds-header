@@ -1,609 +1,819 @@
 import { getMetadata } from '../../scripts/aem.js';
 import { loadFragment } from '../fragment/fragment.js';
 
-// Media query match that indicates mobile/tablet width
+// media query match that indicates mobile/tablet width
 const isDesktop = window.matchMedia('(min-width: 992px)');
 
-// SVG strings for icons
-const CHEVRON_SVG = '<svg viewBox="-23.5 -23.5 122.80 122.80" fill="#000000" stroke="#000000" stroke-width="4.851456000000001"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round" stroke="#CCCCCC" stroke-width="0.30321600000000004"></g><g id="SVGRepo_iconCarrier"> <g id="Group_65" data-name="Group 65" transform="translate(-831.568 -384.448)"> <path id="Path_57" data-name="Path 57" d="M833.068,460.252a1.5,1.5,0,0,1-1.061-2.561l33.557-33.56a2.53,2.53,0,0,0,0-3.564l-33.557-33.558a1.5,1.5,0,0,1,2.122-2.121l33.556,33.558a5.53,5.53,0,0,1,0,7.807l-33.557,33.56A1.5,1.5,0,0,1,833.068,460.252Z" fill="#030408"></path> </g> </g></svg>';
-const MAIL_SVG = '<svg version="1.1" id="Layer_1" x="0px" y="0px" viewBox="0 0 48 38.4" style="enable-background:new 0 0 48 38.4;" xml:space="preserve" width="21" height="21"><path d="M3.6,38.4c-1,0-1.8-0.4-2.5-1.1S0,35.8,0,34.8V3.6c0-1,0.4-1.8,1.1-2.5S2.6,0,3.6,0h40.8c1,0,1.8,0.4,2.5,1.1C47.6,1.8,48,2.6,48,3.6v31.2c0,1-0.4,1.8-1.1,2.5c-0.7,0.7-1.6,1.1-2.5,1.1H3.6z M24,20.3L3.6,6.9v27.9h40.8V6.9L24,20.3z M24,16.7L44.2,3.6H3.9L24,16.7z M3.6,6.9V3.6v31.2V6.9z"></path></svg>';
-const SEARCH_LENS_SVG = '<svg viewBox="0 0 21 21" fill="none" class="lens"><path d="M15.0934 2.73157L15.0934 2.73156C11.6883 -0.67354 6.14543 -0.67354 2.74033 2.73156C-0.666039 6.13793 -0.666063 11.6795 2.74035 15.0847C4.38993 16.7342 6.58308 17.6433 8.91623 17.6433C10.9916 17.6433 12.9533 16.9181 14.5221 15.5975L19.5217 20.5972C19.6721 20.7476 19.8687 20.8212 20.0632 20.8212C20.2588 20.8212 20.4554 20.7476 20.6059 20.5972C20.905 20.2981 20.905 19.8121 20.6059 19.513L15.6062 14.5132C18.4815 11.0845 18.3159 5.95535 15.0934 2.73157ZM14.0092 14.0004C12.6491 15.3606 10.8404 16.1098 8.91623 16.1098C6.99211 16.1098 5.18468 15.3606 3.82452 14.0004C1.01633 11.1923 1.01633 6.62394 3.82452 3.81575C5.22857 2.41171 7.07147 1.71024 8.91623 1.71024C10.7609 1.71024 12.6052 2.41296 14.0092 3.81575C16.8174 6.62394 16.8174 11.1923 14.0092 14.0004Z" stroke-width="0.25"></path></svg>';
-const SEARCH_CLOSE_SVG = '<svg viewBox="0 0 50 50" class="close"><path d="M 9.15625 6.3125 L 6.3125 9.15625 L 22.15625 25 L 6.21875 40.96875 L 9.03125 43.78125 L 25 27.84375 L 40.9375 43.78125 L 43.78125 40.9375 L 27.84375 25 L 43.6875 9.15625 L 40.84375 6.3125 L 25 22.15625 Z"></path></svg>';
-const SUBMIT_ARROW_SVG = '<svg width="12" height="8" viewBox="0 0 12 8" fill="none"><path d="M11.3536 4.35355C11.5488 4.15829 11.5488 3.84171 11.3536 3.64645L8.17157 0.464465C7.97631 0.269203 7.65973 0.269203 7.46447 0.464465C7.2692 0.659728 7.2692 0.97631 7.46447 1.17157L10.2929 4L7.46447 6.82843C7.2692 7.02369 7.2692 7.34027 7.46447 7.53553C7.65973 7.7308 7.97631 7.7308 8.17157 7.53553L11.3536 4.35355ZM4.37114e-08 4.5L11 4.5L11 3.5L-4.37114e-08 3.5L4.37114e-08 4.5Z" fill="black"></path></svg>';
+let nav;
+let navSections;
+let searchScreenWrap;
+let searchInput;
+let searchResultBox;
+let searchSuggestionsWrap;
+let searchLensIcon;
+let searchCloseIcon;
+let hamburger;
+
+function sanitizeClassName(str) {
+  if (!str || typeof str !== 'string') return null;
+  const cleaned = str.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  return cleaned || null;
+}
 
 function moveInstrumentation(originalElement, newElement) {
-  if (originalElement && newElement) {
-    const instrumentation = originalElement.dataset.aueProp;
-    if (instrumentation) {
-      newElement.dataset.aueProp = instrumentation;
-    }
-  }
+  if (!originalElement || !newElement) return;
+  const cqDecorated = originalElement.getAttribute('data-cq-decorated');
+  const cqPath = originalElement.getAttribute('data-cq-path');
+  const cqType = originalElement.getAttribute('data-cq-type');
+  const cqSelectors = originalElement.getAttribute('data-cq-selectors');
+  const cqServlet = originalElement.getAttribute('data-cq-servlet');
+  const cqTotalTime = originalElement.getAttribute('data-cq-total-time');
+  const cqSelfTime = originalElement.getAttribute('data-cq-self-time');
+
+  if (cqDecorated) newElement.setAttribute('data-cq-decorated', cqDecorated);
+  if (cqPath) newElement.setAttribute('data-cq-path', cqPath);
+  if (cqType) newElement.setAttribute('data-cq-type', cqType);
+  if (cqSelectors) newElement.setAttribute('data-cq-selectors', cqSelectors);
+  if (cqServlet) newElement.setAttribute('data-cq-servlet', cqServlet);
+  if (cqTotalTime) newElement.setAttribute('data-cq-total-time', cqTotalTime);
+  if (cqSelfTime) newElement.setAttribute('data-cq-self-time', cqSelfTime);
 }
 
-function parseList(ulElement, level) {
-  const children = [];
-  let liEl = ulElement.firstElementChild;
-  while (liEl) {
-    if (liEl.nodeType === Node.ELEMENT_NODE && liEl.tagName === 'LI') {
-      let title = '';
-      let href = null;
-      let linkElement = liEl.querySelector(':scope > a');
-      let strongElement = liEl.querySelector(':scope > strong');
+function createChevronSVG() {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '-23.5 -23.5 122.80 122.80');
+  svg.setAttribute('fill', '#000000');
+  svg.setAttribute('stroke', '#000000');
+  svg.setAttribute('stroke-width', '4.851456000000001');
 
-      if (linkElement) {
-        title = linkElement.textContent.trim();
-        href = linkElement.href;
-      } else if (strongElement) {
-        title = strongElement.textContent.trim();
-      } else {
-        const textNodes = Array.from(liEl.childNodes).filter(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim().length > 0);
-        if (textNodes.length > 0) {
-          title = textNodes[0].textContent.trim();
+  const g1 = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  g1.setAttribute('id', 'SVGRepo_bgCarrier');
+  g1.setAttribute('stroke-width', '0');
+  svg.appendChild(g1);
+
+  const g2 = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  g2.setAttribute('id', 'SVGRepo_tracerCarrier');
+  g2.setAttribute('stroke-linecap', 'round');
+  g2.setAttribute('stroke-linejoin', 'round');
+  g2.setAttribute('stroke', '#CCCCCC');
+  g2.setAttribute('stroke-width', '0.30321600000000004');
+  svg.appendChild(g2);
+
+  const g3 = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  g3.setAttribute('id', 'SVGRepo_iconCarrier');
+  const g4 = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  g4.setAttribute('id', 'Group_65');
+  g4.setAttribute('data-name', 'Group 65');
+  g4.setAttribute('transform', 'translate(-831.568 -384.448)');
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('id', 'Path_57');
+  path.setAttribute('data-name', 'Path 57');
+  path.setAttribute('d', 'M833.068,460.252a1.5,1.5,0,0,1-1.061-2.561l33.557-33.56a2.53,2.53,0,0,0,0-3.564l-33.557-33.558a1.5,1.5,0,0,1,2.122-2.121l33.556,33.558a5.53,5.53,0,0,1,0,7.807l-33.557,33.56A1.5,1.5,0,0,1,833.068,460.252Z');
+  path.setAttribute('fill', '#030408');
+  g4.appendChild(path);
+  g3.appendChild(g4);
+  svg.appendChild(g3);
+
+  return svg;
+}
+
+function closeAllSubmenus(parentEl) {
+  parentEl.querySelectorAll('.has-sub-child.active, .has-inner-sub-child.active-child').forEach((el) => {
+    el.classList.remove('active');
+    el.classList.remove('active-child');
+    el.setAttribute('aria-expanded', 'false');
+    const triggerSpan = el.previousElementSibling;
+    if (triggerSpan && triggerSpan.tagName === 'SPAN') {
+      triggerSpan.querySelector('svg').style.transform = 'rotate(90deg)';
+    }
+  });
+}
+
+function toggleSubmenu(trigger, submenu, level) {
+  if (!trigger || !submenu) return;
+
+  const isExpanded = submenu.classList.contains(level === 'L1' ? 'active' : 'active-child');
+  const parentLi = trigger.closest('li');
+
+  if (isExpanded) {
+    submenu.classList.remove(level === 'L1' ? 'active' : 'active-child');
+    submenu.setAttribute('aria-expanded', 'false');
+    if (trigger.tagName === 'SPAN') {
+      trigger.querySelector('svg').style.transform = 'rotate(90deg)';
+    }
+    closeAllSubmenus(submenu);
+  } else {
+    // Close other submenus at the same level
+    const siblingsContainer = parentLi ? parentLi.parentElement : submenu.parentElement;
+    if (siblingsContainer) {
+      siblingsContainer.querySelectorAll(`.${level === 'L1' ? 'has-sub-child' : 'has-inner-sub-child'}.active, .${level === 'L1' ? 'has-sub-child' : 'has-inner-sub-child'}.active-child`).forEach((el) => {
+        if (el !== submenu) {
+          el.classList.remove('active');
+          el.classList.remove('active-child');
+          el.setAttribute('aria-expanded', 'false');
+          const siblingTriggerSpan = el.previousElementSibling;
+          if (siblingTriggerSpan && siblingTriggerSpan.tagName === 'SPAN') {
+            siblingTriggerSpan.querySelector('svg').style.transform = 'rotate(90deg)';
+          }
+          closeAllSubmenus(el);
         }
-      }
-
-      const item = { title, href, children: [] };
-      const nestedUl = liEl.querySelector(':scope > ul');
-      if (nestedUl) {
-        item.children = parseList(nestedUl, level + 1);
-      }
-      children.push(item);
+      });
     }
-    liEl = liEl.nextElementSibling;
+
+    submenu.classList.add(level === 'L1' ? 'active' : 'active-child');
+    submenu.setAttribute('aria-expanded', 'true');
+    if (trigger.tagName === 'SPAN') {
+      trigger.querySelector('svg').style.transform = 'rotate(-180deg)';
+    }
   }
-  return children;
 }
 
-function setupHeaderInteractions(navElement, hamburgerButton, searchToggleElement) {
-  const navSections = navElement.querySelector('.main-nav > ul');
-  const searchScreenWrap = searchToggleElement ? searchToggleElement.querySelector('.search-screen-wrap') : null;
-  const searchLensIcon = searchToggleElement ? searchToggleElement.querySelector('.lens') : null;
-  const searchCloseIcon = searchToggleElement ? searchToggleElement.querySelector('.close') : null;
-  const searchInput = searchScreenWrap ? searchScreenWrap.querySelector('.input-text.searchtext') : null;
-  const searchSubmitButton = searchScreenWrap ? searchScreenWrap.querySelector('.submit-button') : null;
+function setupMobileNavBehavior() {
+  if (!nav || !navSections) return;
 
-  const toggleMenu = (forceExpanded = null) => {
-    const expanded = forceExpanded !== null ? forceExpanded : navElement.getAttribute('aria-expanded') === 'true';
-    document.body.style.overflowY = (expanded || isDesktop.matches) ? '' : 'hidden';
-    navElement.setAttribute('aria-expanded', expanded ? 'false' : 'true');
-    hamburgerButton.setAttribute('aria-label', expanded ? 'Open navigation' : 'Close navigation');
-
-    if (searchScreenWrap && searchScreenWrap.classList.contains('active')) {
-      searchScreenWrap.classList.remove('active');
-      if (searchLensIcon) searchLensIcon.style.display = 'block';
-      if (searchCloseIcon) searchCloseIcon.style.display = 'none';
-      searchToggleElement.setAttribute('aria-expanded', 'false');
-    }
-
-    navSections.querySelectorAll('.has-child').forEach((section) => {
-      if (!expanded && section.classList.contains('active')) {
-        section.classList.remove('active');
-        const chevron = section.querySelector(':scope > span svg');
-        if (chevron) chevron.style.transform = 'rotate(90deg)';
-      }
-    });
-
-    if (isDesktop.matches) {
-      navSections.querySelectorAll('.has-child').forEach((section) => {
-        section.setAttribute('aria-expanded', 'false');
-      });
-    }
-  };
-
-  const toggleSubMenu = (event) => {
-    const listItem = event.currentTarget.closest('li');
-    if (!listItem) return;
-
-    const hasSubChild = listItem.querySelector(':scope > .has-sub-child');
-    const hasInnerSubChild = listItem.querySelector(':scope > .has-inner-sub-child');
-    const chevron = listItem.querySelector(':scope > span svg');
-
-    if (!isDesktop.matches) {
-      event.preventDefault();
-      event.stopPropagation();
-
-      if (hasSubChild) {
-        const isActive = hasSubChild.classList.contains('active');
-        listItem.closest('ul').querySelectorAll(':scope > li .has-sub-child.active').forEach((otherSubChild) => {
-          if (otherSubChild !== hasSubChild) {
-            otherSubChild.classList.remove('active');
-            const otherChevron = otherSubChild.closest('li').querySelector(':scope > span svg');
-            if (otherChevron) otherChevron.style.transform = 'rotate(90deg)';
-            otherSubChild.querySelectorAll('.has-inner-sub-child.active-child').forEach((innerChild) => {
-              innerChild.classList.remove('active-child');
-              const innerChevron = innerChild.closest('li').querySelector(':scope > span svg');
-              if (innerChevron) innerChevron.style.transform = 'rotate(90deg)';
-            });
-          }
-        });
-
-        hasSubChild.classList.toggle('active');
-        if (chevron) chevron.style.transform = isActive ? 'rotate(90deg)' : 'rotate(-180deg)';
-        listItem.setAttribute('aria-expanded', isActive ? 'false' : 'true');
-      } else if (hasInnerSubChild) {
-        const isActive = hasInnerSubChild.classList.contains('active-child');
-        listItem.closest('ul').querySelectorAll(':scope > li .has-inner-sub-child.active-child').forEach((otherInnerSubChild) => {
-          if (otherInnerSubChild !== hasInnerSubChild) {
-            otherInnerSubChild.classList.remove('active-child');
-            const otherChevron = otherInnerSubChild.closest('li').querySelector(':scope > span svg');
-            if (otherChevron) otherChevron.style.transform = 'rotate(90deg)';
-          }
-        });
-
-        hasInnerSubChild.classList.toggle('active-child');
-        if (chevron) chevron.style.transform = isActive ? 'rotate(90deg)' : 'rotate(-180deg)';
-        listItem.setAttribute('aria-expanded', isActive ? 'false' : 'true');
-      }
-    }
-  };
-
-  const setupSearchToggle = () => {
-    if (!searchToggleElement) return;
-
-    const searchAnchor = searchToggleElement.querySelector('a');
-    if (!searchAnchor) return;
-
-    searchToggleElement.setAttribute('aria-haspopup', 'true');
-    searchToggleElement.setAttribute('aria-expanded', 'false');
-
-    searchAnchor.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-
-      const isActive = searchScreenWrap.classList.contains('active');
-      searchScreenWrap.classList.toggle('active', !isActive);
-      if (searchLensIcon) searchLensIcon.style.display = isActive ? 'block' : 'none';
-      if (searchCloseIcon) searchCloseIcon.style.display = isActive ? 'none' : 'block';
-      searchToggleElement.setAttribute('aria-expanded', !isActive);
-
-      if (!isDesktop.matches && navElement.getAttribute('aria-expanded') === 'true') {
-        toggleMenu(false);
-      }
-    });
-
-    document.addEventListener('click', (e) => {
-      if (searchScreenWrap && searchScreenWrap.classList.contains('active') && !searchScreenWrap.contains(e.target) && !searchToggleElement.contains(e.target)) {
-        searchScreenWrap.classList.remove('active');
-        if (searchLensIcon) searchLensIcon.style.display = 'block';
-        if (searchCloseIcon) searchCloseIcon.style.display = 'none';
-        searchToggleElement.setAttribute('aria-expanded', 'false');
-      }
-    });
-
-    const searchTokensWrap = searchScreenWrap ? searchScreenWrap.querySelector('.tokens-wrap ul') : null;
-    if (searchTokensWrap) {
-      searchTokensWrap.querySelectorAll('li').forEach((token) => {
-        token.addEventListener('click', (e) => {
-          e.stopPropagation();
-          if (searchInput) {
-            searchInput.value = e.target.textContent;
-            if (searchSubmitButton) {
-              searchSubmitButton.click();
-            }
-          }
-        });
-      });
-    }
-
-    if (searchScreenWrap) {
-      searchScreenWrap.addEventListener('click', (e) => {
-        e.stopPropagation();
-      });
-    }
-  };
-
-  hamburgerButton.addEventListener('click', () => toggleMenu(null));
-  isDesktop.addEventListener('change', () => toggleMenu(isDesktop.matches));
-
-  navSections.querySelectorAll('.has-child > span').forEach((chevron) => {
-    chevron.addEventListener('click', toggleSubMenu);
+  // Reset all previous listeners to avoid duplicates
+  navSections.querySelectorAll('.main-nav > ul > li.has-child > span, .sub-nav-wrap ul li > span, .has-sub-child ul li > span').forEach(span => {
+    const newSpan = span.cloneNode(true);
+    span.parentNode.replaceChild(newSpan, span);
   });
 
-  // Escape key listener for closing nav or search
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      if (navElement.getAttribute('aria-expanded') === 'true') {
-        toggleMenu(false);
-      }
-      if (searchScreenWrap && searchScreenWrap.classList.contains('active')) {
-        searchScreenWrap.classList.remove('active');
-        if (searchLensIcon) searchLensIcon.style.display = 'block';
-        if (searchCloseIcon) searchCloseIcon.style.display = 'none';
-        searchToggleElement.setAttribute('aria-expanded', 'false');
-      }
+  const navItems = navSections.querySelectorAll('.main-nav > ul > li.has-child');
+  navItems.forEach((item) => {
+    const triggerSpan = item.querySelector(':scope > span');
+    const megaMenu = item.querySelector(':scope > .mega-menu');
+
+    if (triggerSpan && megaMenu) {
+      triggerSpan.addEventListener('click', () => {
+        const isExpanded = item.getAttribute('aria-expanded') === 'true';
+        item.setAttribute('aria-expanded', isExpanded ? 'false' : 'true');
+        megaMenu.style.display = isExpanded ? 'none' : 'block';
+        triggerSpan.querySelector('svg').style.transform = isExpanded ? 'rotate(90deg)' : 'rotate(-180deg)';
+      });
+      item.setAttribute('aria-expanded', 'false'); // Initial state
+    }
+
+    // Recursive function to set up listeners for nested submenus
+    function setupNestedSubmenuListeners(parentUl, level) {
+      parentUl.querySelectorAll(':scope > li').forEach((li) => {
+        const subMenuTriggerSpan = li.querySelector(':scope > span');
+        const subMenu = li.querySelector(':scope > .has-sub-child, :scope > .has-inner-sub-child');
+
+        if (subMenuTriggerSpan && subMenu) {
+          subMenuTriggerSpan.addEventListener('click', () => {
+            toggleSubmenu(subMenuTriggerSpan, subMenu, level);
+          });
+          subMenu.setAttribute('aria-expanded', 'false'); // Initial state
+        }
+
+        const nestedUl = li.querySelector(':scope > .has-sub-child > ul, :scope > .has-inner-sub-child > ul');
+        if (nestedUl) {
+          setupNestedSubmenuListeners(nestedUl, level === 'L1' ? 'L2' : 'L3'); // Adjust level as needed
+        }
+      });
+    }
+
+    const firstLevelSubNavWrap = item.querySelector(':scope > .mega-menu .sub-nav-wrap > ul');
+    if (firstLevelSubNavWrap) {
+      setupNestedSubmenuListeners(firstLevelSubNavWrap, 'L1');
     }
   });
-
-  setupSearchToggle();
-  toggleMenu(isDesktop.matches); // Initial state
 }
 
-function createSearchScreenContent(fragment, isMobile = false) {
-  const searchScreenWrap = document.createElement('div');
-  searchScreenWrap.classList.add('search-screen-wrap');
+function setupDesktopNavBehavior() {
+  if (!nav || !navSections) return;
 
-  const wrapDiv = document.createElement('div');
-  wrapDiv.classList.add('wrap');
-  searchScreenWrap.append(wrapDiv);
+  // Clear mobile listeners
+  navSections.querySelectorAll('.main-nav > ul > li.has-child > span, .sub-nav-wrap ul li > span, .has-sub-child ul li > span').forEach(span => {
+    const newSpan = span.cloneNode(true);
+    span.parentNode.replaceChild(newSpan, span);
+  });
 
-  const searchForm = document.createElement('form');
-  searchForm.action = 'https://www.mahindra.com/search'; // Hardcoded URL, but from original HTML
-  searchForm.method = 'get';
-  searchForm.id = isMobile ? 'search-block-form-mobile' : 'search-block-form-desktop';
-  searchForm.setAttribute('accept-charset', 'UTF-8');
-  wrapDiv.append(searchForm);
-
-  const searchInputWrap = document.createElement('div');
-  searchInputWrap.classList.add('search-wrap');
-  searchForm.append(searchInputWrap);
-
-  const searchIconDiv = document.createElement('div');
-  searchIconDiv.classList.add('search-icon');
-  searchIconDiv.innerHTML = SEARCH_LENS_SVG;
-  searchInputWrap.append(searchIconDiv);
-
-  const searchInputEl = document.createElement('input');
-  searchInputEl.type = 'text';
-  searchInputEl.classList.add('input-text', 'searchtext');
-  searchInputEl.required = true;
-  searchInputEl.name = 'key';
-  searchInputEl.id = isMobile ? 'searchInputMobile' : 'searchInputDesktop';
-  searchInputEl.autocomplete = 'off';
-  searchInputWrap.append(searchInputEl);
-
-  const submitButton = document.createElement('button');
-  submitButton.type = 'submit';
-  submitButton.classList.add('submit-button');
-  const submitLabel = document.createElement('div');
-  submitLabel.classList.add('label');
-  submitLabel.textContent = 'Submit';
-  submitButton.append(submitLabel);
-  submitButton.innerHTML += SUBMIT_ARROW_SVG; // Append SVG string
-  searchInputWrap.append(submitButton);
-
-  const searchResultBox = document.createElement('div');
-  searchResultBox.classList.add('searchResultBox');
-  searchResultBox.style.display = 'none';
-  searchForm.append(searchResultBox);
-
-  // Extract search suggestions from fragment (assuming a structure like a section with H4 and ULs)
-  const searchSection = fragment.children[3]; // Assuming search content is in the 4th section
-  if (searchSection) {
-    const searchContentWrapper = searchSection.querySelector(':scope > .default-content-wrapper') || searchSection;
-
-    let currentHeading = null;
-    let currentUl = null;
-
-    Array.from(searchContentWrapper.children).forEach(child => {
-      if (child.tagName === 'H4') {
-        currentHeading = child.textContent.trim();
-        currentUl = null; // Reset UL for new heading
-      } else if (child.tagName === 'UL' && currentHeading) {
-        const searchSuggestionsWrap = document.createElement('div');
-        searchSuggestionsWrap.classList.add('search-suggestions-wrap');
-
-        const label = document.createElement('div');
-        label.classList.add('label');
-        label.textContent = currentHeading;
-        searchSuggestionsWrap.append(label);
-
-        const tokensWrap = document.createElement('div');
-        tokensWrap.classList.add('tokens-wrap');
-        const tokensUl = document.createElement('ul');
-
-        Array.from(child.children).forEach(li => {
-          const tokenLi = document.createElement('li');
-          tokenLi.textContent = li.textContent.trim();
-          tokensUl.append(tokenLi);
-        });
-        tokensWrap.append(tokensUl);
-        searchSuggestionsWrap.append(tokensWrap);
-        wrapDiv.append(searchSuggestionsWrap); // Append to wrapDiv, not searchScreenWrap directly
+  const navItems = navSections.querySelectorAll('.main-nav > ul > li.has-child');
+  navItems.forEach((item) => {
+    item.addEventListener('mouseenter', () => {
+      item.classList.add('hover-red');
+      const megaMenu = item.querySelector(':scope > .mega-menu');
+      if (megaMenu) {
+        megaMenu.setAttribute('aria-expanded', 'true');
       }
     });
-  }
-
-  return searchScreenWrap;
+    item.addEventListener('mouseleave', () => {
+      item.classList.remove('hover-red');
+      const megaMenu = item.querySelector(':scope > .mega-menu');
+      if (megaMenu) {
+        megaMenu.setAttribute('aria-expanded', 'false');
+      }
+    });
+    item.setAttribute('aria-expanded', 'false'); // Initial state
+  });
 }
 
+function toggleSearchScreen(forceExpanded = null) {
+  if (!searchScreenWrap || !searchLensIcon || !searchCloseIcon) return;
+
+  const isExpanded = forceExpanded !== null ? forceExpanded : searchScreenWrap.classList.contains('active');
+
+  if (isExpanded) {
+    searchScreenWrap.classList.remove('active');
+    searchScreenWrap.style.opacity = '0';
+    searchScreenWrap.style.pointerEvents = 'none';
+    searchLensIcon.style.display = 'block';
+    searchCloseIcon.style.display = 'none';
+    document.body.style.overflowY = '';
+    searchScreenWrap.setAttribute('aria-hidden', 'true');
+    searchInput.value = ''; // Clear search input
+    searchResultBox.style.display = 'none'; // Hide results
+  } else {
+    searchScreenWrap.classList.add('active');
+    searchScreenWrap.style.opacity = '1';
+    searchScreenWrap.style.pointerEvents = 'all';
+    searchLensIcon.style.display = 'none';
+    searchCloseIcon.style.display = 'block';
+    document.body.style.overflowY = 'hidden';
+    searchScreenWrap.setAttribute('aria-hidden', 'false');
+    if (searchInput) searchInput.focus();
+  }
+}
+
+function toggleMobileMenu(forceExpanded = null) {
+  if (!nav || !hamburger) return;
+
+  const isExpanded = forceExpanded !== null ? forceExpanded : nav.classList.contains('active');
+
+  if (isExpanded) {
+    nav.classList.remove('active');
+    nav.style.opacity = '0';
+    nav.style.transform = 'translate(-100%,0)';
+    document.body.style.overflowY = '';
+    hamburger.classList.remove('active');
+    nav.setAttribute('aria-hidden', 'true');
+    closeAllSubmenus(nav); // Close all submenus when mobile nav closes
+  } else {
+    nav.classList.add('active');
+    nav.style.opacity = '1';
+    nav.style.transform = 'translate(0,0)';
+    document.body.style.overflowY = 'hidden';
+    hamburger.classList.add('active');
+    nav.setAttribute('aria-hidden', 'false');
+  }
+}
 
 export default async function decorate(block) {
-  block.classList.add('main-header', 'with-marquee', 'solid', 'nav-up');
-
   const navMeta = getMetadata('nav');
   const navPath = navMeta ? new URL(navMeta, window.location).pathname : '/nav';
   const fragment = await loadFragment(navPath);
 
-  const headerContainer = document.createElement('div');
-  headerContainer.classList.add('container');
-  block.append(headerContainer);
+  // Apply original block classes to the header container
+  const headerContainer = document.createElement('header');
+  block.classList.forEach(cls => headerContainer.classList.add(cls));
+  headerContainer.classList.add('main-header', 'with-marquee', 'solid', 'nav-up');
+  headerContainer.setAttribute('data-once', 'header-hover');
+
+  const containerDiv = document.createElement('div');
+  containerDiv.classList.add('container');
 
   const wrapDiv = document.createElement('div');
   wrapDiv.classList.add('wrap');
-  headerContainer.append(wrapDiv);
 
-  // Section 1: Brand
-  const brandSection = fragment.children[0];
-  const brandRoot = brandSection.querySelector(':scope > .default-content-wrapper') || brandSection;
-  const logoDiv = document.createElement('div');
-  logoDiv.classList.add('logo');
-  wrapDiv.append(logoDiv);
+  const mainElement = fragment.querySelector('main');
+  if (!mainElement) return;
 
-  const logoLink = brandRoot.querySelector(':scope > p > picture > img')?.closest('a');
-  if (logoLink) {
-    const newLogoLink = logoLink.cloneNode(true);
-    const newLogoImg = newLogoLink.querySelector('img');
-    if (newLogoImg) {
-      newLogoImg.classList.add('hiddenlogo1');
-    }
-    logoDiv.append(newLogoLink);
-  } else {
-    // Handle case where logo link is missing, but logoDiv should still exist
-    const defaultLogoLink = document.createElement('a');
-    defaultLogoLink.href = '/';
-    logoDiv.append(defaultLogoLink);
-  }
-  moveInstrumentation(brandRoot.firstElementChild, logoDiv);
+  const sections = Array.from(mainElement.children);
+  const brandSection = sections[0];
+  const navSection = sections[1];
+  const toolsSection = sections[2];
 
-  // Hamburger for mobile
-  const hamburgerDiv = document.createElement('div');
-  hamburgerDiv.classList.add('hamburger');
-  const hamburgerUl = document.createElement('ul');
-  for (let i = 0; i < 3; i += 1) {
-    const li = document.createElement('li');
-    hamburgerUl.append(li);
-  }
-  hamburgerDiv.append(hamburgerUl);
-  wrapDiv.append(hamburgerDiv);
+  // Section 1: Brand (Logo)
+  if (brandSection) {
+    const root = brandSection.querySelector(':scope > .default-content-wrapper') || brandSection;
+    const logoDiv = document.createElement('div');
+    logoDiv.classList.add('logo');
+    moveInstrumentation(root, logoDiv);
 
-  // Section 2: Nav
-  const navSection = fragment.children[1];
-  const navRoot = navSection.querySelector(':scope > .default-content-wrapper') || navSection;
-  const navElement = document.createElement('nav');
-  navElement.classList.add('main-nav');
-  navElement.id = 'nav';
-  wrapDiv.append(navElement);
+    const pElement = root.querySelector(':scope > p');
+    if (pElement) {
+      const aElement = pElement.querySelector(':scope > a');
+      if (aElement) {
+        const newA = document.createElement('a');
+        newA.href = aElement.href;
+        logoDiv.appendChild(newA);
+        moveInstrumentation(aElement, newA);
 
-  const navSectionsUl = document.createElement('ul');
-  navSectionsUl.setAttribute('itemscope', '');
-  navSectionsUl.setAttribute('itemtype', 'http://www.schema.org/SiteNavigationElement');
-  navElement.append(navSectionsUl);
-
-  let el = navRoot.firstElementChild;
-  let navItemIndex = 0;
-  let buffer = [];
-
-  while (el) {
-    if (el.nodeType === Node.ELEMENT_NODE) {
-      if (el.tagName === 'P') {
-        const navItemLi = document.createElement('li');
-        navItemLi.classList.add('has-child', 'hover-red');
-        navItemLi.setAttribute('itemprop', 'name');
-        navItemLi.setAttribute('aria-haspopup', 'true');
-        navItemLi.setAttribute('aria-expanded', 'false');
-
-        const link = el.querySelector(':scope > a');
-        if (link) {
-          const newLink = link.cloneNode(true);
-          newLink.setAttribute('itemprop', 'url');
-          navItemLi.append(newLink);
-        } else {
-          const textSpan = document.createElement('span');
-          textSpan.textContent = el.textContent.trim();
-          navItemLi.append(textSpan);
+        const pictureElement = aElement.querySelector(':scope > picture');
+        if (pictureElement) {
+          const imgElement = pictureElement.querySelector(':scope > img');
+          if (imgElement) {
+            const newImg = document.createElement('img');
+            newImg.src = imgElement.src;
+            newImg.alt = imgElement.alt || 'Mahindra Brand Logo White';
+            newImg.title = imgElement.title || 'Mahindra Brand Logo White Image';
+            newImg.classList.add('hiddenlogo1');
+            newImg.loading = 'lazy';
+            newImg.width = imgElement.width || 200;
+            newImg.height = imgElement.height || 30;
+            newA.appendChild(newImg);
+            moveInstrumentation(imgElement, newImg);
+          }
         }
+      }
+    }
+    if (logoDiv.children.length > 0) { // Only append if content exists
+      wrapDiv.appendChild(logoDiv);
+    }
+  }
 
-        const chevronSpan = document.createElement('span');
-        chevronSpan.innerHTML = CHEVRON_SVG;
-        navItemLi.append(chevronSpan);
+  // Hamburger menu
+  hamburger = document.createElement('div');
+  hamburger.classList.add('hamburger');
+  hamburger.setAttribute('data-once', 'hamburger-click nav-close-search');
+  hamburger.setAttribute('role', 'button');
+  hamburger.setAttribute('aria-label', 'Toggle navigation');
+  hamburger.setAttribute('aria-expanded', 'false');
+  const ulHamburger = document.createElement('ul');
+  for (let i = 0; i < 3; i += 1) {
+    ulHamburger.appendChild(document.createElement('li'));
+  }
+  hamburger.appendChild(ulHamburger);
+  wrapDiv.appendChild(hamburger);
 
-        const megaMenuDiv = document.createElement('div');
-        megaMenuDiv.classList.add('mega-menu');
-        navItemLi.append(megaMenuDiv);
+  // Section 2: Navigation
+  nav = document.createElement('nav');
+  nav.classList.add('main-nav');
+  nav.setAttribute('data-once', 'initSubChildToggle');
+  nav.id = 'nav'; // Assign ID for mobile toggle
+  nav.setAttribute('aria-hidden', 'true'); // Initial state for mobile nav
+
+  navSections = document.createElement('ul');
+  navSections.setAttribute('itemscope', '');
+  navSections.setAttribute('itemtype', 'http://www.schema.org/SiteNavigationElement');
+
+  if (navSection) {
+    const root = navSection.querySelector(':scope > .default-content-wrapper') || navSection;
+    const children = Array.from(root.children);
+    let navItemIndex = 0;
+    const contentBuffer = [];
+
+    const parseList = (ulElement) => {
+      const parsedChildren = [];
+      Array.from(ulElement.children).forEach((liEl) => {
+        if (liEl.nodeType === Node.ELEMENT_NODE && liEl.tagName === 'LI') {
+          const liItem = { title: '', href: null, children: [], content: [] };
+          const aTag = liEl.querySelector(':scope > a');
+          const strongTag = liEl.querySelector(':scope > strong');
+          const nestedUl = liEl.querySelector(':scope > ul');
+
+          if (aTag) {
+            liItem.title = aTag.textContent.trim();
+            liItem.href = aTag.href;
+            moveInstrumentation(aTag, liItem);
+          } else if (strongTag) {
+            liItem.title = strongTag.textContent.trim();
+          } else {
+            // Extract direct text nodes and non-UL/A/STRONG elements for title
+            liItem.title = Array.from(liEl.childNodes)
+              .filter((node) => node.nodeType === Node.TEXT_NODE && node.textContent.trim().length > 0)
+              .map((node) => node.textContent.trim())
+              .join(' ');
+          }
+
+          if (nestedUl) {
+            liItem.children = parseList(nestedUl);
+          }
+          parsedChildren.push(liItem);
+        }
+      });
+      return parsedChildren;
+    };
+
+    const buildNavItem = (itemData, level = 0) => {
+      const li = document.createElement('li');
+      li.classList.add(`nav-item-level-${level}`);
+      li.setAttribute('itemprop', 'name');
+
+      let triggerElement;
+      if (itemData.href) {
+        const a = document.createElement('a');
+        a.href = itemData.href;
+        a.textContent = itemData.title;
+        a.classList.add('nav-link');
+        li.appendChild(a);
+        triggerElement = a;
+      } else if (itemData.title) {
+        const span = document.createElement('span'); // Use span for non-clickable categories
+        span.textContent = itemData.title;
+        span.classList.add('nav-category');
+        li.appendChild(span);
+        triggerElement = span;
+      }
+
+      if (itemData.children && itemData.children.length > 0) {
+        li.classList.add('has-child');
+        li.classList.add('hover-red');
+        li.setAttribute('data-once', 'nav-close-search');
+        li.setAttribute('aria-haspopup', 'true');
+        li.setAttribute('aria-expanded', 'false');
+
+        const spanChevron = document.createElement('span');
+        spanChevron.appendChild(createChevronSVG());
+        li.appendChild(spanChevron);
+
+        const megaMenu = document.createElement('div');
+        megaMenu.classList.add('mega-menu');
+        megaMenu.setAttribute('role', 'menu');
+        li.appendChild(megaMenu);
 
         const megaMenuWrap = document.createElement('div');
         megaMenuWrap.classList.add('wrap', 'container');
-        megaMenuDiv.append(megaMenuWrap);
+        megaMenu.appendChild(megaMenuWrap);
 
         const centerDiv = document.createElement('div');
         centerDiv.classList.add('center-div');
-        megaMenuWrap.append(centerDiv);
+        megaMenuWrap.appendChild(centerDiv);
 
-        const leftDiv = document.createElement('div');
-        leftDiv.classList.add('left-div', `nav-item-${navItemIndex}-left-div`);
-        centerDiv.append(leftDiv);
+        // Handle buffered content for the left-div
+        if (level === 0 && contentBuffer.length > 0) {
+          const leftDiv = document.createElement('div');
+          leftDiv.classList.add('left-div', `nav-item-${navItemIndex}-left-div`);
+          centerDiv.appendChild(leftDiv);
 
-        buffer.forEach(bufferedNode => leftDiv.append(bufferedNode));
-        buffer = [];
+          contentBuffer.forEach((bufferedNode) => {
+            leftDiv.appendChild(bufferedNode.cloneNode(true)); // Append cloned node
+          });
+          contentBuffer.length = 0; // Clear the buffer after use
+        }
 
         const subNavWrap = document.createElement('div');
         subNavWrap.classList.add('sub-nav-wrap');
-        centerDiv.append(subNavWrap);
+        centerDiv.appendChild(subNavWrap);
 
-        const nextEl = el.nextElementSibling;
-        if (nextEl && nextEl.tagName === 'UL') {
-          const navItems = parseList(nextEl, 1);
-          const ulContainer = document.createElement('ul');
-          navItems.forEach((item) => {
-            const li = document.createElement('li');
-            li.classList.add('top-level-li');
-            li.setAttribute('aria-haspopup', item.children.length > 0 ? 'true' : 'false');
-            li.setAttribute('aria-expanded', 'false');
+        const ul = document.createElement('ul');
+        itemData.children.forEach((childItem) => {
+          ul.appendChild(buildNavItem(childItem, level + 1));
+        });
+        subNavWrap.appendChild(ul);
+      }
+      return li;
+    };
 
-            if (item.href) {
-              const itemLink = document.createElement('a');
-              itemLink.href = item.href;
-              itemLink.textContent = item.title;
-              li.append(itemLink);
-            } else {
-              const itemText = document.createElement('span');
-              itemText.textContent = item.title;
-              li.append(itemText);
-            }
+    for (let i = 0; i < children.length; i += 1) {
+      const el = children[i];
+      if (el.nodeType === Node.ELEMENT_NODE) {
+        if (el.tagName === 'P') {
+          const aTag = el.querySelector(':scope > a');
+          const strongTag = el.querySelector(':scope > strong');
+          const itemData = { title: '', href: null, children: [] };
 
-            if (item.children.length > 0) {
-              const itemChevronSpan = document.createElement('span');
-              itemChevronSpan.innerHTML = CHEVRON_SVG;
-              li.append(itemChevronSpan);
+          if (aTag) {
+            itemData.title = aTag.textContent.trim();
+            itemData.href = aTag.href;
+            moveInstrumentation(aTag, itemData);
+          } else if (strongTag) {
+            itemData.title = strongTag.textContent.trim();
+          } else {
+            // Extract text content from P, ignoring child ULs if present
+            itemData.title = Array.from(el.childNodes)
+              .filter(node => node.nodeType === Node.TEXT_NODE || (node.nodeType === Node.ELEMENT_NODE && node.tagName !== 'UL'))
+              .map(node => node.textContent.trim())
+              .join(' ');
+          }
 
-              const subMenuDiv = document.createElement('div');
-              subMenuDiv.classList.add('has-sub-child');
-              const subMenuUl = document.createElement('ul');
-              item.children.forEach((subItem) => {
-                const subLi = document.createElement('li');
-                subLi.setAttribute('aria-haspopup', subItem.children.length > 0 ? 'true' : 'false');
-                subLi.setAttribute('aria-expanded', 'false');
+          const nextSibling = children[i + 1];
+          if (nextSibling && nextSibling.tagName === 'UL') {
+            itemData.children = parseList(nextSibling);
+            i += 1; // Skip the UL in the main loop
+          }
 
-                if (subItem.href) {
-                  const subItemLink = document.createElement('a');
-                  subItemLink.href = subItem.href;
-                  subItemLink.textContent = subItem.title;
-                  subLi.append(subItemLink);
-                } else {
-                  const subItemText = document.createElement('span');
-                  subItemText.textContent = subItem.title;
-                  subLi.append(subItemText);
-                }
-
-                if (subItem.children.length > 0) {
-                  const subItemChevronSpan = document.createElement('span');
-                  subItemChevronSpan.innerHTML = CHEVRON_SVG;
-                  subLi.append(subItemChevronSpan);
-
-                  const innerSubMenuDiv = document.createElement('div');
-                  innerSubMenuDiv.classList.add('has-inner-sub-child');
-                  const innerSubMenuUl = document.createElement('ul');
-                  subItem.children.forEach((innerSubItem) => {
-                    const innerSubLi = document.createElement('li');
-                    const innerSubItemLink = document.createElement('a');
-                    innerSubItemLink.href = innerSubItem.href;
-                    innerSubItemLink.textContent = innerSubItem.title;
-                    innerSubLi.append(innerSubItemLink);
-                    innerSubMenuUl.append(innerSubLi);
-                  });
-                  innerSubMenuDiv.append(innerSubMenuUl);
-                  subLi.append(innerSubMenuDiv);
-                }
-                subMenuUl.append(subLi);
-              });
-              subMenuDiv.append(subMenuUl);
-              li.append(subMenuDiv);
-            }
-            ulContainer.append(li);
-          });
-          subNavWrap.append(ulContainer);
-          el = nextEl.nextElementSibling;
-        } else {
-          el = el.nextElementSibling;
+          const li = buildNavItem(itemData, 0);
+          navSections.appendChild(li);
+          moveInstrumentation(el, li);
+          navItemIndex += 1;
+        } else if (el.tagName !== 'UL') {
+          // Buffer non-navigation elements (like H4, P, DIVs)
+          contentBuffer.push(el.cloneNode(true));
         }
-        navSectionsUl.append(navItemLi);
-        navItemIndex += 1;
-        continue;
-      } else {
-        buffer.push(el.cloneNode(true));
       }
     }
-    el = el.nextElementSibling;
   }
+  nav.appendChild(navSections);
 
-  // Mobile and Desktop icon nav
-  const mobileIconNav = document.createElement('div');
-  mobileIconNav.classList.add('icon-nav', 'mobile-menus-icon');
-  const mobileIconUl = document.createElement('ul');
-  mobileIconNav.append(mobileIconUl);
-  navSectionsUl.append(mobileIconNav);
+  // Section 3: Tools (Icons, Search)
+  const iconNavDesktop = document.createElement('div');
+  iconNavDesktop.classList.add('icon-nav', 'desktop-menus-icon');
+  const ulDesktop = document.createElement('ul');
+  iconNavDesktop.appendChild(ulDesktop);
 
-  const desktopIconNav = document.createElement('div');
-  desktopIconNav.classList.add('icon-nav', 'desktop-menus-icon');
-  const desktopIconUl = document.createElement('ul');
-  desktopIconNav.append(desktopIconUl);
-  navElement.append(desktopIconUl);
+  const iconNavMobile = document.createElement('div');
+  iconNavMobile.classList.add('icon-nav', 'mobile-menus-icon');
+  const ulMobile = document.createElement('ul');
+  iconNavMobile.appendChild(ulMobile);
 
-  // Section 3: Tools
-  const toolsSection = fragment.children[2];
-  const toolsRoot = toolsSection.querySelector(':scope > .default-content-wrapper') || toolsSection;
-  const navTools = document.createElement('div'); // Container for icons
+  if (toolsSection) {
+    const root = toolsSection.querySelector(':scope > .default-content-wrapper') || toolsSection;
+    const ulElement = root.querySelector(':scope > ul');
 
-  let toolsEl = toolsRoot.firstElementChild;
-  let searchToggleElement = null; // To store the search li for event listeners
-  while (toolsEl) {
-    if (toolsEl.nodeType === Node.ELEMENT_NODE && toolsEl.tagName === 'UL') {
-      Array.from(toolsEl.children).forEach((li) => {
-        const link = li.querySelector(':scope > a');
-        if (link) {
-          const newLiMobile = document.createElement('li');
-          const newLiDesktop = document.createElement('li');
+    if (ulElement) {
+      Array.from(ulElement.children).forEach((liElement) => {
+        if (liElement.nodeType === Node.ELEMENT_NODE && liElement.tagName === 'LI') {
+          const aTag = liElement.querySelector(':scope > a');
+          if (aTag) {
+            const liDesktop = document.createElement('li');
+            const liMobile = document.createElement('li');
+            const aDesktop = document.createElement('a');
+            const aMobile = document.createElement('a');
 
-          const linkText = link.textContent.trim().toLowerCase();
-          if (linkText.includes('contact')) { // Use includes for robustness
-            newLiMobile.classList.add('mail');
-            newLiDesktop.classList.add('mail');
+            aDesktop.href = aTag.href;
+            aMobile.href = aTag.href;
+            aDesktop.title = aTag.title || aTag.textContent.trim();
+            aMobile.title = aTag.title || aTag.textContent.trim();
 
-            const mobileLink = link.cloneNode(true);
-            mobileLink.textContent = '';
-            mobileLink.innerHTML += MAIL_SVG;
-            mobileLink.append(document.createTextNode(' Contact Us'));
-            newLiMobile.append(mobileLink);
+            const linkText = aTag.textContent.toLowerCase().trim();
 
-            const desktopLink = link.cloneNode(true);
-            desktopLink.textContent = '';
-            desktopLink.innerHTML += MAIL_SVG;
-            newLiDesktop.append(desktopLink);
-          } else if (linkText.includes('search')) { // Use includes for robustness
-            newLiMobile.classList.add('search');
-            newLiDesktop.classList.add('search');
+            if (linkText === 'contact us') {
+              liDesktop.classList.add('mail');
+              liMobile.classList.add('mail');
+              const contactSvg = `
+                <svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg"
+                  xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 48 38.4"
+                  style="enable-background:new 0 0 48 38.4;" xml:space="preserve" width="21" height="21">
+                  <path d="M3.6,38.4c-1,0-1.8-0.4-2.5-1.1S0,35.8,0,34.8V3.6c0-1,0.4-1.8,1.1-2.5S2.6,0,3.6,0h40.8c1,0,1.8,0.4,2.5,1.1
+                            C47.6,1.8,48,2.6,48,3.6v31.2c0,1-0.4,1.8-1.1,2.5c-0.7,0.7-1.6,1.1-2.5,1.1H3.6z M24,20.3L3.6,6.9v27.9h40.8V6.9L24,20.3z M24,16.7
+                            L44.2,3.6H3.9L24,16.7z M3.6,6.9V3.6v31.2V6.9z" />
+                </svg>
+              `;
+              aDesktop.innerHTML = contactSvg;
+              aDesktop.setAttribute('aria-label', 'Contact Us');
+              liDesktop.appendChild(aDesktop);
+              ulDesktop.appendChild(liDesktop);
 
-            // Mobile Search
-            const mobileSearchLink = link.cloneNode(true);
-            mobileSearchLink.textContent = '';
-            mobileSearchLink.innerHTML += SEARCH_LENS_SVG;
-            mobileSearchLink.innerHTML += SEARCH_CLOSE_SVG;
-            mobileSearchLink.append(document.createTextNode(' Search'));
-            newLiMobile.append(mobileSearchLink);
-            newLiMobile.append(createSearchScreenContent(fragment, true));
+              aMobile.textContent = 'Contact Us'; // Mobile uses text for contact
+              aMobile.setAttribute('aria-label', 'Contact Us');
+              liMobile.appendChild(aMobile);
+              ulMobile.appendChild(liMobile);
+            } else if (linkText === 'search') {
+              liDesktop.classList.add('search');
+              liMobile.classList.add('search');
+              liDesktop.setAttribute('data-once', 'search-toggle search-stop-propagation');
+              liMobile.setAttribute('data-once', 'search-toggle search-stop-propagation');
 
-            // Desktop Search
-            const desktopSearchLink = link.cloneNode(true);
-            desktopSearchLink.textContent = '';
-            desktopSearchLink.innerHTML += SEARCH_LENS_SVG;
-            desktopSearchLink.innerHTML += SEARCH_CLOSE_SVG;
-            newLiDesktop.append(desktopSearchLink);
-            newLiDesktop.append(createSearchScreenContent(fragment, false));
+              const searchSvg = `
+                <svg viewBox="0 0 21 21" fill="none" class="lens" data-once="search-stop-propagation">
+                  <path d="M15.0934 2.73157L15.0934 2.73156C11.6883 -0.67354 6.14543 -0.67354 2.74033 2.73156C-0.666039 6.13793 -0.666063 11.6795 2.74035 15.0847C4.38993 16.7342 6.58308 17.6433 8.91623 17.6433C10.9916 17.6433 12.9533 16.9181 14.5221 15.5975L19.5217 20.5972C19.6721 20.7476 19.8687 20.8212 20.0632 20.8212C20.2588 20.8212 20.4554 20.7476 20.6059 20.5972C20.905 20.2981 20.905 19.8121 20.6059 19.513L15.6062 14.5132C18.4815 11.0845 18.3159 5.95535 15.0934 2.73157ZM14.0092 14.0004C12.6491 15.3606 10.8404 16.1098 8.91623 16.1098C6.99211 16.1098 5.18468 15.3606 3.82452 14.0004C1.01633 11.1923 1.01633 6.62394 3.82452 3.81575C5.22857 2.41171 7.07147 1.71024 8.91623 1.71024C10.7609 1.71024 12.6052 2.41296 14.0092 3.81575C16.8174 6.62394 16.8174 11.1923 14.0092 14.0004Z" stroke-width="0.25" data-once="search-stop-propagation"></path>
+                </svg>
+                <svg viewBox="0 0 50 50" class="close" data-once="search-stop-propagation">
+                  <path d="M 9.15625 6.3125 L 6.3125 9.15625 L 22.15625 25 L 6.21875 40.96875 L 9.03125 43.78125 L 25 27.84375 L 40.9375 43.78125 L 43.78125 40.9375 L 27.84375 25 L 43.6875 9.15625 L 40.84375 6.3125 L 25 22.15625 Z" data-once="search-stop-propagation"></path>
+                </svg>
+                <span data-once="search-stop-propagation"> Search</span>
+              `;
+              aDesktop.innerHTML = searchSvg;
+              aDesktop.setAttribute('aria-label', 'Search');
+              liDesktop.appendChild(aDesktop);
+              ulDesktop.appendChild(liDesktop);
 
-            searchToggleElement = newLiDesktop; // Assign desktop search li for event listeners
-          } else {
-            newLiMobile.append(link.cloneNode(true));
-            newLiDesktop.append(link.cloneNode(true));
+              aMobile.innerHTML = searchSvg;
+              aMobile.setAttribute('aria-label', 'Search');
+              liMobile.appendChild(aMobile);
+              ulMobile.appendChild(liMobile);
+
+              searchScreenWrap = document.createElement('div');
+              searchScreenWrap.classList.add('search-screen-wrap');
+              searchScreenWrap.setAttribute('data-once', 'search-stop-propagation');
+              searchScreenWrap.setAttribute('role', 'dialog');
+              searchScreenWrap.setAttribute('aria-modal', 'true');
+              searchScreenWrap.setAttribute('aria-hidden', 'true');
+              searchScreenWrap.setAttribute('aria-label', 'Search overlay');
+
+              const searchWrapInner = document.createElement('div');
+              searchWrapInner.classList.add('wrap');
+              searchWrapInner.setAttribute('data-once', 'search-stop-propagation');
+              searchScreenWrap.appendChild(searchWrapInner);
+
+              const searchForm = document.createElement('form');
+              searchForm.action = 'https://www.mahindra.com/search';
+              searchForm.method = 'get';
+              searchForm.id = 'search-block-form';
+              searchForm.setAttribute('accept-charset', 'UTF-8');
+              searchForm.setAttribute('data-drupal-form-fields', 'edit-keys');
+              searchForm.setAttribute('data-once', 'search-stop-propagation');
+              searchWrapInner.appendChild(searchForm);
+
+              const searchInputWrap = document.createElement('div');
+              searchInputWrap.classList.add('search-wrap');
+              searchInputWrap.setAttribute('data-once', 'search-stop-propagation');
+              searchForm.appendChild(searchInputWrap);
+
+              const searchIconDiv = document.createElement('div');
+              searchIconDiv.classList.add('search-icon');
+              searchIconDiv.setAttribute('data-once', 'search-stop-propagation');
+              searchIconDiv.innerHTML = `
+                <svg viewBox="0 0 21 21" fill="none" data-once="search-stop-propagation">
+                  <path d="M15.0934 2.73157L15.0934 2.73156C11.6883 -0.67354 6.14543 -0.67354 2.74033 2.73156C-0.666039 6.13793 -0.666063 11.6795 2.74035 15.0847C4.38993 16.7342 6.58308 17.6433 8.91623 17.6433C10.9916 17.6433 12.9533 16.9181 14.5221 15.5975L19.5217 20.5972C19.6721 20.7476 19.8687 20.8212 20.0632 20.8212C20.2588 20.8212 20.4554 20.7476 20.6059 20.5972C20.905 20.2981 20.905 19.8121 20.6059 19.513L15.6062 14.5132C18.4815 11.0845 18.3159 5.95535 15.0934 2.73157ZM14.0092 14.0004C12.6491 15.3606 10.8404 16.1098 8.91623 16.1098C6.99211 16.1098 5.18468 15.3606 3.82452 14.0004C1.01633 11.1923 1.01633 6.62394 3.82452 3.81575C5.22857 2.41171 7.07147 1.71024 8.91623 1.71024C10.7609 1.71024 12.6052 2.41296 14.0092 3.81575C16.8174 6.62394 16.8174 11.1923 14.0092 14.0004Z" stroke-width="0.25" data-once="search-stop-propagation"></path>
+                </svg>
+              `;
+              searchInputWrap.appendChild(searchIconDiv);
+
+              searchInput = document.createElement('input');
+              searchInput.type = 'text';
+              searchInput.classList.add('input-text', 'searchtext');
+              searchInput.required = true;
+              searchInput.name = 'key';
+              searchInput.id = 'searchInput';
+              searchInput.autocomplete = 'off';
+              searchInput.setAttribute('data-once', 'search-stop-propagation');
+              searchInput.setAttribute('aria-label', 'Search input');
+              searchInputWrap.appendChild(searchInput);
+
+              const submitButton = document.createElement('button');
+              submitButton.classList.add('submit-button');
+              submitButton.setAttribute('data-once', 'search-stop-propagation');
+              submitButton.setAttribute('aria-label', 'Submit search');
+              submitButton.innerHTML = `
+                <div class="label" data-once="search-stop-propagation"> Submit </div>
+                <svg width="12" height="8" viewBox="0 0 12 8" fill="none" data-once="search-stop-propagation">
+                  <path d="M11.3536 4.35355C11.5488 4.15829 11.5488 3.84171 11.3536 3.64645L8.17157 0.464465C7.97631 0.269203 7.65973 0.269203 7.46447 0.464465C7.2692 0.659728 7.2692 0.97631 7.46447 1.17157L10.2929 4L7.46447 6.82843C7.2692 7.02369 7.2692 7.34027 7.46447 7.53553C7.65973 7.7308 7.97631 7.7308 8.17157 7.53553L11.3536 4.35355ZM4.37114e-08 4.5L11 4.5L11 3.5L-4.37114e-08 3.5L4.37114e-08 4.5Z" fill="black" data-once="search-stop-propagation"></path>
+                </svg>
+              `;
+              searchInputWrap.appendChild(submitButton);
+
+              searchResultBox = document.createElement('div');
+              searchResultBox.classList.add('searchResultBox');
+              searchResultBox.style.display = 'none';
+              searchResultBox.setAttribute('data-once', 'search-stop-propagation');
+              searchForm.appendChild(searchResultBox);
+
+              const swiperDiv = document.createElement('div');
+              swiperDiv.classList.add('swiper', 'scrollSwiper');
+              swiperDiv.setAttribute('data-once', 'search-stop-propagation');
+              searchResultBox.appendChild(swiperDiv);
+
+              const swiperWrapper = document.createElement('div');
+              swiperWrapper.classList.add('swiper-wrapper');
+              swiperWrapper.setAttribute('data-once', 'search-stop-propagation');
+              swiperDiv.appendChild(swiperWrapper);
+
+              const swiperSlide = document.createElement('div');
+              swiperSlide.classList.add('swiper-slide');
+              swiperSlide.setAttribute('data-once', 'search-stop-propagation');
+              swiperWrapper.appendChild(swiperSlide);
+
+              const swiperScrollbar = document.createElement('div');
+              swiperScrollbar.classList.add('swiper-scrollbar');
+              swiperScrollbar.setAttribute('data-once', 'search-stop-propagation');
+              searchResultBox.appendChild(swiperScrollbar);
+
+              searchSuggestionsWrap = document.createElement('div');
+              searchSuggestionsWrap.classList.add('search-suggestions-wrap');
+              searchSuggestionsWrap.setAttribute('data-once', 'search-stop-propagation');
+              searchSuggestionsWrap.innerHTML = `
+                <div class="label" data-once="search-stop-propagation">Popular Keywords:</div>
+                <div class="tokens-wrap" data-once="search-stop-propagation">
+                  <ul data-once="search-stop-propagation">
+                    <li>Business</li>
+                    <li>FY 21</li>
+                    <li>Brands</li>
+                    <li>XUV700</li>
+                    <li>Global</li>
+                    <li>Nanhi Kali</li>
+                  </ul>
+                </div>
+              `;
+              searchWrapInner.appendChild(searchSuggestionsWrap);
+
+              const recommendedSuggestionsWrap = document.createElement('div');
+              recommendedSuggestionsWrap.classList.add('search-suggestions-wrap');
+              recommendedSuggestionsWrap.setAttribute('data-once', 'search-stop-propagation');
+              recommendedSuggestionsWrap.innerHTML = `
+                <div class="label" data-once="search-stop-propagation">Recommended for you:</div>
+                <div class="tokens-wrap" data-once="search-stop-propagation">
+                  <ul data-once="search-stop-propagation">
+                    <li>Annual Report 2021 - 2022</li>
+                    <li>Leadership Announcement</li>
+                    <li>Latest Press Release</li>
+                    <li>Brand Guidelines</li>
+                  </ul>
+                </div>
+              `;
+              searchWrapInner.appendChild(recommendedSuggestionsWrap);
+
+              const searchLink = liDesktop.querySelector('a');
+              if (searchLink) {
+                searchLensIcon = searchLink.querySelector('.lens');
+                searchCloseIcon = searchLink.querySelector('.close');
+                searchLink.addEventListener('click', (e) => {
+                  e.preventDefault();
+                  toggleSearchScreen();
+                });
+              }
+              nav.appendChild(searchScreenWrap);
+            } else {
+              // For other social links, create the <li> and <a> elements
+              const liDesktopSocial = document.createElement('li');
+              const liMobileSocial = document.createElement('li');
+              const aDesktopSocial = document.createElement('a');
+              const aMobileSocial = document.createElement('a');
+
+              aDesktopSocial.href = aTag.href;
+              aMobileSocial.href = aTag.href;
+              aDesktopSocial.title = aTag.title || aTag.textContent.trim();
+              aMobileSocial.title = aTag.title || aTag.textContent.trim();
+
+              // Clone all children of the original <a> tag (including SVGs if present)
+              Array.from(aTag.children).forEach(child => {
+                aDesktopSocial.appendChild(child.cloneNode(true));
+                aMobileSocial.appendChild(child.cloneNode(true));
+              });
+              // If no children (e.g., just text), add text content
+              if (aTag.children.length === 0) {
+                aDesktopSocial.textContent = aTag.textContent;
+                aMobileSocial.textContent = aTag.textContent;
+              }
+
+              liDesktopSocial.appendChild(aDesktopSocial);
+              ulDesktop.appendChild(liDesktopSocial);
+
+              liMobileSocial.appendChild(aMobileSocial);
+              ulMobile.appendChild(liMobileSocial);
+            }
           }
-          mobileIconUl.append(newLiMobile);
-          desktopIconUl.append(newLiDesktop);
-          moveInstrumentation(li, newLiMobile);
-          moveInstrumentation(li, newLiDesktop);
         }
       });
     }
-    toolsEl = toolsEl.nextElementSibling;
   }
+
+  if (ulMobile.children.length > 0) {
+    nav.appendChild(iconNavMobile);
+  }
+  if (ulDesktop.children.length > 0) {
+    nav.appendChild(iconNavDesktop);
+  }
+  wrapDiv.appendChild(nav);
 
   // 80th Year Logo
   const year80LogoDiv = document.createElement('div');
   year80LogoDiv.classList.add('logo', 'year-80-logo');
-  wrapDiv.append(year80LogoDiv);
 
-  const year80Link = document.createElement('a');
-  year80Link.href = 'https://www.mahindra.com/'; // Hardcoded URL from original HTML
-  const year80Img = document.createElement('img');
-  year80Img.src = 'https://www.mahindra.com/sites/default/files/2026-03/80thYearLogo_Gold_com.webp'; // Hardcoded URL from original HTML
-  year80Img.alt = '80th Year Logo Gold';
-  year80Img.title = '80thYearLogo_Gold';
-  year80Img.classList.add('hiddenlogo1', 'years-80');
-  year80Img.setAttribute('width', '74');
-  year80Img.setAttribute('height', '60');
-  year80Img.setAttribute('loading', 'lazy');
-  year80Link.append(year80Img);
-  year80LogoDiv.append(year80Link);
-  moveInstrumentation(fragment.children[2], year80LogoDiv);
+  const year80LogoContent = toolsSection.querySelector('.year-80-logo');
+  if (year80LogoContent) {
+    const year80Link = year80LogoContent.querySelector(':scope > a');
+    if (year80Link) {
+      const newYear80Link = document.createElement('a');
+      newYear80Link.href = year80Link.href;
+      year80LogoDiv.appendChild(newYear80Link);
 
-  setupHeaderInteractions(navElement, hamburgerDiv, searchToggleElement);
+      const year80Img = year80Link.querySelector(':scope > img');
+      if (year80Img) {
+        const newYear80Img = document.createElement('img');
+        newYear80Img.src = year80Img.src;
+        newYear80Img.alt = year80Img.alt || '80th Year Logo Gold';
+        newYear80Img.title = year80Img.title || '80thYearLogo_Gold';
+        newYear80Img.classList.add('hiddenlogo1', 'years-80');
+        newYear80Img.width = year80Img.width || 74;
+        newYear80Img.height = year80Img.height || 60;
+        newYear80Img.loading = 'lazy';
+        newYear80Link.appendChild(newYear80Img);
+      }
+    }
+  }
+  if (year80LogoDiv.children.length > 0) { // Only append if content exists
+    wrapDiv.appendChild(year80LogoDiv);
+  }
+
+  containerDiv.appendChild(wrapDiv);
+  headerContainer.appendChild(containerDiv);
+
+  block.textContent = ''; // Clear the block content
+  block.appendChild(headerContainer);
+
+  // Event Listeners for behavior
+  hamburger.addEventListener('click', () => toggleMobileMenu());
+  hamburger.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && nav.classList.contains('active')) {
+      toggleMobileMenu(true);
+    }
+  });
+
+  if (searchScreenWrap) {
+    searchScreenWrap.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && searchScreenWrap.classList.contains('active')) {
+        toggleSearchScreen(true);
+      }
+    });
+  }
+
+  // Prevent mobile nav behavior on window resize
+  const handleResize = () => {
+    if (isDesktop.matches) {
+      if (nav.classList.contains('active')) {
+        toggleMobileMenu(true); // Force close mobile menu
+      }
+      if (searchScreenWrap && searchScreenWrap.classList.contains('active')) {
+        toggleSearchScreen(true); // Force close search screen
+      }
+      setupDesktopNavBehavior();
+    } else {
+      setupMobileNavBehavior();
+    }
+  };
+
+  isDesktop.addEventListener('change', handleResize);
+  handleResize(); // Initial setup
 }
-
