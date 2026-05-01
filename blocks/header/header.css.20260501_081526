@@ -1435,6 +1435,16 @@ a:any-link {
   }
  }
 
+.header-wrapper.sticky { 
+  position: sticky;
+  top: 0;
+  width: 100%;
+  z-index: 997;
+  background-color: var(--tertiary-white);
+  box-shadow: 0 2px 4px rgb(0 0 0 / 10%);
+  height: 74px;
+ }
+
 .navbar { 
   display: flex;
   justify-content: space-between;
@@ -1803,6 +1813,10 @@ a:any-link {
 
 .navbar-arena { 
     padding: 11px 24px 11px 52px;
+   }
+
+.header-wrapper.sticky { 
+    height: 64px;
    }
 
 .logo-wrapper { 
