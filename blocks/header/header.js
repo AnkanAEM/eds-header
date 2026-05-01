@@ -1,229 +1,302 @@
 import { getMetadata } from '../../scripts/aem.js';
 import { loadFragment } from '../fragment/fragment.js';
 
+// media query match that indicates mobile/tablet width
 const isDesktop = window.matchMedia('(min-width: 1200px)');
-const isTablet = window.matchMedia('(min-width: 768px) and (max-width: 1199px)');
-const isMobile = window.matchMedia('(max-width: 767px)');
 
-let nav = null;
-let navSections = null;
-let menu = null;
-let carFilterMenu = null;
-let contactToggleBox = null;
-let userAccountDropdown = null;
-let navHamburgerButton = null;
-let contactBlock = null;
-let rightDiv = null;
-
-function closeOnEscape(e) {
-  if (e.code === 'Escape') {
-    const navSectionExpanded = navSections?.querySelector('[aria-expanded="true"]');
-    if (navSectionExpanded && isDesktop.matches) {
-      // eslint-disable-next-line no-use-before-define
-      toggleAllNavSections(navSections, false);
-      navSectionExpanded.focus();
-    } else if (!isDesktop.matches && nav.getAttribute('aria-expanded') === 'true') {
-      // eslint-disable-next-line no-use-before-define
-      toggleMenu(nav, navSections, false);
-      navHamburgerButton.focus();
-    }
-  }
-}
-
-function closeOnFocusLost(e) {
-  const currentNav = e.currentTarget;
-  if (!currentNav.contains(e.relatedTarget)) {
-    const navSectionExpanded = navSections?.querySelector('[aria-expanded="true"]');
-    if (navSectionExpanded && isDesktop.matches) {
-      // eslint-disable-next-line no-use-before-define
-      toggleAllNavSections(navSections, false);
-    }
-  }
-}
-
-function openOnKeydown(e) {
-  const focused = document.activeElement;
-  const isNavDrop = focused.classList.contains('link-title'); // Assuming nav-drop is equivalent to link-title for desktop
-  if (isNavDrop && (e.code === 'Enter' || e.code === 'Space')) {
-    const dropExpanded = focused.getAttribute('aria-expanded') === 'true';
-    // eslint-disable-next-line no-use-before-define
-    toggleAllNavSections(focused.closest('.nav-sections'), !dropExpanded);
-    focused.setAttribute('aria-expanded', !dropExpanded);
-  }
-}
-
-function focusNavSection() {
-  document.activeElement.addEventListener('keydown', openOnKeydown);
-}
-
-/**
- * Toggles all nav sections
- * @param {Element} sections The container element
- * @param {Boolean} expanded Whether the element should be expanded or collapsed
- */
-function toggleAllNavSections(sections, expanded = false) {
-  if (!sections) return;
-  sections.querySelectorAll('.nav-sections > .links > .link-title').forEach((section) => {
-    const panel = section.nextElementSibling;
-    const isCurrent = section.getAttribute('aria-expanded') === 'true';
-
-    if (expanded && !isCurrent) {
-      section.setAttribute('aria-expanded', 'true');
-      if (panel && panel.classList.contains('desktop-panel')) {
-        panel.style.display = 'flex';
-        panel.style.opacity = '1';
-        panel.style.visibility = 'visible';
-      }
-    } else if (!expanded && isCurrent) {
-      section.setAttribute('aria-expanded', 'false');
-      if (panel && panel.classList.contains('desktop-panel')) {
-        panel.style.display = 'none';
-        panel.style.opacity = '0';
-        panel.style.visibility = 'hidden';
-      }
-    }
-  });
-}
-
-/**
- * Toggles the entire nav
- * @param {Element} navElement The container element
- * @param {Element} navSectionsElement The nav sections within the container element
- * @param {*} forceExpanded Optional param to force nav expand behavior when not null
- */
-function toggleMenu(navElement, navSectionsElement, forceExpanded = null) {
-  if (!navElement || !navSectionsElement) return;
-
-  const expanded = forceExpanded !== null ? forceExpanded : navElement.getAttribute('aria-expanded') === 'true';
-  const button = navElement.querySelector('.nav-hamburger button');
-  document.body.style.overflowY = (expanded || isDesktop.matches) ? '' : 'hidden';
-  navElement.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-  if (button) {
-    button.setAttribute('aria-label', expanded ? 'Close navigation' : 'Open navigation');
-    button.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-  }
-
-  // enable nav dropdown keyboard accessibility
-  const navDrops = navSectionsElement.querySelectorAll('.link-title');
-  if (isDesktop.matches) {
-    navDrops.forEach((drop) => {
-      if (!drop.hasAttribute('tabindex')) {
-        drop.setAttribute('tabindex', 0);
-        drop.addEventListener('focus', focusNavSection);
-      }
-    });
-  } else {
-    navDrops.forEach((drop) => {
-      drop.removeAttribute('tabindex');
-      drop.removeEventListener('focus', focusNavSection);
-    });
-  }
-
-  // enable menu collapse on escape keypress
-  if (expanded || isDesktop.matches) {
-    window.addEventListener('keydown', closeOnEscape);
-    navElement.addEventListener('focusout', closeOnFocusLost);
-  } else {
-    window.removeEventListener('keydown', closeOnEscape);
-    navElement.removeEventListener('focusout', closeOnFocusLost);
-  }
-}
+let nav;
+let navSections;
+let navTools;
+let menu;
+let carFilterMenu;
+let desktopPanels = [];
+let contactToggleBox;
+let userDropdown;
 
 function sanitizeClassName(name) {
   return name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-');
 }
 
 function moveInstrumentation(originalElement, newElement) {
-  if (!originalElement || !newElement) return;
-  const { blockName, blockStatus, blockVariant } = originalElement.dataset;
-  if (blockName) newElement.dataset.blockName = blockName;
-  if (blockStatus) newElement.dataset.blockStatus = blockStatus;
-  if (blockVariant) newElement.dataset.blockVariant = blockVariant;
-  newElement.classList.add(...originalElement.classList);
+  if (originalElement && newElement && originalElement.dataset.cqPath) {
+    newElement.dataset.cqPath = originalElement.dataset.cqPath;
+  }
 }
 
-/**
- * Recursively parses a UL element and its children to build a nested menu structure.
- * This version is for desktop panels and mobile accordions, where the UL itself
- * does not get the 'accordion' class, but its parent LI might.
- * @param {HTMLUListElement} ulElement The UL element to parse.
- * @returns {HTMLUListElement} The constructed UL element with the correct structure and classes.
- */
-function parseNestedList(ulElement) {
-  if (!ulElement) return null;
+function closeAllMenus(except = null) {
+  if (!navSections) return;
+  navSections.querySelectorAll('.link-title.active').forEach((section) => {
+    if (section !== except) {
+      section.classList.remove('active');
+      section.setAttribute('aria-expanded', 'false');
+      const panel = section.nextElementSibling;
+      if (panel && panel.classList.contains('desktop-panel')) {
+        panel.classList.remove('active');
+        panel.setAttribute('aria-hidden', 'true');
+      }
+    }
+  });
 
-  const newUl = document.createElement('ul');
-  newUl.classList.add('content', 'links-container', 'accordian-content');
+  if (menu && !menu.classList.contains('hidden')) {
+    menu.classList.add('hidden');
+    document.body.classList.remove('menu-open');
+  }
+  if (carFilterMenu && !carFilterMenu.classList.contains('hidden')) {
+    carFilterMenu.classList.add('hidden');
+    document.body.classList.remove('menu-open');
+  }
+  if (contactToggleBox && !contactToggleBox.classList.contains('hidden')) {
+    contactToggleBox.classList.add('hidden');
+  }
+  if (userDropdown && !userDropdown.classList.contains('hidden')) {
+    userDropdown.classList.add('hidden');
+  }
+}
 
-  Array.from(ulElement.children).forEach((li) => {
-    if (li.nodeType !== Node.ELEMENT_NODE) return;
+function toggleMenu(forceExpanded = null) {
+  if (!nav || !navSections) return;
+  const expanded = forceExpanded !== null ? !forceExpanded : nav.getAttribute('aria-expanded') === 'true';
+  const hamburgerButton = nav.querySelector('.nav-hamburger button');
 
-    const newLi = document.createElement('li');
-    moveInstrumentation(li, newLi);
+  document.body.style.overflowY = (expanded || isDesktop.matches) ? '' : 'hidden';
+  document.body.classList.toggle('menu-open', !expanded && !isDesktop.matches);
+  nav.setAttribute('aria-expanded', expanded ? 'false' : 'true');
+  hamburgerButton.setAttribute('aria-label', expanded ? 'Open navigation' : 'Close navigation');
 
-    let link = li.querySelector(':scope > a');
-    const strong = li.querySelector(':scope > strong');
-    const p = li.querySelector(':scope > p'); // Check for paragraph inside li
+  if (menu) {
+    menu.classList.toggle('hidden', expanded);
+  }
 
-    if (link) {
-      newLi.append(link.cloneNode(true));
+  if (expanded) {
+    closeAllMenus();
+  }
+}
+
+function buildMobileMenu(sourceUl, targetUl) {
+  Array.from(sourceUl.children).forEach((sourceLi) => {
+    const targetLi = document.createElement('li');
+    moveInstrumentation(sourceLi, targetLi);
+
+    const anchor = sourceLi.querySelector(':scope > a');
+    const paragraph = sourceLi.querySelector(':scope > p');
+    const strong = sourceLi.querySelector(':scope > strong');
+
+    if (anchor) {
+      const clonedAnchor = anchor.cloneNode(true);
+      if (clonedAnchor.title) targetLi.classList.add(sanitizeClassName(clonedAnchor.title));
+      targetLi.append(clonedAnchor);
     } else if (strong) {
-      newLi.append(strong.cloneNode(true));
-    } else if (p) {
-      newLi.append(p.cloneNode(true));
+      const clonedStrong = strong.cloneNode(true);
+      targetLi.classList.add(sanitizeClassName(clonedStrong.textContent));
+      targetLi.append(clonedStrong);
+    } else if (paragraph) {
+      const clonedParagraph = paragraph.cloneNode(true);
+      targetLi.classList.add(sanitizeClassName(clonedParagraph.textContent));
+      targetLi.append(clonedParagraph);
     } else {
-      // If no link, strong, or p, just take the text content
-      newLi.textContent = li.textContent.trim();
+      targetLi.textContent = sourceLi.textContent.trim();
+      targetLi.classList.add(sanitizeClassName(sourceLi.textContent));
     }
 
-    const nestedUl = li.querySelector(':scope > ul');
+    const nestedUl = sourceLi.querySelector(':scope > ul');
     if (nestedUl) {
-      // This is a nested accordion item for mobile, or just a nested list for desktop
+      targetLi.classList.add('accordion');
       const nestedPanel = document.createElement('div');
       nestedPanel.classList.add('panel');
+      const innerUl = document.createElement('ul');
+      innerUl.classList.add('content', 'links-container', 'accordian-content');
+      nestedPanel.append(innerUl);
+      buildMobileMenu(nestedUl, innerUl); // Recursive call for nested ULs
 
-      const nestedLinkGrid = document.createElement('div');
-      nestedLinkGrid.classList.add('link-grid', 'block');
-      const nestedLinkContainerSection = document.createElement('div');
-      nestedLinkContainerSection.classList.add('link-container-section');
-      const nestedLinkGridColumn = document.createElement('div');
-      nestedLinkGridColumn.classList.add('link-grid-column', 'link-column-vertical');
+      targetLi.addEventListener('click', () => {
+        if (!isDesktop.matches) {
+          targetLi.classList.toggle('active');
+          nestedPanel.style.maxHeight = targetLi.classList.contains('active') ? `${nestedPanel.scrollHeight}px` : '0';
+        }
+      });
+      targetUl.append(targetLi);
+      targetUl.append(nestedPanel); // Panel is sibling to li in mobile menu
+    } else {
+      targetUl.append(targetLi);
+    }
+  });
+}
 
-      const parsedNestedUl = parseNestedList(nestedUl);
-      if (parsedNestedUl) {
-        nestedLinkGridColumn.append(parsedNestedUl);
+function setupMobileNav() {
+  if (!nav || !navSections || !navTools || !menu) return;
+
+  const menuList = menu.querySelector('.menu-list');
+  if (!menuList) return;
+  menuList.replaceChildren(); // Clear existing mobile menu items
+
+  // Add nav sections to mobile menu
+  navSections.querySelectorAll('.link-title').forEach((navSection) => {
+    const li = document.createElement('li');
+    li.classList.add('nav-link');
+    moveInstrumentation(navSection, li);
+
+    const navSectionContent = navSection.querySelector(':scope > span > a') || navSection.querySelector(':scope > span > strong') || navSection.querySelector(':scope > span');
+    const navSectionText = navSectionContent ? navSectionContent.textContent : '';
+    const sanitizedClass = sanitizeClassName(navSectionText);
+    if (sanitizedClass) li.classList.add(sanitizedClass);
+
+    const span = document.createElement('span');
+    span.classList.add('menu-title');
+    if (navSectionContent) {
+      span.append(navSectionContent.cloneNode(true));
+    }
+    li.append(span);
+
+    const desktopPanel = navSection.nextElementSibling;
+    if (desktopPanel && desktopPanel.classList.contains('desktop-panel')) {
+      li.classList.add('accordion');
+      const panelDiv = document.createElement('div');
+      panelDiv.classList.add('panel');
+
+      const linkGridBlock = desktopPanel.querySelector('.link-grid.block');
+      if (linkGridBlock) {
+        const linkContainerSection = linkGridBlock.querySelector('.link-container-section');
+        if (linkContainerSection) {
+          const linkGridColumns = Array.from(linkContainerSection.children);
+          linkGridColumns.forEach(column => {
+            const ul = column.querySelector(':scope > ul.content.links-container.accordian-content');
+            if (ul) {
+              const mobileColumnUl = document.createElement('ul');
+              mobileColumnUl.classList.add('content', 'links-container', 'accordian-content');
+              buildMobileMenu(ul, mobileColumnUl);
+              panelDiv.append(mobileColumnUl);
+            }
+          });
+        }
       }
-      nestedLinkContainerSection.append(nestedLinkGridColumn);
-      nestedLinkGrid.append(nestedLinkContainerSection);
-      nestedPanel.append(nestedLinkGrid);
 
-      newLi.classList.add('accordion');
-      const span = document.createElement('span');
-      span.classList.add('menu-title');
-      const existingContent = newLi.firstChild; // Get the cloned link/strong/p
-      if (existingContent) {
-        span.append(existingContent);
-      } else {
-        span.textContent = newLi.textContent;
-        newLi.textContent = ''; // Clear text content if it was directly set
-      }
-      newLi.prepend(span);
-      newLi.append(nestedPanel);
+      menuList.append(li);
+      menuList.append(panelDiv);
 
-      // Mobile accordion functionality
-      span.addEventListener('click', () => {
-        newLi.classList.toggle('active');
-        if (newLi.classList.contains('active')) {
-          nestedPanel.style.maxHeight = `${nestedPanel.scrollHeight}px`;
-        } else {
-          nestedPanel.style.maxHeight = null;
+      li.addEventListener('click', () => {
+        if (!isDesktop.matches) {
+          li.classList.toggle('active');
+          panelDiv.style.maxHeight = li.classList.contains('active') ? `${panelDiv.scrollHeight}px` : '0';
+        }
+      });
+    } else {
+      menuList.append(li);
+    }
+  });
+
+  // Add tools section to mobile menu
+  const toolsList = document.createElement('ul');
+  toolsList.classList.add('menu-list', 'tools-list'); // Separate class for styling if needed
+  navTools.querySelectorAll('.user__account--link, .language, .contact-wrapper').forEach((toolItem) => {
+    const li = document.createElement('li');
+    moveInstrumentation(toolItem, li);
+
+    if (toolItem.classList.contains('language')) {
+      li.textContent = toolItem.textContent;
+      li.classList.add('language');
+    } else if (toolItem.classList.contains('contact-wrapper')) {
+      const contactClone = toolItem.cloneNode(true);
+      // Remove desktop-specific elements or adjust for mobile if necessary
+      const contactTitle = contactClone.querySelector('.user__contact-title:not(.icon-phone)');
+      if (contactTitle) contactTitle.remove();
+      const contactIcons = contactClone.querySelector('.user__contact__icons');
+      if (contactIcons) contactIcons.classList.remove('hidden'); // Ensure icons are visible
+      const contactToggleBoxDiv = contactClone.querySelector('.contact-toggle-box');
+      if (contactToggleBoxDiv) contactToggleBoxDiv.classList.remove('hidden'); // Ensure toggle box is visible
+      li.append(contactClone);
+    } else {
+      li.append(toolItem.cloneNode(true));
+    }
+    toolsList.append(li);
+  });
+  menuList.append(toolsList);
+
+  // Mobile menu header
+  const menuHeader = menu.querySelector('.menu-header');
+  if (menuHeader) {
+    const backArrow = menuHeader.querySelector('.back-arrow');
+    const closeIcon = menuHeader.querySelector('.close-icon');
+    if (backArrow) {
+      backArrow.addEventListener('click', () => {
+        // Simple close for now, could be enhanced for multi-level mobile menus
+        closeAllMenus();
+        toggleMenu(true); // Close mobile menu
+      });
+    }
+    if (closeIcon) {
+      closeIcon.addEventListener('click', () => {
+        closeAllMenus();
+        toggleMenu(true); // Close mobile menu
+      });
+    }
+  }
+}
+
+function setupDesktopNav() {
+  if (!navSections) return;
+  navSections.querySelectorAll('.link-title').forEach((navSection) => {
+    const desktopPanel = navSection.nextElementSibling;
+    if (desktopPanel && desktopPanel.classList.contains('desktop-panel')) {
+      desktopPanels.push(desktopPanel);
+      navSection.addEventListener('mouseenter', () => {
+        closeAllMenus(navSection);
+        navSection.classList.add('active');
+        navSection.setAttribute('aria-expanded', 'true');
+        desktopPanel.classList.add('active');
+        desktopPanel.setAttribute('aria-hidden', 'false');
+      });
+
+      navSection.addEventListener('mouseleave', (e) => {
+        if (!desktopPanel.contains(e.relatedTarget)) {
+          navSection.classList.remove('active');
+          navSection.setAttribute('aria-expanded', 'false');
+          desktopPanel.classList.remove('active');
+          desktopPanel.setAttribute('aria-hidden', 'true');
+        }
+      });
+
+      desktopPanel.addEventListener('mouseleave', (e) => {
+        if (!navSection.contains(e.relatedTarget)) {
+          navSection.classList.remove('active');
+          navSection.setAttribute('aria-expanded', 'false');
+          desktopPanel.classList.remove('active');
+          desktopPanel.setAttribute('aria-hidden', 'true');
         }
       });
     }
-
-    newUl.append(newLi);
   });
-  return newUl;
+}
+
+/**
+ * Parses the fragment content and constructs the header DOM.
+ * @param {Element} fragment The loaded fragment element.
+ * @returns {object} An object containing the parsed sections.
+ */
+function parseFragment(fragment) {
+  const sections = {
+    brand: null,
+    navLinks: null,
+    tools: null,
+  };
+
+  const children = Array.from(fragment.children);
+
+  // Section 1: Brand
+  if (children[0]) {
+    sections.brand = children[0].cloneNode(true);
+  }
+
+  // Section 2: Nav Links
+  if (children[1]) {
+    sections.navLinks = children[1].cloneNode(true);
+  }
+
+  // Section 3: Tools
+  if (children[2]) {
+    sections.tools = children[2].cloneNode(true);
+  }
+
+  return sections;
 }
 
 /**
@@ -231,570 +304,387 @@ function parseNestedList(ulElement) {
  * @param {Element} block The header block element
  */
 export default async function decorate(block) {
+  // Add root classes from original HTML
+  block.classList.add('corp-header-wrapper', 'header-scroll', 'header-scroll-threshold', 'corp-header-block', 'header-wrapper', 'sticky', 'show');
+
   // load nav as fragment
   const navMeta = getMetadata('nav');
   const navPath = navMeta ? new URL(navMeta, window.location).pathname : '/nav';
   const fragment = await loadFragment(navPath);
 
-  // decorate nav DOM
-  block.textContent = '';
-  const navWrapper = document.createElement('div');
-  navWrapper.classList.add('corp-header', 'block');
-  moveInstrumentation(block, navWrapper); // Transfer original block classes to navWrapper
+  // Parse the fragment without mutating it
+  const { brand, navLinks, tools } = parseFragment(fragment);
+
+  // Clear the block content after parsing the fragment
+  block.replaceChildren();
 
   nav = document.createElement('nav');
   nav.id = 'nav';
+  nav.classList.add('navbar', 'navbar-arena', 'g-container');
 
-  const fragmentContainer = document.createElement('div');
-  while (fragment.firstElementChild) {
-    fragmentContainer.append(fragment.firstElementChild);
-  }
+  // Section 1: Brand
+  if (brand) {
+    const logoWrapper = document.createElement('div');
+    logoWrapper.classList.add('logo-wrapper');
+    moveInstrumentation(brand, logoWrapper);
 
-  const classes = ['brand', 'sections', 'tools'];
-  const navElements = {};
-  classes.forEach((c, i) => {
-    const section = fragmentContainer.children[i];
-    if (section) {
-      section.classList.add(`nav-${c}`);
-      navElements[c] = section;
+    const logoBlock = document.createElement('div');
+    logoBlock.classList.add('logo', 'block');
+    logoBlock.dataset.blockName = 'logo';
+    moveInstrumentation(brand.firstElementChild, logoBlock);
+
+    const spanArena = document.createElement('span');
+    spanArena.classList.add('arena');
+
+    const brandLink = brand.querySelector(':scope > p > picture')?.closest('a');
+    if (brandLink) {
+      const clonedBrandLink = brandLink.cloneNode(true);
+      if (!clonedBrandLink.href) clonedBrandLink.href = '/'; // Default home link
+      clonedBrandLink.classList.add('logo__picture');
+      clonedBrandLink.dataset.logoName = 'Arena';
+      spanArena.append(clonedBrandLink);
+    } else {
+      // Fallback if no link found, create a default one
+      const defaultLink = document.createElement('a');
+      defaultLink.href = '/';
+      defaultLink.classList.add('logo__picture');
+      defaultLink.dataset.logoName = 'Arena';
+      const picture = brand.querySelector(':scope > p > picture');
+      if (picture) {
+        defaultLink.append(picture.cloneNode(true));
+      }
+      spanArena.append(defaultLink);
     }
-  });
-
-  // --- Section 1: Brand (Logo) ---
-  const navBrand = navElements.brand;
-  if (navBrand) {
+    logoBlock.append(spanArena);
+    logoWrapper.append(logoBlock);
+    nav.append(logoWrapper);
+  } else {
+    // Ensure logo-wrapper is still created even if brand section is empty
     const logoWrapper = document.createElement('div');
     logoWrapper.classList.add('logo-wrapper');
     const logoBlock = document.createElement('div');
     logoBlock.classList.add('logo', 'block');
-    moveInstrumentation(navBrand, logoBlock); // Instrumentation for the nav-brand div
-
-    const picture = navBrand.querySelector('picture');
-    const logoLink = navBrand.querySelector('a'); // Get the actual link for the logo
-    if (picture && logoLink) {
-      const anchor = document.createElement('a');
-      anchor.classList.add('logo__picture');
-      anchor.href = logoLink.href;
-      anchor.setAttribute('data-logo-name', logoLink.dataset.logoName || 'Arena');
-      anchor.append(picture);
-      logoBlock.append(anchor);
-    } else if (picture) { // Fallback if no link, but there should always be one
-      const anchor = document.createElement('a');
-      anchor.classList.add('logo__picture');
-      anchor.href = '/';
-      anchor.setAttribute('data-logo-name', 'Arena');
-      anchor.append(picture);
-      logoBlock.append(anchor);
-    }
-    if (logoBlock.children.length > 0) { // Only append if content exists
-      logoWrapper.append(logoBlock);
-      navBrand.replaceChildren(logoWrapper);
-    } else {
-      navBrand.remove(); // Remove empty brand section
-      navElements.brand = null;
-    }
+    logoBlock.dataset.blockName = 'logo';
+    logoWrapper.append(logoBlock);
+    nav.append(logoWrapper);
   }
 
-  // --- Section 2: Main Navigation ---
-  navSections = navElements.sections;
-  if (navSections) {
-    const navLinks = document.createElement('div');
-    navLinks.classList.add('links');
+  // Section 2: Nav Links
+  if (navLinks) {
+    navSections = document.createElement('div');
+    navSections.classList.add('links');
+    moveInstrumentation(navLinks, navSections);
 
-    let el = navSections.firstElementChild;
-    while (el) {
-      if (el.nodeType !== Node.ELEMENT_NODE) {
-        el = el.nextElementSibling;
+    let currentElement = navLinks.firstElementChild;
+    while (currentElement) {
+      if (currentElement.nodeType === Node.COMMENT_NODE) {
+        currentElement = currentElement.nextElementSibling;
         continue;
       }
 
-      if (el.tagName === 'P') {
+      if (currentElement.tagName === 'P') {
         const linkTitle = document.createElement('div');
         linkTitle.classList.add('link-title');
-        moveInstrumentation(el, linkTitle);
+        moveInstrumentation(currentElement, linkTitle);
 
         const span = document.createElement('span');
-        const anchor = el.querySelector(':scope > a');
-        if (anchor) {
-          span.append(anchor.cloneNode(true));
-          linkTitle.setAttribute('aria-expanded', 'false'); // Default collapsed
-          linkTitle.setAttribute('role', 'button');
-          linkTitle.setAttribute('tabindex', '0');
+        let link = currentElement.querySelector(':scope > a');
+        let strong = currentElement.querySelector(':scope > strong');
+
+        if (link) {
+          span.append(link.cloneNode(true));
+          if (link.title) linkTitle.classList.add(sanitizeClassName(link.title));
+        } else if (strong) {
+          span.append(strong.cloneNode(true));
+          linkTitle.classList.add(sanitizeClassName(strong.textContent));
         } else {
-          span.textContent = el.textContent.trim();
+          span.textContent = currentElement.textContent.trim();
+          linkTitle.classList.add(sanitizeClassName(currentElement.textContent));
         }
         linkTitle.append(span);
-        navLinks.append(linkTitle);
+        navSections.append(linkTitle);
 
-        const desktopPanelDiv = document.createElement('div');
-        desktopPanelDiv.classList.add('desktop-panel', 'panel');
-        desktopPanelDiv.classList.add(sanitizeClassName(span.textContent));
+        const nextSibling = currentElement.nextElementSibling;
+        if (nextSibling && nextSibling.tagName === 'UL') {
+          const desktopPanel = document.createElement('div');
+          desktopPanel.classList.add('desktop-panel', 'panel', sanitizeClassName(span.textContent));
+          desktopPanel.setAttribute('aria-hidden', 'true');
+          moveInstrumentation(nextSibling, desktopPanel);
 
-        let nextEl = el.nextElementSibling;
-        if (nextEl && nextEl.tagName === 'UL') {
-          const linkGrid = document.createElement('div');
-          linkGrid.classList.add('link-grid', 'block');
-          moveInstrumentation(nextEl, linkGrid);
+          const linkGridBlock = document.createElement('div');
+          linkGridBlock.classList.add('link-grid', 'block');
+          linkGridBlock.dataset.blockName = 'link-grid';
+          desktopPanel.append(linkGridBlock);
 
           const linkContainerSection = document.createElement('div');
           linkContainerSection.classList.add('link-container-section');
+          linkGridBlock.append(linkContainerSection);
 
-          const parsedUl = parseNestedList(nextEl);
-          if (parsedUl) {
-            const linkGridColumn = document.createElement('div');
-            linkGridColumn.classList.add('link-grid-column', 'link-column-vertical');
-            linkGridColumn.append(parsedUl);
-            linkContainerSection.append(linkGridColumn);
+          const linkGridColumn = document.createElement('div');
+          linkGridColumn.classList.add('link-grid-column', 'link-column-vertical'); // Default to vertical
+          linkContainerSection.append(linkGridColumn);
+
+          const ul = nextSibling.cloneNode(true);
+          ul.classList.add('content', 'links-container', 'accordian-content');
+          linkGridColumn.append(ul);
+
+          // Check if the UL contains P elements, indicating horizontal layout
+          if (ul.querySelector(':scope > li > p')) {
+            linkGridColumn.classList.remove('link-column-vertical');
+            linkGridColumn.classList.add('link-column-horizontal');
           }
-          linkGrid.append(linkContainerSection);
-          desktopPanelDiv.append(linkGrid);
-          navLinks.append(desktopPanelDiv);
 
-          el = nextEl.nextElementSibling; // Skip the UL as it's processed
-        } else {
-          el = nextEl;
+          navSections.append(desktopPanel);
+          currentElement = nextSibling.nextElementSibling; // Skip the UL as it's processed
+          continue;
         }
-
-        // Desktop hover functionality (CSS driven, but JS for aria-expanded)
-        linkTitle.addEventListener('mouseenter', () => {
-          if (isDesktop.matches) {
-            toggleAllNavSections(navSections, false); // Close others
-            linkTitle.setAttribute('aria-expanded', 'true');
-            desktopPanelDiv.style.display = 'flex';
-            desktopPanelDiv.style.opacity = '1';
-            desktopPanelDiv.style.visibility = 'visible';
-          }
-        });
-        linkTitle.addEventListener('mouseleave', () => {
-          if (isDesktop.matches) {
-            linkTitle.setAttribute('aria-expanded', 'false');
-            desktopPanelDiv.style.display = 'none';
-            desktopPanelDiv.style.opacity = '0';
-            desktopPanelDiv.style.visibility = 'hidden';
-          }
-        });
-        desktopPanelDiv.addEventListener('mouseenter', () => {
-          if (isDesktop.matches) {
-            linkTitle.setAttribute('aria-expanded', 'true');
-            desktopPanelDiv.style.display = 'flex';
-            desktopPanelDiv.style.opacity = '1';
-            desktopPanelDiv.style.visibility = 'visible';
-          }
-        });
-        desktopPanelDiv.addEventListener('mouseleave', () => {
-          if (isDesktop.matches) {
-            linkTitle.setAttribute('aria-expanded', 'false');
-            desktopPanelDiv.style.display = 'none';
-            desktopPanelDiv.style.opacity = '0';
-            desktopPanelDiv.style.visibility = 'hidden';
-          }
-        });
-
-      } else {
-        el = el.nextElementSibling;
       }
+      currentElement = currentElement.nextElementSibling;
     }
-    if (navLinks.children.length > 0) {
-      navSections.replaceChildren(navLinks);
-    } else {
-      navSections.remove();
-      navElements.sections = null;
-    }
+    nav.append(navSections);
   }
 
-  // --- Section 3: Tools (Contact, Language, Sign-in) ---
-  const navTools = navElements.tools;
-  if (navTools) {
-    rightDiv = document.createElement('div');
-    rightDiv.classList.add('right');
-    rightDiv.id = 'nav-right';
+  // Section 3: Tools
+  if (tools) {
+    navTools = document.createElement('div');
+    navTools.classList.add('right');
+    navTools.id = 'nav-right';
+    moveInstrumentation(tools, navTools);
 
-    const contactWrapper = document.createElement('div');
-    contactWrapper.classList.add('contact-wrapper');
-    contactBlock = document.createElement('div');
-    contactBlock.classList.add('contact', 'block');
-    moveInstrumentation(navTools, contactBlock); // Instrumentation for the nav-tools div
+    let currentToolEl = tools.firstElementChild;
+    while (currentToolEl) {
+      if (currentToolEl.nodeType === Node.COMMENT_NODE) {
+        currentToolEl = currentToolEl.nextElementSibling;
+        continue;
+      }
 
-    const contactTitle = document.createElement('h4');
-    contactTitle.classList.add('user__contact-title');
-    contactTitle.textContent = 'Contact Us'; // Default, will be overwritten if found in fragment
-    const contactIconPhone = document.createElement('span');
-    contactIconPhone.classList.add('user__contact-title', 'icon-phone');
-    contactIconPhone.setAttribute('aria-label', 'Contact Us');
+      if (currentToolEl.tagName === 'UL') {
+        Array.from(currentToolEl.children).forEach(li => {
+          const anchor = li.querySelector(':scope > a');
+          const text = li.textContent.trim();
 
-    const userContactIcons = document.createElement('div');
-    userContactIcons.classList.add('user__contact__icons', 'hidden');
-
-    contactToggleBox = document.createElement('div');
-    contactToggleBox.classList.add('hidden', 'contact-toggle-box');
-    const userContactCallContainer = document.createElement('div');
-    userContactCallContainer.classList.add('user__contact__icon-call_container');
-
-    const toolsUlElements = navTools.querySelectorAll(':scope > ul');
-    let primaryTelephoneLink = null;
-    let whatsappLink = null;
-    let emailLink = null;
-    let reachUsLink = null;
-    let profileLink = null;
-    let signInText = null;
-    let languageText = 'EN'; // Default language
-
-    if (toolsUlElements.length > 0) {
-      // First UL typically contains social/contact icons
-      const socialLinksUl = toolsUlElements[0];
-      Array.from(socialLinksUl.children).forEach((li) => {
-        const anchor = li.querySelector(':scope > a');
-        if (anchor) {
-          const iconName = anchor.title ? sanitizeClassName(anchor.title) : '';
-          if (iconName) {
-            const socialAnchor = document.createElement('a');
-            socialAnchor.href = anchor.href;
-            socialAnchor.target = '_blank';
-            socialAnchor.rel = 'noopener noreferrer';
-            socialAnchor.classList.add('user__contact--icon', iconName);
-            // Extract image src from original anchor if available, otherwise use default
-            const img = anchor.querySelector('img');
-            const imgSrc = img ? img.src : `/icons/${iconName}.svg`;
-            socialAnchor.innerHTML = `<span class="sr-only">${iconName}</span><img src="${imgSrc}" alt="${iconName}" loading="lazy">`;
-            userContactIcons.append(socialAnchor);
+          // Language selector
+          if (li.classList.contains('language')) {
+            const langDiv = document.createElement('div');
+            langDiv.classList.add('language');
+            langDiv.textContent = text;
+            navTools.append(langDiv);
+            moveInstrumentation(li, langDiv);
           }
-        }
-      });
-      moveInstrumentation(socialLinksUl, userContactIcons);
-    }
+          // Sign In / User Dropdown
+          else if (li.classList.contains('sign-in')) {
+            const signInWrapper = document.createElement('div');
+            signInWrapper.classList.add('sign-in-wrapper', 'hidden');
+            moveInstrumentation(li, signInWrapper);
 
-    if (toolsUlElements.length > 1) {
-      // Second UL typically contains utility links (tel, whatsapp, email, reach us, profile, sign in)
-      const utilityLinksUl = toolsUlElements[1];
-      Array.from(utilityLinksUl.children).forEach((li) => {
-        const anchor = li.querySelector(':scope > a');
-        if (anchor) {
-          if (anchor.href.startsWith('tel:')) {
-            primaryTelephoneLink = anchor;
-          } else if (anchor.href.includes('wa.me')) {
-            whatsappLink = anchor;
-          } else if (anchor.href.startsWith('mailto:')) {
-            emailLink = anchor;
-          } else if (anchor.href.includes('reach-us')) {
-            reachUsLink = anchor;
-          } else if (anchor.href.includes('/user')) {
-            profileLink = anchor;
+            const signInBlock = document.createElement('div');
+            signInBlock.classList.add('sign-in', 'block');
+            signInBlock.dataset.blockName = 'sign-in';
+            signInWrapper.append(signInBlock);
+
+            userDropdown = document.createElement('div');
+            userDropdown.classList.add('user__dropdown');
+            signInBlock.append(userDropdown);
+
+            const userAccount = document.createElement('div');
+            userAccount.classList.add('user__account');
+            userDropdown.append(userAccount);
+
+            const signInButton = document.createElement('div');
+            signInButton.classList.add('user__account--link', 'sign-in-btn');
+            const signInButtonText = li.querySelector(':scope > button')?.textContent || 'Sign In';
+            const signInButtonImgSrc = li.querySelector(':scope > img')?.src || 'https://www.marutisuzuki.com/adobe/assets/urn:aaid:aem:3c13f70a-cefc-4aeb-83f2-53cd72a175d1/as/world-blue.svg';
+            signInButton.innerHTML = `
+              <span class="user__account__list-icon">
+                <img src="${signInButtonImgSrc}" loading="lazy" alt="${signInButtonText}">
+              </span>
+              <button type="button" data-sign-out-text="Sign Out">${signInButtonText}</button>
+            `;
+            userAccount.append(signInButton);
+
+            // Add other user account links from the fragment
+            li.querySelectorAll(':scope > ul > li > a').forEach(accountLink => {
+              const clonedAccountLink = accountLink.cloneNode(true);
+              clonedAccountLink.classList.add('user__account--link', sanitizeClassName(accountLink.textContent));
+              userAccount.append(clonedAccountLink);
+            });
+            navTools.append(signInWrapper);
           }
-        } else if (li.textContent.trim().toLowerCase() === 'sign in') {
-          signInText = li.textContent.trim();
-        } else if (li.textContent.trim().length === 2 && li.textContent.trim().match(/^[A-Z]{2}$/)) {
-          languageText = li.textContent.trim();
-        }
-      });
+          // Contact Us
+          else if (li.classList.contains('contact')) {
+            const contactWrapper = document.createElement('div');
+            contactWrapper.classList.add('contact-wrapper');
+            moveInstrumentation(li, contactWrapper);
 
-      if (primaryTelephoneLink) {
-        const telAnchor = document.createElement('a');
-        telAnchor.href = primaryTelephoneLink.href;
-        telAnchor.classList.add('primary-telephone');
-        telAnchor.textContent = primaryTelephoneLink.textContent;
-        userContactCallContainer.append(telAnchor);
+            const contactBlock = document.createElement('div');
+            contactBlock.classList.add('contact', 'block');
+            contactBlock.dataset.blockName = 'contact';
+            contactWrapper.append(contactBlock);
+
+            const contactDiv = document.createElement('div');
+            contactDiv.classList.add('contact_wrp_arena', 'user__contact', 'header');
+            contactBlock.append(contactDiv);
+
+            const h4 = document.createElement('h4');
+            h4.classList.add('user__contact-title');
+            h4.textContent = anchor ? anchor.textContent : 'Contact Us';
+            contactDiv.append(h4);
+
+            const iconPhone = document.createElement('span');
+            iconPhone.classList.add('user__contact-title', 'icon-phone');
+            iconPhone.setAttribute('aria-label', anchor ? anchor.textContent : 'Contact Us');
+            contactDiv.append(iconPhone);
+
+            const userContactIcons = document.createElement('div');
+            userContactIcons.classList.add('user__contact__icons', 'hidden');
+            contactDiv.append(userContactIcons);
+
+            const contactToggleBoxDiv = document.createElement('div');
+            contactToggleBoxDiv.classList.add('hidden', 'contact-toggle-box');
+            contactDiv.append(contactToggleBoxDiv);
+
+            const userContactCallContainer = document.createElement('div');
+            userContactCallContainer.classList.add('user__contact__icon-call_container');
+            contactToggleBoxDiv.append(userContactCallContainer);
+
+            li.querySelectorAll(':scope > ul > li').forEach(subLi => {
+              const subAnchor = subLi.querySelector(':scope > a');
+              if (subAnchor) {
+                const subText = subAnchor.textContent.toLowerCase();
+                if (subText.includes('whatsapp')) {
+                  const whatsappLink = document.createElement('a');
+                  whatsappLink.href = subAnchor.href;
+                  whatsappLink.target = '_blank';
+                  whatsappLink.classList.add('user__contact--icon', 'whatsapp');
+                  whatsappLink.setAttribute('rel', 'noopener noreferrer');
+                  whatsappLink.innerHTML = `<span class="sr-only">whatsapp</span><img src="https://www.marutisuzuki.com/adobe/assets/urn:aaid:aem:8b7e1a58-e51b-4076-8d71-74415f808bb5/as/whatsapp-blue.svg" alt="whatsapp" loading="lazy">`;
+                  userContactIcons.append(whatsappLink);
+                } else if (subText.includes('email')) {
+                  const emailLink = document.createElement('a');
+                  emailLink.href = subAnchor.href;
+                  emailLink.classList.add('user__contact--icon', 'email');
+                  emailLink.innerHTML = `<span class="sr-only">email</span><img src="https://www.marutisuzuki.com/adobe/assets/urn:aaid:aem:486b1069-8798-47ae-ac0b-d557f2185041/as/mail-blue.svg" alt="email" loading="lazy">`;
+                  userContactIcons.append(emailLink);
+                } else if (subAnchor.href.startsWith('tel:')) { // Phone number
+                  const phoneLink = document.createElement('a');
+                  phoneLink.href = subAnchor.href;
+                  phoneLink.classList.add('primary-telephone');
+                  phoneLink.textContent = subAnchor.textContent;
+                  userContactCallContainer.append(phoneLink);
+                }
+              }
+            });
+
+            // Add phone icon for mobile
+            const phoneIcon = document.createElement('a');
+            phoneIcon.href = '#';
+            phoneIcon.classList.add('user__contact--icon', 'phone');
+            phoneIcon.onclick = (e) => {
+              e.preventDefault();
+              contactToggleBoxDiv.classList.toggle('hidden');
+            };
+            phoneIcon.innerHTML = `<span class="sr-only">phone</span><img src="https://www.marutisuzuki.com/adobe/assets/urn:aaid:aem:5b948ce6-b05d-4b51-ad62-c8763b2489ef/as/phone-blue.svg" alt="phone" loading="lazy">`;
+            userContactIcons.prepend(phoneIcon); // Prepend to match original HTML order
+
+            contactToggleBox = contactToggleBoxDiv; // Store reference
+            navTools.append(contactWrapper);
+          }
+        });
       }
-
-      if (whatsappLink) {
-        const whatsappAnchor = document.createElement('a');
-        whatsappAnchor.href = whatsappLink.href;
-        whatsappAnchor.target = '_blank';
-        whatsappAnchor.classList.add('user__contact--icon', 'whatsapp');
-        whatsappAnchor.rel = 'noopener noreferrer';
-        const img = whatsappLink.querySelector('img');
-        const imgSrc = img ? img.src : '/icons/whatsapp-blue.svg';
-        whatsappAnchor.innerHTML = `<span class="sr-only">whatsapp</span><img src="${imgSrc}" alt="whatsapp" loading="lazy">`;
-        userContactIcons.append(whatsappAnchor);
-      }
-
-      if (emailLink) {
-        const emailAnchor = document.createElement('a');
-        emailAnchor.href = emailLink.href;
-        emailAnchor.classList.add('user__contact--icon', 'email');
-        const img = emailLink.querySelector('img');
-        const imgSrc = img ? img.src : '/icons/mail-blue.svg';
-        emailAnchor.innerHTML = `<span class="sr-only">email</span><img src="${imgSrc}" alt="email" loading="lazy">`;
-        userContactIcons.append(emailAnchor);
-      }
-
-      if (userContactIcons.children.length > 0) {
-        userContactIcons.prepend(contactIconPhone);
-        contactBlock.append(contactTitle, userContactIcons);
-      }
-      if (userContactCallContainer.children.length > 0) {
-        contactToggleBox.append(userContactCallContainer);
-        contactBlock.append(contactToggleBox);
-      }
-
-      if (contactBlock.children.length > 0) {
-        contactWrapper.append(contactBlock);
-        rightDiv.append(contactWrapper);
-      }
-
-      // Language
-      const languageDiv = document.createElement('div');
-      languageDiv.classList.add('language');
-      languageDiv.textContent = languageText;
-      rightDiv.append(languageDiv);
-
-      // Sign-in
-      const signInWrapper = document.createElement('div');
-      signInWrapper.classList.add('sign-in-wrapper', 'hidden');
-      const signInBlock = document.createElement('div');
-      signInBlock.classList.add('sign-in', 'block');
-      moveInstrumentation(utilityLinksUl, signInBlock); // Instrumentation for the utility UL
-
-      userAccountDropdown = document.createElement('div');
-      userAccountDropdown.classList.add('user__dropdown');
-      const userAccount = document.createElement('div');
-      userAccount.classList.add('user__account');
-
-      if (reachUsLink) {
-        const reachUsAnchor = document.createElement('a');
-        reachUsAnchor.href = reachUsLink.href;
-        reachUsAnchor.classList.add('user__account--link', 'reach', 'us');
-        reachUsAnchor.target = '_self';
-        const img = reachUsLink.querySelector('img');
-        const imgSrc = img ? img.src : '/icons/ReachUs.svg';
-        reachUsAnchor.innerHTML = `<span class="user__account__list-icon"><img src="${imgSrc}" loading="lazy" alt="Reach Us"></span>${reachUsLink.textContent}`;
-        userAccount.append(reachUsAnchor);
-      }
-
-      if (profileLink) {
-        const profileAnchor = document.createElement('a');
-        profileAnchor.href = profileLink.href;
-        profileAnchor.classList.add('user__account--link', 'profile');
-        profileAnchor.target = '_self';
-        const img = profileLink.querySelector('img');
-        const imgSrc = img ? img.src : '/icons/Profile.svg';
-        profileAnchor.innerHTML = `<span class="user__account__list-icon"><img src="${imgSrc}" loading="lazy" alt="Profile"></span>${profileLink.textContent}`;
-        userAccount.append(profileAnchor);
-      }
-
-      if (signInText) {
-        const signInBtnDiv = document.createElement('div');
-        signInBtnDiv.classList.add('user__account--link', 'sign-in-btn');
-        const signInButton = document.createElement('button');
-        signInButton.type = 'button';
-        signInButton.setAttribute('data-sign-out-text', 'Sign Out');
-        signInButton.textContent = signInText;
-        // Assuming world-blue.svg is the default icon for sign-in
-        signInBtnDiv.innerHTML = `<span class="user__account__list-icon"><img src="/icons/world-blue.svg" loading="lazy" alt="Sign-in"></span>`;
-        signInBtnDiv.append(signInButton);
-        userAccount.append(signInBtnDiv);
-      }
-
-      if (userAccount.children.length > 0) {
-        userAccountDropdown.append(userAccount);
-        signInBlock.append(userAccountDropdown);
-        signInWrapper.append(signInBlock);
-        rightDiv.append(signInWrapper);
-      }
+      currentToolEl = currentToolEl.nextElementSibling;
     }
-    if (rightDiv.children.length > 0) {
-      navTools.replaceChildren(rightDiv);
-    } else {
-      navTools.remove();
-      navElements.tools = null;
-    }
+    nav.append(navTools);
+  } else {
+    // Ensure nav-right is still created even if tools section is empty
+    navTools = document.createElement('div');
+    navTools.classList.add('right');
+    navTools.id = 'nav-right';
+    nav.append(navTools);
   }
 
   // Hamburger for mobile
   const hamburger = document.createElement('div');
   hamburger.classList.add('nav-hamburger');
-  navHamburgerButton = document.createElement('button');
-  navHamburgerButton.type = 'button';
-  navHamburgerButton.setAttribute('aria-controls', 'nav');
-  navHamburgerButton.setAttribute('aria-label', 'Open navigation');
-  navHamburgerButton.setAttribute('aria-expanded', 'false');
-  const hamburgerIcon = document.createElement('span');
-  hamburgerIcon.classList.add('nav-hamburger-icon');
-  navHamburgerButton.append(hamburgerIcon);
-  hamburger.append(navHamburgerButton);
+  hamburger.innerHTML = '<button type="button" aria-controls="nav" aria-label="Open navigation"><span class="nav-hamburger-icon"></span></button>';
+  hamburger.addEventListener('click', () => toggleMenu());
+  nav.prepend(hamburger);
+  moveInstrumentation(block.firstElementChild, hamburger); // Assuming first child is the original hamburger
 
-  const navbar = document.createElement('div');
-  navbar.classList.add('navbar', 'navbar-arena', 'g-container');
-  if (navElements.brand) navbar.append(navElements.brand);
-  if (navElements.sections) navbar.append(navElements.sections);
-  if (navElements.tools) navbar.append(navElements.tools);
-  navbar.prepend(hamburger); // Hamburger always first
-
-  nav.prepend(navbar);
-
-  // Mobile Menu
-  menu = document.createElement('div');
-  menu.id = 'menu';
-  menu.classList.add('menu', 'hidden', 'menu-arena');
-
-  const menuHeader = document.createElement('div');
-  menuHeader.classList.add('menu-header');
-  const backArrow = document.createElement('div');
-  backArrow.classList.add('back-arrow');
-  const menuTitle = document.createElement('span');
-  menuTitle.classList.add('menu-title');
-  menuTitle.textContent = 'Menu';
-  const closeIcon = document.createElement('span');
-  closeIcon.classList.add('close-icon');
-  menuHeader.append(backArrow, menuTitle, closeIcon);
-  menu.append(menuHeader);
-
-  const menuList = document.createElement('ul');
-  menuList.classList.add('menu-list');
-
-  if (navSections && navSections.querySelector('.links')) {
-    Array.from(navSections.querySelector('.links').children).forEach((item) => {
-      if (item.classList.contains('link-title')) {
-        const li = document.createElement('li');
-        li.classList.add('nav-link');
-        const linkText = item.querySelector('span')?.textContent.trim();
-        if (linkText) {
-          li.classList.add(sanitizeClassName(linkText));
-        }
-        const anchor = item.querySelector('span > a'); // Get the actual anchor inside the span
-        if (anchor) {
-          const span = document.createElement('span');
-          span.classList.add('menu-title');
-          span.append(anchor.cloneNode(true));
-          li.append(span);
-        } else {
-          const span = document.createElement('span');
-          span.classList.add('menu-title');
-          span.textContent = linkText;
-          li.append(span);
-        }
-
-        const desktopPanelForMenuItem = item.nextElementSibling;
-        if (desktopPanelForMenuItem && desktopPanelForMenuItem.classList.contains('desktop-panel')) {
-          li.classList.add('accordion');
-          const clonedPanel = desktopPanelForMenuItem.cloneNode(true);
-          clonedPanel.classList.remove('desktop-panel');
-          clonedPanel.style.maxHeight = null;
-          clonedPanel.style.opacity = null;
-          clonedPanel.style.visibility = null;
-          clonedPanel.style.display = null;
-          li.append(clonedPanel);
-
-          li.addEventListener('click', () => {
-            li.classList.toggle('active');
-            if (li.classList.contains('active')) {
-              clonedPanel.style.maxHeight = `${clonedPanel.scrollHeight}px`;
-            } else {
-              clonedPanel.style.maxHeight = null;
-            }
-          });
-        }
-        menuList.append(li);
-      }
-    });
-  }
-
-  // Append utility links to mobile menu
-  if (navTools) {
-    const utilityLinksUl = navTools.querySelector(':scope > .right > .sign-in-wrapper > .sign-in > .user__dropdown > .user__account');
-    if (utilityLinksUl) {
-      Array.from(utilityLinksUl.children).forEach((item) => {
-        const li = document.createElement('li');
-        li.classList.add('nav-link');
-        const clonedItem = item.cloneNode(true);
-        li.append(clonedItem);
-        menuList.append(li);
-      });
-    }
-  }
-
-  menu.append(menuList);
-  nav.append(menu);
-
-  // Car Filter Menu (placeholder, as content is dynamic)
+  // Car Filter Menu (if present in original HTML, it's a sibling of nav)
   carFilterMenu = document.createElement('div');
   carFilterMenu.id = 'carFilterMenu';
   carFilterMenu.classList.add('car-filter-menu', 'hidden', 'car-filter-arena');
 
   const carPanelHeader = document.createElement('div');
   carPanelHeader.classList.add('car-panel-header');
-  const carTextSpan = document.createElement('span');
-  carTextSpan.classList.add('car-text');
-  carTextSpan.textContent = 'Cars'; // Dynamically get this if possible, otherwise default
-  const carFilterCloseSpan = document.createElement('span');
-  carFilterCloseSpan.classList.add('car-filter-close');
-  carFilterCloseSpan.innerHTML = '<img src="/icons/close.svg" alt="close">';
-  carPanelHeader.append(document.createElement('div'), carTextSpan, carFilterCloseSpan); // Empty div for alignment
+  carPanelHeader.innerHTML = `
+    <div></div>
+    <span class="car-text">Cars</span>
+    <span class="car-filter-close"><img src="/icons/close.svg" alt="close"></span>
+  `;
   carFilterMenu.append(carPanelHeader);
-  nav.append(carFilterMenu);
 
+  const carFilterClose = carPanelHeader.querySelector('.car-filter-close');
+  if (carFilterClose) {
+    carFilterClose.addEventListener('click', () => {
+      carFilterMenu.classList.add('hidden');
+      document.body.classList.remove('menu-open');
+    });
+  }
+
+  // Mobile Menu container
+  menu = document.createElement('div');
+  menu.id = 'menu';
+  menu.classList.add('menu', 'hidden', 'menu-arena');
+
+  const menuHeader = document.createElement('div');
+  menuHeader.classList.add('menu-header');
+  menuHeader.innerHTML = `
+    <div class="back-arrow"></div>
+    <span class="menu-title">Menu</span>
+    <span class="close-icon"></span>
+  `;
+  menu.append(menuHeader);
+
+  const menuList = document.createElement('ul');
+  menuList.classList.add('menu-list');
+  menu.append(menuList);
+
+  const navWrapper = document.createElement('div');
+  navWrapper.classList.add('corp-header', 'block');
+  navWrapper.dataset.blockName = 'corp-header';
   navWrapper.append(nav);
   block.append(navWrapper);
+  block.append(carFilterMenu);
+  block.append(menu);
 
-  // Event Listeners
-  navHamburgerButton.addEventListener('click', () => {
-    const isExpanded = nav.getAttribute('aria-expanded') === 'true';
-    toggleMenu(nav, navSections, !isExpanded);
-    menu.classList.toggle('hidden', isExpanded);
-    document.body.classList.toggle('no-scroll', !isExpanded);
-  });
+  // Set up event listeners
+  setupMobileNav();
+  setupDesktopNav();
 
-  closeIcon.addEventListener('click', () => {
-    toggleMenu(nav, navSections, false);
-    menu.classList.add('hidden');
-    document.body.classList.remove('no-scroll');
-  });
+  // Initial state and resize handling
+  nav.setAttribute('aria-expanded', 'false');
+  toggleMenu(isDesktop.matches);
+  isDesktop.addEventListener('change', () => toggleMenu(isDesktop.matches));
 
-  backArrow.addEventListener('click', () => {
-    const activeAccordion = menuList.querySelector('.accordion.active');
-    if (activeAccordion) {
-      activeAccordion.classList.remove('active');
-      activeAccordion.querySelector('.panel').style.maxHeight = null;
-    } else {
-      toggleMenu(nav, navSections, false);
-      menu.classList.add('hidden');
-      document.body.classList.remove('no-scroll');
+  // Escape key listener for accessibility
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeAllMenus();
+      toggleMenu(true); // Close mobile menu
     }
   });
 
-  // Contact toggle
-  const contactTitleElement = contactBlock.querySelector('.user__contact-title');
-  const contactIconsElement = contactBlock.querySelector('.user__contact__icons');
-  if (contactTitleElement && contactIconsElement) {
-    contactTitleElement.addEventListener('click', () => {
-      contactIconsElement.classList.toggle('hidden');
-    });
-  }
-
-  // Sign-in toggle
-  const signInBtn = rightDiv.querySelector('.sign-in-btn');
-  if (signInBtn && userAccountDropdown) {
-    signInBtn.addEventListener('click', () => {
-      userAccountDropdown.classList.toggle('hidden');
-    });
-  }
-
-  // Initial state for desktop
-  if (isDesktop.matches) {
-    menu.classList.add('hidden');
-    document.body.classList.remove('no-scroll');
-  }
-
-  isDesktop.addEventListener('change', () => {
-    if (isDesktop.matches) {
-      menu.classList.add('hidden');
-      document.body.classList.remove('no-scroll');
-      toggleMenu(nav, navSections, false); // Ensure nav is closed on desktop resize
-    }
-  });
-
-  isTablet.addEventListener('change', () => {
-    if (isTablet.matches) {
-      menu.classList.add('hidden');
-      document.body.classList.remove('no-scroll');
-      toggleMenu(nav, navSections, false);
-    }
-  });
-
-  isMobile.addEventListener('change', () => {
-    if (isMobile.matches) {
-      menu.classList.add('hidden');
-      document.body.classList.remove('no-scroll');
-      toggleMenu(nav, navSections, false);
-    }
-  });
+  // Behavioral Justification:
+  // Desktop navigation uses a CSS-driven hover model for submenus.
+  // The CSS rules `.navbar .links .link-title:hover + .desktop-panel, .desktop-panel:hover`
+  // and `.desktop-panel { display: none; opacity: 0; visibility: hidden; }`
+  // indicate that submenus appear on hover. JavaScript is used to add/remove `.active`
+  // classes and `aria-expanded`/`aria-hidden` attributes for accessibility and
+  // to manage menu state (e.g., closing other menus when one opens).
+  //
+  // Mobile navigation uses a JS-driven click/toggle model.
+  // The CSS rules `.menu.hidden { display: none !important; }` and `.panel { max-height: 0; overflow: hidden; }`
+  // coupled with JS toggling of `.hidden` and `max-height` for `.panel` elements confirm this.
+  // The `.accordion` class on `li` items in the mobile menu suggests a click-to-expand behavior.
 }
