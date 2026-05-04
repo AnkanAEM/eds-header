@@ -492,7 +492,6 @@ export default async function decorate(block) {
 
   // decorate nav DOM
   block.textContent = '';
-  block.classList.forEach((cls) => navWrapper.classList.add(cls)); // Copy original root classes
 
   navWrapper = document.createElement('div');
   navWrapper.classList.add(
@@ -502,8 +501,9 @@ export default async function decorate(block) {
     sanitizeClassName('corp-header-block'),
     sanitizeClassName('header-wrapper'),
     sanitizeClassName('sticky'),
-    sanitizeClassName('show')
+    sanitizeClassName('show'),
   );
+  block.classList.forEach((cls) => navWrapper.classList.add(cls)); // Copy original root classes
 
   const corpHeaderDiv = document.createElement('div');
   corpHeaderDiv.classList.add(sanitizeClassName('corp-header'), sanitizeClassName('block'));
